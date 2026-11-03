@@ -15,6 +15,8 @@ export type TikzGraph = {
   seedTitle: string;
   nodes: TikzNode[];
   edges: { from: string; to: string }[];
+  /** Figure label; defaults to "citation-graph". Suffix it when exporting twice. */
+  figLabel?: string;
 };
 
 const texEscape = (s: string) =>
@@ -67,11 +69,14 @@ export function graphToTikz(g: TikzGraph, widthCm = 14, heightCm = 9.5): string 
     "    \\tikzstyle{every node}=[font=\\scriptsize]",
   );
   // Nodes first: TikZ edges reference node coordinates that must already exist.
+  // Size×0.85 mm keeps the on-screen area ratio (size 3→2.55 mm, 10→8.5 mm);
+  // labels only above the same threshold the canvas uses, or they overlap.
   nodes.forEach((n, i) => {
-    const mm = (3 + n.size * 0.55).toFixed(1);
+    const mm = (n.size * 0.85).toFixed(1);
     const isSeed = n.id === g.seedId;
+    const label = n.size >= 6 ? texEscape(n.label) : "";
     lines.push(
-      `    \\node[circle, draw=${isSeed ? `cg${i + 1}` : "gray!70"}, line width=${isSeed ? "0.8pt" : "0.3pt"}, fill=cg${i + 1}, text=white, minimum size=${mm}mm, inner sep=0pt] (${names.get(n.id)}) at (${n.x},${n.y}) {${texEscape(n.label)}};`,
+      `    \\node[circle, draw=${isSeed ? `cg${i + 1}` : "gray!70"}, line width=${isSeed ? "0.8pt" : "0.3pt"}, fill=cg${i + 1}, text=white, minimum size=${mm}mm, inner sep=0pt] (${names.get(n.id)}) at (${n.x},${n.y}) {${label}};`,
     );
   });
   for (const e of g.edges) {
@@ -82,7 +87,7 @@ export function graphToTikz(g: TikzGraph, widthCm = 14, heightCm = 9.5): string 
   lines.push(
     "  \\end{tikzpicture}",
     `  \\caption{Citation graph around ${texEscape(g.seedTitle)}.}`,
-    "  \\label{fig:citation-graph}",
+    `  \\label{fig:${g.figLabel ?? "citation-graph"}}`,
     "\\end{figure}",
   );
   return lines.join("\n");
