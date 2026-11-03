@@ -111,13 +111,24 @@ function bibName(name: string) {
   return `${parts.at(-1)}, ${parts.slice(0, -1).join(" ")}`;
 }
 
-/** Escapes the characters that break BibTeX/LaTeX; keeps Unicode letters. */
+/**
+ * Escapes the characters that break BibTeX/LaTeX; keeps Unicode letters, math
+ * (`$\alpha$`), backslash commands and protective braces (`{Deep}`) as they
+ * are, and balances braces so a stray one cannot break the generated entry.
+ */
 export function texEscape(s: string) {
-  return s
-    .replace(/[\\{}]/g, "")
-    .replace(/([&%$#_])/g, "\\$1")
+  const escaped = s
+    .replace(/([&%#_])/g, "\\$1")
     .replace(/~/g, "\\textasciitilde{}")
     .replace(/\^/g, "\\textasciicircum{}");
+  let net = 0;
+  for (const c of escaped) {
+    if (c === "{") net++;
+    else if (c === "}") net--;
+  }
+  if (net > 0) return escaped + "}".repeat(net);
+  if (net < 0) return "{".repeat(-net) + escaped;
+  return escaped;
 }
 
 /** Key in the common "familyYEARfirstword" form, e.g. vaswani2017attention. */
