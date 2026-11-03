@@ -1,0 +1,15 @@
+import { lintProject } from "@/lib/compiler";
+import { enforceRateLimit, requireUser, route } from "@/lib/http";
+import { getViewableProject, listFilesWithData } from "@/lib/projects";
+
+type Ctx = { params: Promise<{ id: string }> };
+
+/** chktex style/syntax warnings over the stored sources (no PDF built). */
+export const GET = route(async (req, { params }: Ctx) => {
+  const user = await requireUser(req);
+  const project = await getViewableProject(user.id, (await params).id);
+  enforceRateLimit(`lint:${user.id}`, 20, 60_000);
+  const files = await listFilesWithData(project.id);
+  const r = await lintProject(project.mainFile, files);
+  return Response.json(r);
+});
