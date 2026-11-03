@@ -4,7 +4,13 @@ import { bibKeys } from "@/lib/bibtex";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { streamChat } from "@/lib/llm";
 import { anyEndpoint, resolveEndpoint } from "@/lib/llm-profiles";
-import { getFile, getOwnedProject, listFiles } from "@/lib/projects";
+import {
+  addAiMessage,
+  getFile,
+  getViewableProject,
+  listAiMessages,
+  listFiles,
+} from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -23,7 +29,7 @@ const body = z.object({
 
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getViewableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
   const endpoint = await resolveEndpoint(user.id, "draft");
   if (!endpoint)
@@ -54,16 +60,26 @@ export const POST = route(async (req, { params }: Ctx) => {
   // Pull the first chunk before answering so provider errors map to a real status code.
   const first = await tokens.next();
   const encoder = new TextEncoder();
+  let full = first.done ? "" : first.value;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
         if (!first.done) controller.enqueue(encoder.encode(first.value));
-        for await (const piece of tokens) controller.enqueue(encoder.encode(piece));
+        for await (const piece of tokens) {
+          full += piece;
+          controller.enqueue(encoder.encode(piece));
+        }
       } catch (err) {
         const msg = err instanceof HttpError ? err.message : "La respuesta de la IA se interrumpió";
         controller.enqueue(encoder.encode(`\n\n[${msg}]`));
       } finally {
         controller.close();
+        // Persist the turn so the conversation survives reloads.
+        if (full.trim()) {
+          const prompt = input.instruction || `[${input.action}]`;
+          await addAiMessage(project.id, "user", input.action, prompt).catch(() => {});
+          await addAiMessage(project.id, "assistant", input.action, full).catch(() => {});
+        }
       }
     },
     cancel() {
@@ -79,7 +95,10 @@ export const POST = route(async (req, { params }: Ctx) => {
   });
 });
 
-export const GET = route(async (req) => {
+export const GET = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  return Response.json({ enabled: await anyEndpoint(user.id) });
+  const { id } = await params;
+  const project = await getViewableProject(user.id, id);
+  const messages = await listAiMessages(project.id);
+  return Response.json({ enabled: await anyEndpoint(user.id), messages });
 });

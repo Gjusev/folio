@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { bibDois } from "@/lib/bibtex";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
 import { bibliographyGraph } from "@/lib/papers";
-import { getOwnedProject, listFiles } from "@/lib/projects";
+import { getViewableProject, listFiles } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -13,7 +13,7 @@ type Ctx = { params: Promise<{ id: string }> };
  */
 export const GET = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getViewableProject(user.id, (await params).id);
   enforceRateLimit(`papers:${user.id}`, 30, 60_000);
 
   const dois = (await listFiles(project.id))

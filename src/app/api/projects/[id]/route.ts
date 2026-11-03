@@ -3,7 +3,9 @@ import { z } from "zod";
 import { parseJson, requireUser, route } from "@/lib/http";
 import {
   deleteProject,
+  getEditableProject,
   getOwnedProject,
+  getViewableProject,
   listFiles,
   renameProject,
   setAiSteering,
@@ -15,13 +17,13 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export const GET = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getViewableProject(user.id, (await params).id);
   return NextResponse.json({ project, files: await listFiles(project.id) });
 });
 
 export const PATCH = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getEditableProject(user.id, (await params).id);
   const { name, mainFile, aiInstructions, aiStyleSample } = await parseJson(
     req,
     z

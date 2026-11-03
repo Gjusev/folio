@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { parseJson, requireUser, route } from "@/lib/http";
-import { createFile, getOwnedProject } from "@/lib/projects";
+import { createFile, getEditableProject } from "@/lib/projects";
 import { fileContent } from "@/lib/validation";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getEditableProject(user.id, (await params).id);
   const { path, content } = await parseJson(
     req,
     z.object({ path: z.string().trim(), content: fileContent.default("") }),

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { addBibEntry, toBibtex } from "@/lib/bibtex";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { getPaper } from "@/lib/papers";
-import { createFile, getFile, getOwnedProject, listFiles, saveFile } from "@/lib/projects";
+import { createFile, getEditableProject, getFile, listFiles, saveFile } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,7 +19,7 @@ const body = z.object({
  */
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getEditableProject(user.id, (await params).id);
   const { source, paperId } = await parseJson(req, body);
   enforceRateLimit(`papers:${user.id}`, 30, 60_000);
   const paper = await getPaper(source, paperId);

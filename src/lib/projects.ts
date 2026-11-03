@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import {
@@ -41,16 +41,25 @@ export type FileMeta = {
   updatedAt: Date;
 };
 
+/** Dashboard list: owned projects plus those shared with the user. */
 export async function listProjects(userId: string) {
+  const shared = db()
+    .select({ projectId: schema.projectMembers.projectId })
+    .from(schema.projectMembers)
+    .where(eq(schema.projectMembers.userId, userId));
   return db()
     .select({
       id: schema.projects.id,
       name: schema.projects.name,
       updatedAt: schema.projects.updatedAt,
+      // "owner" | "editor" | "viewer"; null means the owner row (not a member).
+      role: sql<
+        string | null
+      >`(select "role" from "project_members" m where m."project_id" = "projects"."id" and m."user_id" = ${userId})`,
       files: sql<number>`(select count(*)::int from "files" where "files"."project_id" = "projects"."id")`,
     })
     .from(schema.projects)
-    .where(eq(schema.projects.ownerId, userId))
+    .where(or(eq(schema.projects.ownerId, userId), inArray(schema.projects.id, shared)))
     .orderBy(desc(schema.projects.updatedAt));
 }
 
@@ -110,6 +119,46 @@ export async function createProject(
   });
 }
 
+/** Copies a project (files + steering + plan) into a new one owned by the
+ *  caller; snapshots are not carried over. Respects the 50 MB cap. */
+export async function duplicateProject(userId: string, projectId: string) {
+  const source = await getViewableProject(userId, projectId);
+  const files = await db()
+    .select({
+      path: schema.files.path,
+      content: schema.files.content,
+      data: schema.files.data,
+      size: schema.files.size,
+    })
+    .from(schema.files)
+    .where(eq(schema.files.projectId, source.id));
+  const total = files.reduce((n, f) => n + (f.size ?? 0), 0);
+  if (total > MAX_PROJECT_BYTES) throw new HttpError(413, "El proyecto supera 50 MB");
+  return db().transaction(async (tx) => {
+    const [copy] = await tx
+      .insert(schema.projects)
+      .values({
+        ownerId: userId,
+        name: `${source.name.slice(0, 110)} (copia)`,
+        mainFile: source.mainFile,
+        aiInstructions: source.aiInstructions,
+        aiStyleSample: source.aiStyleSample,
+        aiPlan: source.aiPlan,
+      })
+      .returning();
+    await tx.insert(schema.files).values(
+      files.map((f) => ({
+        projectId: copy.id,
+        path: f.path,
+        content: f.content,
+        data: f.data,
+        size: f.size,
+      })),
+    );
+    return copy;
+  });
+}
+
 export async function getOwnedProject(userId: string, projectId: string) {
   if (!isUuid(projectId)) throw new HttpError(404, "Proyecto no encontrado");
   const [project] = await db()
@@ -119,6 +168,119 @@ export async function getOwnedProject(userId: string, projectId: string) {
     .limit(1);
   if (!project) throw new HttpError(404, "Proyecto no encontrado");
   return project;
+}
+
+export type ProjectRole = "owner" | "editor" | "viewer";
+
+/**
+ * Project plus the caller's role. Strangers get the same uniform 404 as the
+ * owner-only path (anti-probing); members see the project.
+ */
+export async function getAccessibleProject(
+  userId: string,
+  projectId: string,
+): Promise<{ project: typeof schema.projects.$inferSelect; role: ProjectRole }> {
+  if (!isUuid(projectId)) throw new HttpError(404, "Proyecto no encontrado");
+  const [row] = await db()
+    .select({ project: schema.projects, role: schema.projectMembers.role })
+    .from(schema.projects)
+    .leftJoin(
+      schema.projectMembers,
+      and(
+        eq(schema.projectMembers.projectId, schema.projects.id),
+        eq(schema.projectMembers.userId, userId),
+      ),
+    )
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  if (!row) throw new HttpError(404, "Proyecto no encontrado");
+  if (row.project.ownerId === userId) return { project: row.project, role: "owner" };
+  if (row.role === "editor" || row.role === "viewer")
+    return { project: row.project, role: row.role };
+  throw new HttpError(404, "Proyecto no encontrado");
+}
+
+/** Read access: owner, editor or viewer (compile, export, read files and diffs). */
+export async function getViewableProject(userId: string, projectId: string) {
+  return (await getAccessibleProject(userId, projectId)).project;
+}
+
+/** Write access: owner or editor. Viewers get a clear 403, not a 404 — they
+ *  can see the project exists, they just cannot change it. */
+export async function getEditableProject(userId: string, projectId: string) {
+  const { project, role } = await getAccessibleProject(userId, projectId);
+  if (role === "viewer")
+    throw new HttpError(403, "Te han compartido este proyecto como lector (solo lectura)");
+  return project;
+}
+
+/** Persists one assistant/agent turn so conversations survive reloads. */
+export async function addAiMessage(
+  projectId: string,
+  role: "user" | "assistant",
+  action: string,
+  content: string,
+) {
+  await db().insert(schema.aiMessages).values({ projectId, role, action, content });
+  // Keep the newest 200 rows per project: cheap trim on the same path.
+  await db().execute(sql`
+    delete from "ai_messages" where "project_id" = ${projectId} and "id" not in (
+      select "id" from "ai_messages" where "project_id" = ${projectId}
+      order by "created_at" desc limit 200
+    )`);
+}
+
+/** Recent conversation turns, oldest first (for seeding the assistant panel). */
+export async function listAiMessages(projectId: string, limit = 60) {
+  const rows = await db()
+    .select()
+    .from(schema.aiMessages)
+    .where(eq(schema.aiMessages.projectId, projectId))
+    .orderBy(desc(schema.aiMessages.createdAt))
+    .limit(limit);
+  return rows.reverse();
+}
+
+/** Members of a project (owner first, then by join date), for the share menu. */
+export async function listMembers(projectId: string) {
+  return db()
+    .select({
+      userId: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      role: schema.projectMembers.role,
+      createdAt: schema.projectMembers.createdAt,
+    })
+    .from(schema.projectMembers)
+    .innerJoin(schema.users, eq(schema.users.id, schema.projectMembers.userId))
+    .where(eq(schema.projectMembers.projectId, projectId))
+    .orderBy(schema.projectMembers.createdAt);
+}
+
+/** Adds (or re-invites with a new role) a member by email. Owner is implicit. */
+export async function addMember(projectId: string, email: string, role: "editor" | "viewer") {
+  const [user] = await db()
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.email, email.toLowerCase()))
+    .limit(1);
+  if (!user) throw new HttpError(404, "No hay ninguna cuenta con ese email");
+  await db()
+    .insert(schema.projectMembers)
+    .values({ projectId, userId: user.id, role })
+    .onConflictDoUpdate({
+      target: [schema.projectMembers.projectId, schema.projectMembers.userId],
+      set: { role },
+    });
+  return { userId: user.id, email: email.toLowerCase(), role };
+}
+
+export async function removeMember(projectId: string, userId: string) {
+  await db()
+    .delete(schema.projectMembers)
+    .where(
+      and(eq(schema.projectMembers.projectId, projectId), eq(schema.projectMembers.userId, userId)),
+    );
 }
 
 export async function renameProject(projectId: string, name: string) {

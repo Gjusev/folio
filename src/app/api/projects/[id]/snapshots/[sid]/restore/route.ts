@@ -3,8 +3,8 @@ import { HttpError, enforceRateLimit, requireUser, route } from "@/lib/http";
 import {
   createFile,
   createSnapshot,
+  getEditableProject,
   getFile,
-  getOwnedProject,
   getSnapshotFiles,
   listFiles,
   saveFile,
@@ -20,7 +20,7 @@ type Ctx = { params: Promise<{ id: string; sid: string }> };
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
   const { id, sid } = await params;
-  const project = await getOwnedProject(user.id, id);
+  const project = await getEditableProject(user.id, id);
   enforceRateLimit(`snapshots:${user.id}`, 20, 60_000);
   const snap = await getSnapshotFiles(project.id, sid);
   const undo = await createSnapshot(project.id, "antes de restaurar");
