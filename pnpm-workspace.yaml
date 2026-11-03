@@ -1,0 +1,9 @@
+# Owner decision (2026-11-03): pnpm's minimumReleaseAge hold disabled so
+# Docker/CI installs stay reproducible when a dependency ships a fresh release.
+# The lockfile pins exact versions; revisit when dependency churn slows.
+minimumReleaseAge: 0
+allowBuilds:
+  # esbuild's postinstall only verifies the prebuilt platform binary.
+  esbuild: true
+  sharp: false
+  unrs-resolver: false

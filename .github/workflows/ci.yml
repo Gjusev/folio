@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: folio
+          POSTGRES_PASSWORD: folio
+          POSTGRES_DB: folio_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U folio" --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://folio:folio@localhost:5432/folio_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  compiler:
+    runs-on: ubuntu-latest
+    env:
+      COMPILER_TOKEN: ci-compiler-token-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build and start the hardened compiler
+        run: |
+          docker build -t folio-compiler services/latex-compiler
+          docker run -d --name compiler -p 127.0.0.1:3001:3001 \
+            -e COMPILER_TOKEN -e JOB_TIMEOUT_MS=20000 \
+            --read-only --tmpfs /tmp:size=512m --cap-drop ALL --security-opt no-new-privileges \
+            --memory 1g --pids-limit 256 folio-compiler
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3001/health && break; sleep 1; done
+      - name: Security and compilation tests against the real container
+        run: pnpm vitest run services/latex-compiler/compile.e2e.test.ts
+        env:
+          COMPILER_E2E_URL: http://127.0.0.1:3001
+          SKIP_DB_SETUP: "1"
