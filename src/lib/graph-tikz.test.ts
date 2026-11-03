@@ -48,4 +48,21 @@ describe("graphToTikz", () => {
       expect(y).toBeLessThanOrEqual(9.5);
     }
   });
+
+  it("keeps the on-screen area ratio and hides labels below the canvas threshold", () => {
+    const tikz = graphToTikz(g);
+    // size×0.85 mm: 18 → 15.3, 6 → 5.1 (same ~1:3 area ratio as on screen).
+    expect(tikz).toContain("minimum size=15.3mm");
+    expect(tikz).toContain("minimum size=5.1mm");
+    // Only nodes with size ≥ 6 carry a label, like labelRenderedSizeThreshold.
+    expect(tikz).toContain("Vaswani 2017");
+    expect(tikz).toContain("Beltagy 2020");
+    expect(tikz).not.toContain("Mikolov 2013");
+  });
+
+  it("parametrizes the figure label so two exports can coexist", () => {
+    const tikz = graphToTikz({ ...g, figLabel: "citation-graph-2" });
+    expect(tikz).toContain("\\label{fig:citation-graph-2}");
+    expect(graphToTikz(g)).toContain("\\label{fig:citation-graph}");
+  });
 });

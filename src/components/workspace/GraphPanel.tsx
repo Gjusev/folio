@@ -1,8 +1,9 @@
 "use client";
 
-import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SigmaContainer, useRegisterEvents, useSigma } from "@react-sigma/core";
 import { useLayoutForceAtlas2 } from "@react-sigma/layout-forceatlas2";
+import { Maximize2, Minimize2 } from "lucide-react";
 import Graph from "graphology";
 import { api } from "@/lib/client/api";
 import { graphToTikz } from "@/lib/graph-tikz";
@@ -49,29 +50,59 @@ type GraphData = {
   truncated: boolean;
 };
 
-function hslToHex(h: number, s: number, l: number): string {
-  s /= 100;
-  l /= 100;
-  const k = (n: number) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  const byte = (x: number) =>
-    Math.round(255 * x)
-      .toString(16)
-      .padStart(2, "0");
-  return `#${byte(f(0))}${byte(f(8))}${byte(f(4))}`;
-}
+/**
+ * Sequential ramp with monotonically increasing luminance (dark blue → teal →
+ * green → orange): unlike a constant-lightness hue sweep, it survives
+ * grayscale printing and colour-blind vision, and mid years stay separable.
+ */
+const YEAR_STOPS: [number, [number, number, number]][] = [
+  [0, [47, 90, 130]],
+  [0.33, [61, 145, 136]],
+  [0.66, [138, 185, 111]],
+  [1, [232, 169, 79]],
+];
 
-/** Older papers run cold-blue, recent ones warm-orange; the seed keeps the accent. */
 function yearColor(year: number | undefined): string {
   if (!year) return "#8a857b";
   const t = Math.max(0, Math.min(1, (year - 1985) / 40));
-  return hslToHex(Math.round(210 - t * 185), 48, 42);
+  let lo = YEAR_STOPS[0];
+  let hi = YEAR_STOPS[YEAR_STOPS.length - 1];
+  for (let i = 1; i < YEAR_STOPS.length; i++) {
+    if (t <= YEAR_STOPS[i][0]) {
+      lo = YEAR_STOPS[i - 1];
+      hi = YEAR_STOPS[i];
+      break;
+    }
+  }
+  const k = (t - lo[0]) / (hi[0] - lo[0] || 1);
+  const rgb = lo[1].map((v, j) => Math.round(v + (hi[1][j] - v) * k));
+  return `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
 // Sizes are pixels at zoom 1; the panel is ~270px wide, so nodes must stay
 // modest there — the fullscreen view scales them up via the camera instead.
-const nodeSize = (citedBy: number) => Math.max(3, Math.min(10, 2 + Math.sqrt(citedBy) / 6));
+// Log scale keeps mid-field papers distinguishable (a sqrt of raw counts
+// collapsed almost everything onto the 3px floor).
+const nodeSize = (citedBy: number) => Math.max(3, Math.min(10, 2 + 0.8 * Math.log(citedBy + 1)));
+
+/** Deterministic PRNG so the same graph lays out the same way every visit. */
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (const c of s) {
+    h ^= c.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
 
 /** One row of the Prior/Derivative works lists; clicking selects the node. */
 function WorkRow({
@@ -88,8 +119,10 @@ function WorkRow({
       <button
         type="button"
         onClick={() => onSelect(node.id)}
-        className={`w-full truncate py-1 text-left text-xs ${
-          active ? "text-accent" : "text-ink hover:text-accent"
+        className={`w-full truncate border-l-2 py-1 pl-1.5 text-left text-xs ${
+          active
+            ? "border-accent bg-active text-accent"
+            : "border-transparent text-ink hover:text-accent"
         }`}
         title={node.title}
       >
@@ -99,25 +132,26 @@ function WorkRow({
   );
 }
 
-/** Short "Family year" tag, the way Connected Papers labels nodes. */
+/** Short "First author year" tag, the way Connected Papers labels nodes. */
 function shortLabel(node: GraphNode): string {
-  const tag = `${node.authors.at(-1)?.split(/\s+/).at(-1) ?? "?"} ${node.year ?? ""}`.trim();
+  const tag = `${node.authors[0]?.split(/\s+/).at(-1) ?? "?"} ${node.year ?? ""}`.trim();
   return tag.length > 20 ? `${tag.slice(0, 19)}…` : tag;
 }
 
-function buildGraph(data: GraphData, mode: "paper" | "bib"): Graph {
+function buildGraph(data: GraphData, mode: "paper" | "bib", rngSeed: string): Graph {
   const g = new Graph({ multi: false });
   const n = data.nodes.length || 1;
+  const rng = mulberry32(hashString(rngSeed));
   data.nodes.forEach((node, i) => {
     const angle = (2 * Math.PI * i) / n; // circle start position; FA2 reshapes it
     // In bibliography mode the user's own papers (ring 0) take the accent.
     const focal = mode === "bib" ? node.ring === 0 : node.id === data.seed;
     g.addNode(node.id, {
       label: shortLabel(node),
-      size: focal ? nodeSize(node.citedBy) + 2 : nodeSize(node.citedBy),
+      size: nodeSize(node.citedBy),
       color: focal ? "#1b6c80" : yearColor(node.year),
-      x: 100 * Math.cos(angle) + (Math.random() - 0.5),
-      y: 100 * Math.sin(angle) + (Math.random() - 0.5),
+      x: 100 * Math.cos(angle) + rng(),
+      y: 100 * Math.sin(angle) + rng(),
     });
   });
   for (const e of data.edges) {
@@ -137,17 +171,24 @@ function pathEdgeKeys(path: string[]): Set<string> {
   return keys;
 }
 
+type Hover = { id: string; x: number; y: number } | null;
+
 /**
  * Runs the layout and wires node selection; must live inside SigmaContainer.
- * When a path to the seed is set, its nodes and edges are painted with the
- * accent color the way Connected Papers highlights the chain to the origin.
+ * The selected node is always highlighted (plus the path to the seed, painted
+ * the way Connected Papers highlights the chain to the origin), the camera
+ * follows the selection, and hovering shows a tooltip.
  */
 function GraphControls({
   onSelect,
   path,
+  selected,
+  setHover,
 }: {
   onSelect: (id: string) => void;
   path: string[] | null;
+  selected: string;
+  setHover: (h: Hover) => void;
 }) {
   const sigma = useSigma();
   const { assign } = useLayoutForceAtlas2({
@@ -175,15 +216,30 @@ function GraphControls({
       registerEvents({
         clickNode: ({ node }) => onSelect(node),
         clickStage: () => onSelect(""), // click on empty canvas clears selection
+        enterNode: ({ node, event }) => setHover({ id: node, x: event.x, y: event.y }),
+        leaveNode: () => setHover(null),
       }),
-    [registerEvents, onSelect],
+    [registerEvents, onSelect, setHover],
   );
+
+  // Bring the selected node into view: picking from the side lists must move
+  // the camera, or the node can sit outside the viewport in a 120-node graph.
+  useEffect(() => {
+    if (!selected) return;
+    const g = sigma.getGraph();
+    if (!g.hasNode(selected)) return;
+    const { x, y } = g.getNodeAttributes(selected);
+    if (Number.isFinite(x) && Number.isFinite(y))
+      sigma.getCamera().animate({ x, y }, { duration: 250 });
+  }, [selected, sigma]);
 
   useEffect(() => {
     const g = sigma.getGraph();
-    const keys = path ? pathEdgeKeys(path) : null;
     const onPath = new Set(path ?? []);
-    g.forEachNode((node) => g.setNodeAttribute(node, "highlighted", onPath.has(node)));
+    g.forEachNode((node) =>
+      g.setNodeAttribute(node, "highlighted", onPath.has(node) || node === selected),
+    );
+    const keys = path ? pathEdgeKeys(path) : null;
     g.forEachEdge((edge, _attrs, source, target) => {
       const [a, b] = [source, target].sort();
       const hit = keys?.has(`${a}|${b}`) ?? false;
@@ -191,9 +247,41 @@ function GraphControls({
       g.setEdgeAttribute(edge, "size", hit ? 2.5 : 0.5);
     });
     sigma.refresh();
-  }, [path, sigma]);
+  }, [path, selected, sigma]);
 
   return null;
+}
+
+/**
+ * Mounts sigma only once the wrapper has been laid out (height > 0): mounting
+ * into an unmeasured container logs "Container has no height/width" errors.
+ */
+function Stage({
+  ariaLabel,
+  children,
+}: {
+  ariaLabel: string;
+  children: (ready: boolean) => ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setReady(el.getBoundingClientRect().height > 0);
+    const raf = requestAnimationFrame(check);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, []);
+  return (
+    <div ref={ref} className="relative min-h-0 flex-1" role="img" aria-label={ariaLabel}>
+      {children(ready)}
+    </div>
+  );
 }
 
 type Props = {
@@ -223,6 +311,7 @@ export function GraphPanel({
   const [state, setState] = useState<"loading" | "error" | "done">("loading");
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<string>("");
+  const [hover, setHover] = useState<Hover>(null);
   const [big, setBig] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
@@ -251,9 +340,19 @@ export function GraphPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- view is fixed per mount (keyed); t only rewords errors
   }, []);
 
-  const graph = useMemo(() => (data ? buildGraph(data, mode) : null), [data, mode]);
+  const graph = useMemo(
+    () => (data ? buildGraph(data, mode, `${mode}:${data.seed || projectId}`) : null),
+    [data, mode, projectId],
+  );
   const nf = new Intl.NumberFormat(lang);
   const sel = data?.nodes.find((n) => n.id === selected);
+  const hoverNode = data?.nodes.find((n) => n.id === hover?.id);
+
+  // Real year range of the data, so the colour legend can be decoded.
+  const yearRange = useMemo(() => {
+    const years = (data?.nodes ?? []).map((n) => n.year).filter((y): y is number => !!y);
+    return years.length ? { min: Math.min(...years), max: Math.max(...years) } : null;
+  }, [data]);
 
   // Connected Papers highlights the chain from the selected node back to the
   // origin paper; BFS over the undirected view of the citation graph.
@@ -281,7 +380,7 @@ export function GraphPanel({
     <div className="shrink-0 border-t border-line p-3">
       <p className="text-sm leading-5 font-medium">{sel.title}</p>
       <p className="mt-0.5 text-xs text-muted">
-        {[sel.authors.at(-1), sel.year, sel.venue].filter(Boolean).join(" · ")}
+        {[sel.authors[0], sel.year, sel.venue].filter(Boolean).join(" · ")}
       </p>
       <p className="num mt-1 text-xs text-muted">
         {nf.format(sel.citedBy)}{" "}
@@ -327,43 +426,45 @@ export function GraphPanel({
     graph.forEachNode((id, attrs) =>
       positions.set(id, { x: attrs.x as number, y: attrs.y as number }),
     );
-    const tikz = graphToTikz({
-      seedId: data.seed,
-      seedTitle: mode === "bib" ? t("papers.graph.bibShort") : seed.title,
-      nodes: data.nodes.map((n) => {
-        const focal = mode === "bib" ? n.ring === 0 : n.id === data.seed;
-        return {
+    const makeTikz = (figLabel?: string) =>
+      graphToTikz({
+        seedId: data.seed,
+        seedTitle: mode === "bib" ? t("papers.graph.bibShort") : seed.title,
+        nodes: data.nodes.map((n) => ({
           id: n.id,
           x: positions.get(n.id)?.x ?? 0,
           y: positions.get(n.id)?.y ?? 0,
-          size: nodeSize(n.citedBy) + (focal ? 2 : 0),
-          color: focal ? "#1b6c80" : yearColor(n.year),
+          size: nodeSize(n.citedBy),
+          color: (mode === "bib" ? n.ring === 0 : n.id === data.seed)
+            ? "#1b6c80"
+            : yearColor(n.year),
           label: shortLabel(n),
-        };
-      }),
-      edges: data.edges,
-    });
+        })),
+        edges: data.edges,
+        figLabel,
+      });
     const base = "figures/citation-graph";
     let path = `${base}.tex`;
     try {
       const r = await api<{ file: { path: string } }>("POST", `/api/projects/${projectId}/files`, {
         path,
-        content: tikz,
+        content: makeTikz(),
       });
       path = r.file.path;
-    } catch (err) {
-      // Already exists: retry with a timestamped name.
+    } catch {
+      // Already exists: retry with a timestamped name (and its own \label).
+      const suffix = Date.now() % 100000;
       try {
         const r = await api<{ file: { path: string } }>(
           "POST",
           `/api/projects/${projectId}/files`,
           {
-            path: `${base}-${Date.now() % 100000}.tex`,
-            content: tikz,
+            path: `${base}-${suffix}.tex`,
+            content: makeTikz(`citation-graph-${suffix}`),
           },
         );
         path = r.file.path;
-      } catch {
+      } catch (err) {
         setNote((err as Error).message);
         return;
       }
@@ -371,6 +472,81 @@ export function GraphPanel({
     setNote(t("papers.graph.tikzSaved", { path }));
     await navigator.clipboard.writeText(`\\input{${path.replace(/\.tex$/, "")}}`).catch(() => {});
   }
+
+  /** Canvas + overlays, shared by the stacked and three-column layouts. */
+  const stage = (
+    <Stage ariaLabel={t("papers.graph.canvas")}>
+      {(ready) => (
+        <>
+          {ready && graph && (
+            <CanvasBoundary>
+              <SigmaContainer
+                graph={graph}
+                style={{ position: "absolute", inset: 0 }}
+                options={{
+                  settings: {
+                    minCameraRatio: 0.05,
+                    maxCameraRatio: 8,
+                    labelRenderedSizeThreshold: 6,
+                    labelDensity: 0.4,
+                    renderEdgeLabels: false,
+                  },
+                }}
+              >
+                <GraphControls
+                  onSelect={setSelected}
+                  path={path}
+                  selected={selected}
+                  setHover={setHover}
+                />
+              </SigmaContainer>
+            </CanvasBoundary>
+          )}
+          {hoverNode && hover && (
+            <div
+              className="pointer-events-none absolute z-10 max-w-[260px] rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+              style={{
+                left: hover.x,
+                top: hover.y < 90 ? hover.y + 14 : hover.y - 8,
+                transform: hover.y < 90 ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+              }}
+            >
+              <p className="line-clamp-2 font-medium leading-4">{hoverNode.title}</p>
+              <p className="mt-0.5 truncate text-muted">
+                {[hoverNode.authors[0], hoverNode.year, hoverNode.venue]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              <p className="num text-muted">
+                {nf.format(hoverNode.citedBy)}{" "}
+                {hoverNode.citedBy === 1 ? t("papers.citations.one") : t("papers.citations")}
+              </p>
+            </div>
+          )}
+          <p className="pointer-events-none absolute bottom-1 left-2 right-2 flex items-end justify-between gap-2 text-[10px] text-muted">
+            {yearRange ? (
+              <span className="flex items-center gap-1.5" title={t("papers.graph.legend")}>
+                <span
+                  className="h-1.5 w-16 shrink-0 rounded-full border border-line"
+                  style={{
+                    background: `linear-gradient(to right, ${yearColor(yearRange.min)}, ${yearColor(
+                      Math.round((yearRange.min + yearRange.max) / 2),
+                    )}, ${yearColor(yearRange.max)})`,
+                  }}
+                />
+                <span className="num">
+                  {yearRange.min}–{yearRange.max}
+                </span>
+              </span>
+            ) : (
+              <span>{t("papers.graph.legend")}</span>
+            )}
+            {data?.truncated && <span>{t("papers.graph.truncated")}</span>}
+          </p>
+        </>
+      )}
+    </Stage>
+  );
 
   return (
     <div
@@ -402,10 +578,12 @@ export function GraphPanel({
             <button
               type="button"
               className="btn btn-ghost btn-sm"
+              aria-label={t("papers.graph.fullscreen")}
+              title={t("papers.graph.fullscreen")}
               aria-expanded={big}
               onClick={() => setBig(!big)}
             >
-              {big ? "⤡" : "⤢"}
+              {big ? <Minimize2 size={14} aria-hidden /> : <Maximize2 size={14} aria-hidden />}
             </button>
           </>
         )}
@@ -453,29 +631,7 @@ export function GraphPanel({
                 </ul>
               </aside>
               <div className="flex min-h-0 min-w-0 flex-col">
-                <div className="relative min-h-0 flex-1">
-                  <CanvasBoundary>
-                    <SigmaContainer
-                      graph={graph}
-                      style={{ position: "absolute", inset: 0 }}
-                      options={{
-                        settings: {
-                          minCameraRatio: 0.05,
-                          maxCameraRatio: 8,
-                          labelRenderedSizeThreshold: 6,
-                          labelDensity: 0.4,
-                          renderEdgeLabels: false,
-                        },
-                      }}
-                    >
-                      <GraphControls onSelect={setSelected} path={path} />
-                    </SigmaContainer>
-                  </CanvasBoundary>
-                  <p className="pointer-events-none absolute bottom-1 left-2 right-2 flex justify-between text-[10px] text-muted">
-                    <span>{t("papers.graph.legend")}</span>
-                    {data.truncated && <span>{t("papers.graph.truncated")}</span>}
-                  </p>
-                </div>
+                {stage}
                 {sel && selCard}
               </div>
               <aside className="flex min-h-0 flex-col overflow-y-auto border-l border-line px-2 py-2">
@@ -496,31 +652,7 @@ export function GraphPanel({
             </div>
           ) : (
             <>
-              {data.edges.length > 0 && graph && (
-                <div className="relative min-h-0 flex-1">
-                  <CanvasBoundary>
-                    <SigmaContainer
-                      graph={graph}
-                      style={{ position: "absolute", inset: 0 }}
-                      options={{
-                        settings: {
-                          minCameraRatio: 0.05,
-                          maxCameraRatio: 8,
-                          labelRenderedSizeThreshold: 6,
-                          labelDensity: 0.4,
-                          renderEdgeLabels: false,
-                        },
-                      }}
-                    >
-                      <GraphControls onSelect={setSelected} path={path} />
-                    </SigmaContainer>
-                  </CanvasBoundary>
-                  <p className="pointer-events-none absolute bottom-1 left-2 right-2 flex justify-between text-[10px] text-muted">
-                    <span>{t("papers.graph.legend")}</span>
-                    {data.truncated && <span>{t("papers.graph.truncated")}</span>}
-                  </p>
-                </div>
-              )}
+              {data.edges.length > 0 && graph && stage}
 
               {(prior.length > 0 || derivative.length > 0) && (
                 <div className="shrink-0 space-y-1 border-t border-line px-3 py-2">
