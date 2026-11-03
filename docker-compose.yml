@@ -1,0 +1,82 @@
+# Full self-hosted stack:  docker compose --profile app up -d --build
+# Dev services only:       pnpm services:up   (Postgres + compiler; run the web app with pnpm dev)
+name: folio
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-folio}
+      POSTGRES_DB: folio
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/create-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [default]
+
+  # Untrusted LaTeX runs here, never in the web process. See IMPLEMENTATION_PLAN.md section 4.
+  compiler:
+    build: ./services/latex-compiler
+    environment:
+      COMPILER_TOKEN: ${COMPILER_TOKEN:?set COMPILER_TOKEN in .env}
+      MAX_CONCURRENT_JOBS: "2"
+      JOB_TIMEOUT_MS: "45000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 256
+    networks: [compile]
+
+  web:
+    profiles: [app]
+    build: .
+    environment:
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:-folio}@db:5432/folio
+      COMPILER_URL: http://compiler:3001
+      COMPILER_TOKEN: ${COMPILER_TOKEN}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_CREDENTIALS_KEY: ${LLM_CREDENTIALS_KEY:-}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+      OPENALEX_MAILTO: ${OPENALEX_MAILTO:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      db: { condition: service_healthy }
+      compiler: { condition: service_started }
+    networks: [default, compile]
+
+  # Optional local model server (OpenAI-compatible at http://127.0.0.1:11434/v1).
+  #   docker compose --profile ollama up -d ollama
+  #   docker compose exec ollama ollama pull qwen3:0.6b
+  ollama:
+    profiles: [ollama]
+    image: ollama/ollama:latest
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    networks: [default]
+
+networks:
+  default: {}
+  # No route to the Internet: only the web app can reach the compiler.
+  compile:
+    internal: true
+
+volumes:
+  pgdata: {}
+  ollama: {}

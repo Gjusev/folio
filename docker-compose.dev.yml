@@ -1,0 +1,9 @@
+# Dev override: the web app runs on the host (pnpm dev), so the compiler port is
+# published on loopback. An `internal` network cannot publish ports, so in dev the
+# compiler sits on the default network instead. Use the full stack for the
+# no-egress guarantee.
+services:
+  compiler:
+    ports:
+      - "127.0.0.1:3001:3001"
+    networks: [default]
