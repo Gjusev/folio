@@ -1,3 +1,4 @@
+import { citeCommandRe } from "@/lib/citation-health";
 import type { ChatMessage } from "@/lib/llm";
 
 export const AI_ACTIONS = ["improve", "explain", "continue", "fix", "ask"] as const;
@@ -107,19 +108,18 @@ export function enforceCiteKeys(
 ): { latex: string; used: string[] } {
   const ok = new Set(allowed);
   const used = new Set<string>();
-  const out = latex.replace(
-    /\\(?:cite|citep|citet)\*?(?:\[[^\]]*\])*\{([^}]*)\}/g,
-    (m: string, inner: string) => {
-      const keys = inner
-        .split(",")
-        .map((k) => k.trim())
-        .filter(Boolean);
-      const good = keys.filter((k) => ok.has(k));
-      good.forEach((k) => used.add(k));
-      if (good.length === 0) return "";
-      return m.slice(0, m.indexOf("{")) + "{" + good.join(", ") + "}";
-    },
-  );
+  // The whole \cite family (\cite, \citep, \textcite, \parencite, \citeauthor, …),
+  // same regex the citation-health scan uses.
+  const out = latex.replace(citeCommandRe(), (m: string, inner: string) => {
+    const keys = inner
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+    const good = keys.filter((k) => ok.has(k));
+    good.forEach((k) => used.add(k));
+    if (good.length === 0) return "";
+    return m.slice(0, m.indexOf("{")) + "{" + good.join(", ") + "}";
+  });
   return { latex: out, used: [...used] };
 }
 
