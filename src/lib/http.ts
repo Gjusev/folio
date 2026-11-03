@@ -91,5 +91,12 @@ export function enforceRateLimit(key: string, limit: number, windowMs: number) {
 }
 
 export function clientIp(req: NextRequest): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  // Take the LAST X-Forwarded-For entry: it is the one appended by the trusted
+  // proxy closest to us. Earlier entries are supplied by the client and can be
+  // forged, so taking the first one let anyone mint a fresh rate-limit bucket
+  // per request. Caveat: this only holds behind a proxy that manages the
+  // header; without one the whole XFF is attacker data — which is why login
+  // also rate-limits per e-mail, independent of IP.
+  const xff = req.headers.get("x-forwarded-for");
+  return xff?.split(",").pop()?.trim() || "local";
 }
