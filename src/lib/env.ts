@@ -10,6 +10,9 @@ const schema = z.object({
   LLM_MODEL: z.string().default(""),
   OPENALEX_MAILTO: z.union([z.literal(""), z.email()]).default(""),
   OPENALEX_API_KEY: z.string().default(""),
+  // 1/true (default) keeps self-registration open for dev; production operators
+  // set 0 to close it. Accepts booleans and the usual string spellings.
+  ALLOW_REGISTRATION: z.stringbool().or(z.boolean()).default(true),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
