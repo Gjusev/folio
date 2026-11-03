@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793653658945,
+      "tag": "0000_funny_doctor_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793694247481,
+      "tag": "0001_aromatic_sleeper",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793708635817,
+      "tag": "0002_big_red_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793714933383,
+      "tag": "0003_optimal_green_goblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793724472077,
+      "tag": "0004_familiar_tinkerer",
+      "breakpoints": true
+    }
+  ]
+}
