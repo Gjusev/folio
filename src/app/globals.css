@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+/*
+ * Framed sheet: the chrome is one stone-tinted frame; the work (the source and
+ * the PDF) sits on white sheets, like pages on a desk. Depth comes from one tone
+ * step and a 1px edge, never a shadow. Colour is for data and selection only.
+ */
+:root {
+  /* The app ships both themes; declaring it disables the browser's
+     half-applied forced darkening of native controls and inputs. */
+  color-scheme: light dark;
+  --ground: #f6f5f1; /* the frame: warm stone, not cream */
+  --surface: #ffffff; /* the sheets */
+  --raised: #f2f1ec;
+  --active: #e9e8e2;
+  --border: #e6e5df;
+  --rule: #efeee9;
+  --control: #cdccc6;
+  --text: #141413;
+  --muted: #5d5c58;
+  --accent: #1b6c80;
+  --accent-soft: #e3eff2;
+  --primary: #1d1f20;
+  --primary-ink: #ffffff;
+  --positive: #1e7b4f;
+  --negative: #c4242a;
+  --warning: #92400e;
+  --pill-positive-bg: #dcfae5;
+  --pill-positive-ink: #04250e;
+  --pill-negative-bg: #ffedea;
+  --pill-negative-ink: #831c1e;
+  --pill-warning-bg: #fffbeb;
+  --pill-warning-ink: #92400e;
+  --pill-neutral-bg: #ebeae5;
+  --pill-neutral-ink: #353533;
+  --pdf-desk: #ecebe6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0f0f0e;
+    --surface: #181817;
+    --raised: #202020;
+    --active: #2a2a29;
+    --border: #2c2c2a;
+    --rule: #232322;
+    --control: #4a4a47;
+    --text: #f2f2ef;
+    --muted: #b2b1ac;
+    --accent: #5fb3c8;
+    --accent-soft: #1d3138;
+    --primary: #f2f2ef;
+    --primary-ink: #111111;
+    --positive: #3fc07a;
+    --negative: #e5566f;
+    --warning: #e0b45c;
+    --pill-positive-bg: #172a1d;
+    --pill-positive-ink: #3fc07a;
+    --pill-negative-bg: #2c1a20;
+    --pill-negative-ink: #e5566f;
+    --pill-warning-bg: #2b2414;
+    --pill-warning-ink: #e0b45c;
+    --pill-neutral-bg: #2a2a29;
+    --pill-neutral-ink: #d6d5d0;
+    --pdf-desk: #0b0b0a;
+  }
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-active: var(--active);
+  --color-line: var(--border);
+  --color-rule: var(--rule);
+  --color-control: var(--control);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-ok: var(--positive);
+  --color-danger: var(--negative);
+  --color-warn: var(--warning);
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; /* taste-skill-ignore mono: token for code, IDs and logs only */
+  --font-serif: "IBM Plex Serif", "Iowan Old Style", Georgia, serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Controls: 32px tall, 6px radius, one gap. */
+  .btn {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-control bg-surface px-3 text-sm font-medium whitespace-nowrap text-ink transition-colors hover:bg-raised active:bg-active disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-transparent bg-primary text-primary-ink hover:bg-primary hover:opacity-90 active:bg-primary active:opacity-80;
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-muted hover:bg-active hover:text-ink;
+  }
+  .btn-sm {
+    @apply h-7 px-2 text-xs;
+  }
+  .input {
+    @apply h-8 w-full rounded-md border border-control bg-surface px-2.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+  /* A white sheet on the frame. */
+  .sheet {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+  /* Underline tabs on a full-width 1px rule. */
+  .tab {
+    @apply -mb-px border-b-2 border-transparent px-1 pb-2 text-sm text-muted hover:text-ink;
+  }
+  .tab[aria-selected="true"] {
+    @apply border-ink font-semibold text-ink;
+  }
+  .pill {
+    @apply inline-flex h-5 items-center rounded px-1.5 text-[11px] font-medium;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* CodeMirror fills its sheet. */
+.cm-editor {
+  height: 100%;
+  font-size: 14px;
+}
+.cm-scroller {
+  font-family: var(--font-mono); /* taste-skill-ignore mono: the LaTeX editor shows literal code */
+  line-height: 1.65;
+}
+
+/* @react-sigma/core ships these rules in its own CSS, but Turbopack drops the
+   dependency's CSS import from dynamically-imported chunks; without them the
+   inner .sigma-container has no height and Sigma refuses to start. */
+div.react-sigma {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+div.sigma-container {
+  height: 100%;
+  width: 100%;
+}
