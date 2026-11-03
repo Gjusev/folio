@@ -7,7 +7,7 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: folio
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-folio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
       POSTGRES_DB: folio
     ports:
       - "127.0.0.1:5432:5432"
@@ -19,6 +19,8 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+    mem_limit: 512m
+    restart: unless-stopped
     networks: [default]
 
   # Untrusted LaTeX runs here, never in the web process. See IMPLEMENTATION_PLAN.md section 4.
@@ -36,15 +38,18 @@ services:
     mem_limit: 1g
     cpus: 2
     pids_limit: 256
+    restart: unless-stopped
     networks: [compile]
 
   web:
     profiles: [app]
     build: .
     environment:
-      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:-folio}@db:5432/folio
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@db:5432/folio
       COMPILER_URL: http://compiler:3001
       COMPILER_TOKEN: ${COMPILER_TOKEN}
+      # 0 closes self-registration (existing accounts keep logging in).
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-1}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
@@ -57,6 +62,13 @@ services:
     depends_on:
       db: { condition: service_healthy }
       compiler: { condition: service_started }
+    # Not read_only: Next writes to .next at runtime. Limits still cap a
+    # compromised web process (memory, CPU, processes, privilege gains).
+    mem_limit: 1g
+    cpus: 2.0
+    pids_limit: 256
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
     networks: [default, compile]
 
   # Optional local model server (OpenAI-compatible at http://127.0.0.1:11434/v1).

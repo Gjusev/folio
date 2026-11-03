@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { SESSION_COOKIE, createSession, sessionCookieOptions } from "@/lib/auth/session";
+import { env } from "@/lib/env";
 import { HttpError, clientIp, enforceRateLimit, parseJson, route } from "@/lib/http";
 import { registerBody } from "@/lib/validation";
 
 export const POST = route(async (req) => {
+  if (!env().ALLOW_REGISTRATION)
+    throw new HttpError(403, "El registro está desactivado en esta instancia");
   enforceRateLimit(`register:${clientIp(req)}`, 10, 60 * 60 * 1000);
   const { email, name, password } = await parseJson(req, registerBody);
   const [user] = await db()

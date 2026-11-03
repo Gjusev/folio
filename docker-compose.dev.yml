@@ -1,7 +1,8 @@
 # Dev override: the web app runs on the host (pnpm dev), so the compiler port is
-# published on loopback. An `internal` network cannot publish ports, so in dev the
-# compiler sits on the default network instead. Use the full stack for the
-# no-egress guarantee.
+# published on loopback (127.0.0.1:3001) and still requires the COMPILER_TOKEN
+# bearer header — nothing else on the machine or network can submit jobs.
+# An `internal` network cannot publish ports, so in dev the compiler sits on
+# the default network instead. Use the full stack for the no-egress guarantee.
 services:
   compiler:
     ports:
