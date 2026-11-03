@@ -12,6 +12,10 @@ let dummyHash: Promise<string> | undefined;
 export const POST = route(async (req) => {
   const { email, password } = await parseJson(req, loginBody);
   enforceRateLimit(`login:${clientIp(req)}:${email}`, 10, 15 * 60 * 1000);
+  // Independent of IP: a spoofed X-Forwarded-For mints new IP buckets, but the
+  // per-email budget caps brute force on one account no matter how many IPs
+  // the attacker claims. Same limit as the IP bucket.
+  enforceRateLimit(`login:email:${email.toLowerCase()}`, 10, 15 * 60 * 1000);
   const [user] = await db()
     .select()
     .from(schema.users)
