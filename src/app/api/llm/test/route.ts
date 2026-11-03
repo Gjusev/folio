@@ -17,8 +17,9 @@ export const POST = route(async (req) => {
   );
 
   // Same policy as saved profiles: this server will fetch the URL, so it must
-  // be https (or loopback http) — otherwise it is an internal-network prober.
-  const base = validateBaseUrl(input.baseUrl.trim()).toString().replace(/\/+$/, "");
+  // be https (or loopback http) and resolve to a public IP — otherwise it is
+  // an internal-network prober.
+  const base = (await validateBaseUrl(input.baseUrl.trim())).toString().replace(/\/+$/, "");
   const url = input.kind === "anthropic" ? `${base}/v1/messages` : `${base}/chat/completions`;
   const headers: Record<string, string> = { "content-type": "application/json" };
   const body: Record<string, unknown> =

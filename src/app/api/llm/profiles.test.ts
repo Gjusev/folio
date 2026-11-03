@@ -26,6 +26,24 @@ vi.hoisted(() => {
   // No .env endpoint in this worker: profiles come from the DB only.
   process.env.LLM_BASE_URL = "";
   process.env.LLM_MODEL = "";
+  // The Ollama-style local profile below is legit in tests.
+  process.env.LLM_ALLOW_LOCAL = "1";
+});
+
+// validateBaseUrl resolves hostnames to reject private networks (SSRF); in
+// tests every hostname resolves to a public address and literals to
+// themselves, mirroring the table in llm-profiles.test.ts.
+vi.mock("node:dns/promises", () => {
+  const isIP = (s: string) => (/^\d+\.\d+\.\d+\.\d+$/.test(s) ? 4 : s.includes(":") ? 6 : 0);
+  return {
+    lookup: (host: string) => {
+      const bare = host.replace(/^\[|\]$/g, "");
+      const own = isIP(bare);
+      if (own) return Promise.resolve([{ address: bare, family: own }]);
+      if (bare === "localhost") return Promise.resolve([{ address: "127.0.0.1", family: 4 }]);
+      return Promise.resolve([{ address: "93.184.216.34", family: 4 }]);
+    },
+  };
 });
 
 afterAll(async () => {
