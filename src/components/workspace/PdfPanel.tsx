@@ -28,10 +28,29 @@ type Props = {
   onCompile: () => void;
   onReveal: (issue: LogIssue) => void;
   onTextClick: (text: string) => void;
+  /** Click point in PDF pt for exact SyncTeX sync (falls back to text search). */
+  onPointClick?: (p: { page: number; x: number; y: number; text: string }) => void;
+  /** Body word count from texcount, if already fetched. */
+  words?: number | null;
+  /** chktex issues over the current sources. */
+  lint?: LogIssue[] | null;
+  lintBusy?: boolean;
+  onLint?: () => void;
 };
 
-export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: Props) {
-  const { t } = useI18n();
+export function PdfPanel({
+  state,
+  fileName,
+  onCompile,
+  onReveal,
+  onTextClick,
+  onPointClick,
+  words,
+  lint,
+  lintBusy,
+  onLint,
+}: Props) {
+  const { t, lang } = useI18n();
   const { status, errors, warnings } = state;
   const [scale, setScale] = useState<number | null>(null);
   const [pages, setPages] = useState(0);
@@ -54,6 +73,11 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
                 ? t("pdf.noPdf")
                 : t("pdf.notCompiled")}
         </span>
+        {words != null && !failed && (
+          <span className="num text-xs text-muted">
+            {t("pdf.words", { n: words.toLocaleString(lang) })}
+          </span>
+        )}
         {state.seconds !== undefined && status !== "running" && !failed && (
           <span className="num hidden text-xs text-muted lg:inline">
             {t("pdf.seconds", { s: state.seconds.toFixed(1) })}
@@ -94,7 +118,10 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
         </div>
       </div>
 
-      {(failed || errors.length > 0 || (warnings.length > 0 && showLog)) && (
+      {(failed ||
+        errors.length > 0 ||
+        (warnings.length > 0 && showLog) ||
+        (lint != null && (lint.length > 0 || errors.length === 0))) && (
         <div className="max-h-[40%] shrink-0 overflow-y-auto border-b border-line px-4 py-3">
           <p role="alert" className={`text-sm font-medium ${failed ? "text-danger" : "text-ink"}`}>
             {state.message ??
@@ -102,11 +129,23 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
                 ? t("pdf.timeout")
                 : failed
                   ? t("pdf.failed", { stale: state.pdf ? t("pdf.failed.stale") : "" })
-                  : t("pdf.warnings.one"))}
+                  : warnings.length === 1
+                    ? t("pdf.warnings.one")
+                    : warnings.length > 1
+                      ? t("pdf.warnings", { n: warnings.length })
+                      : t("pdf.lint"))}
           </p>
           <IssueList issues={errors} tone="text-danger" onReveal={onReveal} />
           {errors.length === 0 && (
-            <IssueList issues={warnings} tone="text-warn" onReveal={onReveal} />
+            <>
+              <IssueList issues={warnings} tone="text-warn" onReveal={onReveal} />
+              {lint && lint.length > 0 && (
+                <IssueList issues={lint} tone="text-warn" onReveal={onReveal} />
+              )}
+              {lint && lint.length === 0 && (
+                <p className="mt-2 text-xs text-muted">{t("pdf.lint.none")}</p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -120,6 +159,7 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
             onPages={setPages}
             onPageInView={setPage}
             onTextClick={onTextClick}
+            onPointClick={onPointClick}
           />
         ) : (
           <div className="flex h-full flex-col items-start justify-center gap-3 bg-[var(--pdf-desk)] p-8">
@@ -146,6 +186,12 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
               {warnings.length === 1
                 ? t("pdf.warnings.one")
                 : t("pdf.warnings", { n: warnings.length })}
+            </button>
+          )}
+          {onLint && (
+            <button type="button" className="hover:text-ink" onClick={onLint} disabled={lintBusy}>
+              {lintBusy ? t("common.loading") : t("pdf.lint")}
+              {lint && lint.length > 0 ? ` (${lint.length})` : ""}
             </button>
           )}
           {state.log && (

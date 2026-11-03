@@ -20,6 +20,8 @@ type Props = {
   onPages: (pages: number) => void;
   onPageInView: (page: number) => void;
   onTextClick: (text: string) => void;
+  /** Click point in PDF pt (origin top-left) for exact SyncTeX inverse sync. */
+  onPointClick?: (p: { page: number; x: number; y: number; text: string }) => void;
 };
 
 export default function PdfViewer({
@@ -29,6 +31,7 @@ export default function PdfViewer({
   onPages,
   onPageInView,
   onTextClick,
+  onPointClick,
 }: Props) {
   const { t } = useI18n();
   const box = useRef<HTMLDivElement>(null);
@@ -89,7 +92,21 @@ export default function PdfViewer({
         const t = e.target as HTMLElement;
         if (t.tagName === "SPAN" && t.closest(".react-pdf__Page__textContent")) {
           const text = t.textContent?.trim();
-          if (text && text.length > 3 && !window.getSelection()?.toString()) onTextClick(text);
+          if (!text || text.length <= 3 || window.getSelection()?.toString()) return;
+          const pageEl = t.closest("[data-page]");
+          if (onPointClick && pageEl) {
+            const pr = pageEl.getBoundingClientRect();
+            const sr = t.getBoundingClientRect();
+            onPointClick({
+              page: Number(pageEl.getAttribute("data-page")),
+              // CSS px ÷ render scale = PDF points (synctex: origin top-left).
+              x: (sr.left - pr.left + 2) / effective,
+              y: (sr.top - pr.top + 4) / effective,
+              text,
+            });
+            return;
+          }
+          onTextClick(text);
         }
       }}
     >

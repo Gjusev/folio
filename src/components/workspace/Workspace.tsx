@@ -18,6 +18,7 @@ import { PaperSearch } from "./PaperSearch";
 import { PdfPanel, type CompileState } from "./PdfPanel";
 import { useDocuments, type FileDoc, type SaveStatus } from "./useDocuments";
 import { useOutsideClose } from "./useOutsideClose";
+import { requestCollab } from "@/lib/collab";
 
 type Props = {
   project: {
@@ -32,6 +33,8 @@ type Props = {
   };
   initialFiles: FileDoc[];
   aiEnabled: boolean;
+  /** Display name for live cursors when real-time collab is enabled. */
+  userName?: string;
 };
 
 type SideTab = "files" | "papers" | "assistant";
@@ -74,7 +77,7 @@ function locate(text: string, docs: { id: string; path: string; content: string 
   return null;
 }
 
-export function Workspace({ project, initialFiles, aiEnabled }: Props) {
+export function Workspace({ project, initialFiles, aiEnabled, userName }: Props) {
   const docs = useDocuments(project.id, initialFiles);
   const { t, lang } = useI18n();
   const editor = useRef<EditorHandle | null>(null);
@@ -130,6 +133,42 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
     }
   }, [project.id]);
 
+  const [words, setWords] = useState<number | null>(null);
+  // Live collab session for the active file (null when the feature is off).
+  const [collab, setCollab] = useState<{ url: string; token: string } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setCollab(null);
+    if (activeId)
+      void requestCollab(project.id, activeId).then((c) => {
+        if (!cancelled) setCollab(c);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.id, activeId]);
+  const [lint, setLint] = useState<LogIssue[] | null>(null);
+  const [lintBusy, setLintBusy] = useState(false);
+
+  /** chktex warnings over the stored sources; revealed like compile issues. */
+  async function runLint() {
+    setLintBusy(true);
+    try {
+      await docs.store.flush();
+      const r = await api<{ issues: { file: string; line: number; message: string }[] }>(
+        "GET",
+        `/api/projects/${project.id}/lint`,
+      );
+      setLint(
+        r.issues.map((i) => ({ file: i.file, line: i.line, message: `chktex: ${i.message}` })),
+      );
+    } catch (err) {
+      setNotice((err as Error).message);
+    } finally {
+      setLintBusy(false);
+    }
+  }
+
   const compiling = useRef(false);
   const runCompile = useCallback(async () => {
     if (compiling.current) return; // key repeat and double clicks race otherwise
@@ -164,6 +203,14 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
         timedOut: r.timedOut,
         seconds: (performance.now() - started) / 1000,
       }));
+      setLint(null);
+      if (r.ok) {
+        api<{ words: number }>("GET", `/api/projects/${project.id}/count`)
+          .then((c) => setWords(c.words))
+          .catch(() => setWords(null));
+      } else {
+        setWords(null);
+      }
     } catch (err) {
       setCompile((c) => ({
         ...c,
@@ -203,6 +250,58 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
     if (!issue.line) return;
     const target = issue.file ? docs.files.find((f) => f.path === issue.file) : active;
     if (target) open(target.id, issue.line);
+    // Forward sync: also bring the PDF to the page holding that line.
+    if (synctexBusy.current) return;
+    synctexBusy.current = true;
+    void docs.store
+      .flush()
+      .then(() =>
+        api<{ ok: boolean; result?: { page: number } }>(
+          "POST",
+          `/api/projects/${project.id}/synctex`,
+          { mode: "view", line: issue.line!, col: 1 },
+        ),
+      )
+      .then((r) => {
+        if (r.ok && r.result)
+          document
+            .getElementById(`pdf-page-${r.result.page}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      })
+      .catch(() => {})
+      .finally(() => {
+        synctexBusy.current = false;
+      });
+  }
+
+  // Exact PDF→source sync. Costs a server-side recompile, so one at a time
+  // and with a quiet fallback to the text heuristic when it fails.
+  const synctexBusy = useRef(false);
+  async function pointClicked(p: { page: number; x: number; y: number; text: string }) {
+    if (synctexBusy.current) return;
+    synctexBusy.current = true;
+    try {
+      await docs.store.flush();
+      const r = await api<{ ok: boolean; result?: { file: string; line: number } }>(
+        "POST",
+        `/api/projects/${project.id}/synctex`,
+        { mode: "edit", page: p.page, x: Math.round(p.x), y: Math.round(p.y) },
+      );
+      if (r.ok && r.result) {
+        const name = r.result.file.split(/[\\/]/).pop() ?? "";
+        const target =
+          docs.files.find((f) => f.path === name || f.path.endsWith(`/${name}`)) ?? active;
+        if (target) {
+          open(target.id, r.result.line);
+          return;
+        }
+      }
+    } catch {
+      /* fall through to the heuristic */
+    } finally {
+      synctexBusy.current = false;
+    }
+    findClicked(p.text);
   }
 
   function findClicked(text: string) {
@@ -380,6 +479,7 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
             handleRef={editor}
             completions={completions}
             label={t("editor.label")}
+            collab={collab ? { ...collab, user: userName ? { name: userName } : undefined } : null}
           />
         ) : (
           <p className="p-6 text-sm text-muted">{t("editor.pick")}</p>
@@ -396,6 +496,11 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
         onCompile={runCompile}
         onReveal={reveal}
         onTextClick={findClicked}
+        onPointClick={pointClicked}
+        words={words}
+        lint={lint}
+        lintBusy={lintBusy}
+        onLint={() => void runLint()}
       />
     </div>
   );

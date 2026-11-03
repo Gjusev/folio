@@ -306,7 +306,7 @@ async function searchArxiv(query: PaperQuery): Promise<PaperPage> {
     // A literal "+" would be sent as %2B and parsed as an OR-ish token.
     params.set("search_query", terms.join(" AND "));
     params.set("sortBy", query.sort === "recent" ? "submittedDate" : "relevance");
-    params.set("sortOrder", query.sort === "recent" ? "descending" : "descending");
+    params.set("sortOrder", "descending");
   }
   const xml = await getText(`https://export.arxiv.org/api/query?${params}`, "arXiv");
   const results = parseArxivFeed(xml);
