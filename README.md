@@ -32,7 +32,7 @@ Prism de OpenAI cierra el 1 de enero de 2027 y sus críticas repetidas señalan 
 - **IA multi-proveedor**: ajustes con presets (OpenRouter con privacidad por defecto, OpenAI, Anthropic nativo, Gemini, Mistral, DeepSeek, xAI, Ollama, vLLM, custom), claves cifradas en reposo (AES-256-GCM) y enrutado por tarea: modelo barato para buscar, fuerte para redactar. Sin perfiles, el `.env` sigue funcionando igual.
 - **Figuras**: sube PNG/JPG/PDF arrastrándolos a la lista de archivos; se comprueba que el contenido coincida con el formato y se incluyen al compilar.
 - **Plantillas**: artículo, IEEE, Elsevier (elsarticle), REVTeX, AMS, tesis con capítulos y presentación beamer.
-- **Importar ZIP**: trae un proyecto de Overleaf o las fuentes de arXiv tal cual; se detecta el archivo principal y se descarta lo que no compila.
+- **Importar ZIP**: trae un proyecto de Overleaf, las fuentes de arXiv o el ZIP de exportación de OpenAI Prism tal cual; se detecta el archivo principal y se descarta lo que no compila.
 - **Asistente de IA** (opcional): mejorar o explicar la selección, continuar el texto, corregir errores de compilación y preguntar sobre el documento. Solo cita claves que existen en tu `.bib` y no toca el documento sin tu confirmación.
 - **Exportación** a PDF y ZIP de fuentes.
 - **Interfaz en español, inglés y alemán**: se cambia con un selector y la cookie recuerda tu elección, también en los mensajes de error.
