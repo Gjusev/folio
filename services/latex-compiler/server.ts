@@ -14,7 +14,7 @@ const PORT = Number(process.env.PORT ?? 3001);
 const TOKEN = process.env.COMPILER_TOKEN ?? "";
 const MAX_JOBS = Number(process.env.MAX_CONCURRENT_JOBS ?? 2);
 const TIMEOUT_MS = Number(process.env.JOB_TIMEOUT_MS ?? 45_000);
-const MAX_BODY = 96 * 1024 * 1024; // 50 MB of sources, base64-encoded figures included
+const MAX_BODY = 96 * 1024 * 1024; // 96 MB of sources, base64-encoded figures included
 const MAX_FILES = 200;
 const MAX_BINARY_BYTES = 10_000_000; // parity with the web app's per-figure cap
 
@@ -319,6 +319,11 @@ export const server = createServer(async (req, res) => {
     return send(res, 404, { error: "not found" });
   if (!authorized(req)) return send(res, 401, { error: "unauthorized" });
   if (active >= MAX_JOBS) return send(res, 429, { error: "compiler busy" });
+  // Reserve the slot BEFORE the first await: readBody yields to the event loop,
+  // so checking above and incrementing after it let N concurrent requests in
+  // with active=0 (MAX_JOBS was never enforced). The try/finally releases the
+  // slot on every exit path, error returns included.
+  active++;
   try {
     const raw = await readBody(req);
     if (raw === null) return send(res, 413, { error: "request too large" });
@@ -330,19 +335,15 @@ export const server = createServer(async (req, res) => {
     }
     const parsed = req.url === "/diff" ? parseDiffRequest(body) : parseRequest(body);
     if (typeof parsed === "string") return send(res, 400, { error: parsed });
-    // The slot is held only for actual compilation, not while reading the body.
-    active++;
-    try {
-      if (req.url === "/diff" && "oldFiles" in parsed) send(res, 200, await diff(parsed));
-      else if ("files" in parsed) send(res, 200, await compile(parsed));
-      else send(res, 400, { error: "invalid request" });
-    } finally {
-      active--;
-    }
+    if (req.url === "/diff" && "oldFiles" in parsed) send(res, 200, await diff(parsed));
+    else if ("files" in parsed) send(res, 200, await compile(parsed));
+    else send(res, 400, { error: "invalid request" });
   } catch (err) {
     if (err instanceof InvalidFile) return send(res, 400, { error: err.message });
     console.error(err);
     send(res, 500, { error: "internal error" });
+  } finally {
+    active--;
   }
 });
 
