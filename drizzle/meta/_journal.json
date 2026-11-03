@@ -36,6 +36,13 @@
       "when": 1793724472077,
       "tag": "0004_familiar_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793733283687,
+      "tag": "0005_bizarre_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

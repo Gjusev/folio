@@ -135,3 +135,57 @@ export const snapshots = pgTable(
   },
   (t) => [index("snapshots_project_idx").on(t.projectId)],
 );
+
+/** Co-authors with access to a project. The owner is not a row here. */
+export const projectMembers = pgTable(
+  "project_members",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // editor: everything except sharing/deleting. viewer: read + compile + export.
+    role: text().notNull().default("viewer"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("project_members_uq").on(t.projectId, t.userId),
+    index("project_members_user_idx").on(t.userId),
+  ],
+);
+
+/** Persisted assistant/agent turns so conversations survive reloads. */
+export const aiMessages = pgTable(
+  "ai_messages",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // user | assistant
+    role: text().notNull(),
+    // What produced it: chat | improve | explain | continue | fixlog | draft | plan | rebuttal
+    action: text().notNull().default("chat"),
+    content: text().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_messages_project_idx").on(t.projectId, t.createdAt)],
+);
+
+/** Third-party integrations (Zotero…); payloads sealed with LLM_CREDENTIALS_KEY. */
+export const integrations = pgTable(
+  "integrations",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // zotero | …
+    kind: text().notNull(),
+    // AES-256-GCM sealed JSON ({ apiKey, userId } for zotero).
+    dataEnc: text("data_enc").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("integrations_user_kind_uq").on(t.userId, t.kind)],
+);
