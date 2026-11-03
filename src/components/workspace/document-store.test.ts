@@ -122,4 +122,37 @@ describe("DocumentStore", () => {
     expect(calls).toHaveLength(2);
     expect(store.getSnapshot()).toMatchObject({ status: "saved", error: null });
   });
+
+  it("applies a server change to a clean doc", () => {
+    const { store } = setup(async () => ({ version: 9 }));
+    store.replaceFromServer("f1", "with new entry", 2);
+    expect(store.getDoc("f1")).toBe("with new entry");
+    expect(store.getSnapshot().status).toBe("saved");
+    expect(store.hasUnsaved()).toBe(false);
+  });
+
+  it("raises a conflict instead of rebasing a dirty doc over a server change", async () => {
+    // Regression: the server added a bib entry while a local edit was pending;
+    // the old silent rebase let the debounced PUT wipe the server change.
+    const { store, calls } = setup(async (call) => ({ version: call.body.baseVersion + 1 }));
+    store.edit("f1", "local edit"); // dirty, autosave timer pending
+    store.replaceFromServer("f1", "server + added entry", 2);
+    expect(store.getSnapshot().status).toBe("conflict");
+    expect(store.getSnapshot().conflict).toEqual({
+      fileId: "f1",
+      path: "main.tex",
+      content: "server + added entry",
+      version: 2,
+    });
+    expect(store.getDoc("f1")).toBe("local edit"); // mine is never dropped
+
+    // The pending debounce must NOT fire a save that would wipe the entry.
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toHaveLength(0);
+
+    // Resolving with "keep mine" rebases on the server version, as with a 409.
+    store.keepMine();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls[0].body).toEqual({ content: "local edit", baseVersion: 2 });
+  });
 });

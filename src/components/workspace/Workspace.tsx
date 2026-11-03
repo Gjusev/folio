@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Pencil } from "lucide-react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
 import { SnapshotsMenu } from "./SnapshotsMenu";
 import { bibKeys } from "@/lib/bibtex";
@@ -15,6 +16,7 @@ import { FileTree } from "./FileTree";
 import { PaperSearch } from "./PaperSearch";
 import { PdfPanel, type CompileState } from "./PdfPanel";
 import { useDocuments, type FileDoc, type SaveStatus } from "./useDocuments";
+import { useOutsideClose } from "./useOutsideClose";
 
 type Props = {
   project: {
@@ -30,7 +32,7 @@ type Props = {
 };
 
 type SideTab = "files" | "papers" | "assistant";
-type MobileView = "files" | "editor" | "pdf" | "papers";
+type MobileView = "files" | "editor" | "pdf" | "papers" | "assistant";
 
 const STATUS_KEY: Record<
   SaveStatus,
@@ -80,6 +82,7 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
   );
   const [name, setName] = useState(project.name);
   const [mainFile, setMainFile] = useState(project.mainFile);
+  const exportRef = useOutsideClose();
   const [activeId, setActiveId] = useState<string | undefined>(
     () => initialFiles.find((f) => f.path === project.mainFile)?.id ?? initialFiles[0]?.id,
   );
@@ -266,6 +269,7 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
       projectId={project.id}
       keys={keys}
       canCite={canCite}
+      flush={docs.store.flush}
       onCite={(k) => editor.current?.insertAtCursor(`~\\cite{${k}}`)}
       onBibUpdated={(file) => {
         if (!docs.files.some((f) => f.id === file.id)) docs.store.add(file);
@@ -286,6 +290,8 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
   const addPapersToBib: NonNullable<React.ComponentProps<typeof AiPanel>["onAddPapers"]> = async (
     papers,
   ) => {
+    // The server appends to the stored .bib; land our pending edits first.
+    await docs.store.flush();
     for (const p of papers) {
       try {
         const r = await api<{ key: string; added: boolean; file: FileDoc }>(
@@ -433,15 +439,27 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
         <label htmlFor="project-name" className="sr-only">
           {t("ws.rename")}
         </label>
-        <input
-          id="project-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={(e) => saveName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-          maxLength={120}
-          className="h-8 min-w-0 flex-1 truncate rounded-md bg-transparent px-1.5 text-base font-semibold hover:bg-active focus:bg-surface focus:outline-none sm:max-w-sm sm:flex-none"
-        />
+        <div className="flex min-w-0 flex-1 items-center gap-1 sm:max-w-sm sm:flex-none">
+          <input
+            id="project-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={(e) => saveName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            maxLength={120}
+            className="h-8 min-w-0 flex-1 truncate rounded-md bg-transparent px-1.5 text-base font-semibold hover:bg-active focus:bg-surface focus:outline-none"
+          />
+          <Pencil size={12} className="shrink-0 text-muted" aria-hidden />
+        </div>
+        {/* On mobile only the dot fits; its title carries the full state. */}
+        <span
+          className="flex items-center text-xs text-muted sm:hidden"
+          role="status"
+          aria-live="polite"
+          title={t(STATUS_KEY[docs.status])}
+        >
+          <span className={`h-2 w-2 rounded-full ${statusDot}`} aria-hidden />
+        </span>
         <span
           className="hidden items-center gap-1.5 text-xs text-muted sm:flex"
           role="status"
@@ -451,7 +469,7 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
           {t(STATUS_KEY[docs.status])}
         </span>
         <div className="ml-auto flex items-center gap-2">
-          <details className="relative">
+          <details className="relative" ref={exportRef}>
             <summary className="btn cursor-pointer list-none">{t("ws.export")}</summary>
             <div
               className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-line bg-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]" /* taste-skill-ignore shadow: floating export menu */
@@ -537,7 +555,7 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
           <div
             className="flex shrink-0 gap-4 border-b border-line px-3"
             role="tablist"
-            aria-label="Vista"
+            aria-label={t("ws.view")}
           >
             {(
               [
@@ -545,6 +563,7 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
                 ["editor", lang === "en" ? "Editor" : "Editor"],
                 ["pdf", "PDF"],
                 ["papers", sideTabs[1][1]],
+                ["assistant", sideTabs[2][1]],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -566,6 +585,9 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
             </div>
             <div className={mobile === "papers" ? "sheet h-full overflow-hidden" : "hidden"}>
               {papers}
+            </div>
+            <div className={mobile === "assistant" ? "sheet h-full overflow-hidden" : "hidden"}>
+              {assistant}
             </div>
           </div>
         </>
