@@ -1,8 +1,8 @@
 import { strToU8, zipSync } from "fflate";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { addBibEntry, bibKeys, citeKey, texEscape, toBibtex } from "@/lib/bibtex";
 import { ImportError, findMainFile, readProjectZip } from "@/lib/importer";
-import { abstractFromIndex as abstractFrom, parseArxivFeed } from "@/lib/papers";
+import { abstractFromIndex as abstractFrom, parseArxivFeed, searchPapers } from "@/lib/papers";
 import { matchesMagic, validateFilePath } from "@/lib/paths";
 
 describe("toBibtex", () => {
@@ -48,7 +48,7 @@ describe("toBibtex", () => {
     );
     expect(citeKey({ authors: [], title: "A" })).toBe("anonwork");
     expect(texEscape("{\\evil} a_b ~x^2")).toBe(
-      "evil a\\_b \\textasciitilde{}x\\textasciicircum{}2",
+      "{\\evil} a\\_b \\textasciitilde{}x\\textasciicircum{}2",
     );
   });
 
@@ -65,6 +65,31 @@ describe("OpenAlex mapping", () => {
       "Hello world hello again",
     );
     expect(abstractFrom(null)).toBeUndefined();
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sends AND-joined terms so arXiv intersects instead of unioning", async () => {
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: true,
+      url,
+      text: async () => "<feed/>",
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    await searchPapers("arxiv", {
+      q: "alpha stable",
+      sort: "relevance",
+      openAccess: false,
+      page: 1,
+    });
+    // Exact wire form: URLSearchParams encodes the separator space as "+",
+    // which arXiv reads as AND. A literal "+" goes out as %2B and the
+    // multi-word query degrades to OR.
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://export.arxiv.org/api/query?max_results=15&start=0" +
+        "&search_query=all%3A%22alpha%22+AND+all%3A%22stable%22" +
+        "&sortBy=relevance&sortOrder=descending",
+    );
   });
 
   it("parses arXiv Atom feeds: ids, authors, entities, DOIs", () => {

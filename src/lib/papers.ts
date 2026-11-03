@@ -302,7 +302,9 @@ async function searchArxiv(query: PaperQuery): Promise<PaperPage> {
       .split(/\s+/)
       .filter(Boolean)
       .map((t) => `all:"${t}"`);
-    params.set("search_query", terms.join("+AND+"));
+    // URLSearchParams encodes the space as "+", the separator arXiv expects.
+    // A literal "+" would be sent as %2B and parsed as an OR-ish token.
+    params.set("search_query", terms.join(" AND "));
     params.set("sortBy", query.sort === "recent" ? "submittedDate" : "relevance");
     params.set("sortOrder", query.sort === "recent" ? "descending" : "descending");
   }
