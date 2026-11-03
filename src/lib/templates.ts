@@ -338,6 +338,52 @@ Attention~\cite{vaswani2017attention}:
       refs,
     ],
   },
+  {
+    id: "response-letter",
+    name: "Carta de respuesta",
+    description: "Respuesta punto por punto a los revisores, con diff por comentario.",
+    files: [
+      {
+        path: "main.tex",
+        content: String.raw`\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\newcommand{\rev}[1]{\textcolor{blue}{#1}}
+\begin{document}
+\title{Response to Reviewers}
+\author{}
+\date{}
+\maketitle
+
+We thank the reviewers for their careful reading. Below we respond point by
+point; \rev{blue text marks what changed} in the revised manuscript.
+
+\section*{Reviewer 1}
+
+\subsection*{R1.1 (Major): SUMMARY OF THE COMMENT}
+\textbf{Response.} What we did about it, referencing the exact section or
+figure: see Section~4, Figure~2.
+\textbf{Change.} \rev{Rewrote Section~4 and added Figure~2.}
+
+\subsection*{R1.2 (Minor): SUMMARY OF THE COMMENT}
+\textbf{Response.} ---
+\textbf{Change.} \rev{---}
+
+\section*{Reviewer 2}
+
+\subsection*{R2.1: SUMMARY OF THE COMMENT}
+\textbf{Response.} ---
+\textbf{Change.} \rev{---}
+
+\end{document}
+`,
+      },
+    ],
+  },
 ];
 
 export const DEFAULT_TEMPLATE = TEMPLATES[0];

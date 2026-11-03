@@ -3,6 +3,7 @@ import { useRef, useState, useSyncExternalStore, type SubmitEvent } from "react"
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { FileDoc } from "./document-store";
+import type { MsgKey } from "@/lib/i18n/dictionaries";
 import type { GraphSeed } from "./GraphPanel";
 
 // sigma touches WebGL2RenderingContext at import time: must never enter the SSR bundle.
@@ -66,6 +67,15 @@ function authorLine(a: string[]) {
 /** Which graph the panel shows: one paper's, or the whole bibliography's. */
 type GraphView = { kind: "paper"; seed: GraphSeed } | { kind: "bib" } | null;
 
+const SUBMISSION_KEYS: Record<string, MsgKey> = {
+  citations: "papers.submission.citations",
+  unused: "papers.submission.unused",
+  todos: "papers.submission.todos",
+  figures: "papers.submission.figures",
+  abstract: "papers.submission.abstract",
+  keywords: "papers.submission.keywords",
+};
+
 /** One search box; free engines (OpenAlex, Semantic Scholar, arXiv) as filters. */
 export function PaperSearch({
   projectId,
@@ -89,6 +99,11 @@ export function PaperSearch({
   const [graphHistory, setGraphHistory] = useState<GraphView[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
   const [healthState, setHealthState] = useState<"idle" | "loading" | "error">("idle");
+  const [sub, setSub] = useState<{
+    checks: { id: string; ok: boolean; detail: string }[];
+    words: number | null;
+  } | null>(null);
+  const [subState, setSubState] = useState<"idle" | "loading" | "error">("idle");
   const [upgrading, setUpgrading] = useState<string | null>(null);
   // WebGL cannot render during SSR: false on the server, true after hydration.
   const graphReady = useSyncExternalStore(
@@ -249,6 +264,26 @@ export function PaperSearch({
     }
   }
 
+  /** Honest pre-submission checks: citations, TODOs, figures, words. */
+  async function loadSubmission() {
+    setSubState("loading");
+    setMessage(null);
+    try {
+      const r = await api<{
+        checks: { id: string; ok: boolean; detail: string }[];
+        words: number | null;
+      }>("GET", `/api/projects/${projectId}/submission-check`);
+      setSub(r);
+      setSubState("idle");
+    } catch (err) {
+      setSubState("error");
+      setMessage({
+        text: err instanceof TypeError ? t("offline") : (err as Error).message,
+        error: true,
+      });
+    }
+  }
+
   /** Replaces an arXiv preprint entry with its published version. */
   async function upgrade(u: Upgrade) {
     setUpgrading(u.key);
@@ -360,6 +395,14 @@ export function PaperSearch({
             disabled={healthState === "loading"}
           >
             {healthState === "loading" ? t("common.loading") : t("papers.health.button")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={subState === "loading"}
+            onClick={() => void loadSubmission()}
+          >
+            {subState === "loading" ? t("common.loading") : t("papers.submission.button")}
           </button>
         </div>
       </div>
@@ -601,6 +644,30 @@ export function PaperSearch({
 
         {!results && state === "idle" && (
           <p className="p-4 text-sm text-muted">{t("papers.idle")}</p>
+        )}
+
+        {sub && subState === "idle" && (
+          <div className="shrink-0 border-b border-line p-3">
+            <h3 className="label">{t("papers.submission.title")}</h3>
+            <ul className="space-y-1">
+              {sub.checks.map((c) => (
+                <li key={c.id} className="flex items-start gap-1.5 text-xs">
+                  <span aria-hidden className={c.ok ? "text-ok" : "text-danger"}>
+                    {c.ok ? "✓" : "✗"}
+                  </span>
+                  <span className="min-w-0">
+                    {t(SUBMISSION_KEYS[c.id] ?? "papers.submission.title")}{" "}
+                    <span className="text-muted">— {c.detail}</span>
+                  </span>
+                </li>
+              ))}
+              {sub.words !== null && (
+                <li className="num text-xs text-muted">
+                  {t("papers.submission.words")}: {sub.words.toLocaleString(lang)}
+                </li>
+              )}
+            </ul>
+          </div>
         )}
 
         {health && healthState === "idle" && (
