@@ -2,10 +2,10 @@
 
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SigmaContainer, useRegisterEvents, useSigma } from "@react-sigma/core";
-import { useLayoutForceAtlas2 } from "@react-sigma/layout-forceatlas2";
 import { Maximize2, Minimize2 } from "lucide-react";
 import Graph from "graphology";
 import { api } from "@/lib/client/api";
+import { layoutIslands } from "@/lib/graph-islands";
 import { graphToTikz } from "@/lib/graph-tikz";
 import { shortestPath } from "@/lib/graph-path";
 import { useI18n } from "@/lib/i18n/client";
@@ -158,6 +158,10 @@ function buildGraph(data: GraphData, mode: "paper" | "bib", rngSeed: string): Gr
     if (!g.hasNode(e.from) || !g.hasNode(e.to) || g.hasEdge(e.from, e.to)) continue;
     g.addEdge(e.from, e.to, { size: 0.5, color: "#cfcac2" });
   }
+  // Layout before sigma mounts: ForceAtlas2 per connected component, islands
+  // packed on a grid so multi-seed bibliography graphs never pile up in the
+  // centre (review finding 11); a connected graph gets plain FA2 as before.
+  layoutIslands(g, { rng });
   return g;
 }
 
@@ -174,7 +178,8 @@ function pathEdgeKeys(path: string[]): Set<string> {
 type Hover = { id: string; x: number; y: number } | null;
 
 /**
- * Runs the layout and wires node selection; must live inside SigmaContainer.
+ * Wires node selection; must live inside SigmaContainer. The layout itself
+ * (ForceAtlas2 per island) already ran in buildGraph, before sigma mounted.
  * The selected node is always highlighted (plus the path to the seed, painted
  * the way Connected Papers highlights the chain to the origin), the camera
  * follows the selection, and hovering shows a tooltip.
@@ -191,16 +196,11 @@ function GraphControls({
   setHover: (h: Hover) => void;
 }) {
   const sigma = useSigma();
-  const { assign } = useLayoutForceAtlas2({
-    iterations: 150,
-    settings: { adjustSizes: true, gravity: 0.6, slowDown: 8, barnesHutOptimize: true },
-  });
   const registerEvents = useRegisterEvents();
 
   useEffect(() => {
-    assign();
     sigma.refresh();
-  }, [assign, sigma]);
+  }, [sigma]);
 
   // Sections below the canvas (works lists, selection card) resize it after
   // sigma first measured itself; sigma has no container observer, so a stale
@@ -661,7 +661,7 @@ export function GraphPanel({
                       <summary className="cursor-pointer select-none text-xs font-medium text-muted">
                         {t("papers.graph.prior")} ({prior.length})
                       </summary>
-                      <ul className="mt-1 max-h-36 overflow-y-auto">
+                      <ul data-testid="prior-works" className="mt-1 max-h-36 overflow-y-auto">
                         {prior.map((n) => (
                           <WorkRow
                             key={n.id}
@@ -678,7 +678,7 @@ export function GraphPanel({
                       <summary className="cursor-pointer select-none text-xs font-medium text-muted">
                         {t("papers.graph.derivative")} ({derivative.length})
                       </summary>
-                      <ul className="mt-1 max-h-36 overflow-y-auto">
+                      <ul data-testid="derivative-works" className="mt-1 max-h-36 overflow-y-auto">
                         {derivative.map((n) => (
                           <WorkRow
                             key={n.id}
