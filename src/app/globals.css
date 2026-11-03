@@ -124,6 +124,9 @@ body {
   .input {
     @apply h-8 w-full rounded-md border border-control bg-surface px-2.5 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none;
   }
+  .select {
+    @apply h-8 w-auto rounded-md border border-control bg-surface px-1.5 text-sm text-ink focus:border-accent focus:outline-none;
+  }
   .label {
     @apply mb-1 block text-xs font-medium text-muted;
   }

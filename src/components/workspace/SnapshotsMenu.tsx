@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Clock, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { useOutsideClose } from "./useOutsideClose";
 import type { CompileState } from "./PdfPanel";
 
 type Snapshot = { id: string; label: string; createdAt: string; files: number };
@@ -22,6 +24,8 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const detailsRef = useOutsideClose();
 
   useEffect(() => {
     if (!open || snapshots) return;
@@ -82,12 +86,6 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
   }
 
   async function restore(s: Snapshot) {
-    if (
-      !window.confirm(
-        t("snap.restore.confirm", { label: s.label || fmt.format(new Date(s.createdAt)) }),
-      )
-    )
-      return;
     setBusy(s.id);
     setError(null);
     try {
@@ -97,6 +95,7 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
       setError((err as Error).message);
     } finally {
       setBusy(null);
+      setConfirmId(null);
     }
   }
 
@@ -113,9 +112,18 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
   }
 
   return (
-    <details className="relative" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="btn btn-ghost btn-sm cursor-pointer list-none" title={t("snap.title")}>
-        ⏱
+    <details
+      className="relative"
+      ref={detailsRef}
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary
+        className="btn btn-ghost btn-sm cursor-pointer list-none"
+        title={t("snap.title")}
+        aria-label={t("snap.title")}
+      >
+        <Clock size={14} aria-hidden />
       </summary>
       <div className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-line bg-surface p-3 text-xs shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <p className="label">{t("snap.title")}</p>
@@ -142,6 +150,13 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
           </p>
         )}
         <ul className="mt-2 max-h-56 space-y-1.5 overflow-y-auto">
+          {snapshots === null &&
+            [0, 1].map((i) => (
+              <li key={i} className="animate-pulse rounded-md border border-line p-1.5">
+                <div className="h-3 w-2/3 rounded bg-raised" />
+                <div className="mt-1.5 h-2 w-1/2 rounded bg-raised" />
+              </li>
+            ))}
           {(snapshots ?? []).map((s) => (
             <li key={s.id} className="rounded-md border border-line p-1.5">
               <p className="truncate font-medium" title={s.label}>
@@ -150,33 +165,61 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
               <p className="num mt-0.5 text-[10px] text-muted">
                 {fmt.format(new Date(s.createdAt))} · {s.files}
               </p>
-              <div className="mt-1 flex gap-1">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  disabled={busy !== null}
-                  onClick={() => void diff(s)}
-                >
-                  {busy === s.id ? t("common.loading") : t("snap.diff")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  disabled={busy !== null}
-                  onClick={() => void restore(s)}
-                >
-                  {t("snap.restore")}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  disabled={busy !== null}
-                  onClick={() => void remove(s)}
-                  aria-label={t("snap.delete")}
-                >
-                  ✕
-                </button>
-              </div>
+              {confirmId === s.id ? (
+                <div className="mt-1 flex items-center gap-1">
+                  <span
+                    className="min-w-0 flex-1"
+                    title={t("snap.restore.confirm", { label: s.label })}
+                  >
+                    {t("snap.restore.confirm", {
+                      label: s.label || fmt.format(new Date(s.createdAt)),
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm shrink-0"
+                    disabled={busy !== null}
+                    onClick={() => void restore(s)}
+                  >
+                    {t("common.confirm")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm shrink-0"
+                    onClick={() => setConfirmId(null)}
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-1 flex gap-1">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy !== null}
+                    onClick={() => void diff(s)}
+                  >
+                    {busy === s.id ? t("common.loading") : t("snap.diff")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy !== null}
+                    onClick={() => setConfirmId(s.id)}
+                  >
+                    {t("snap.restore")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy !== null}
+                    onClick={() => void remove(s)}
+                    aria-label={t("snap.delete")}
+                  >
+                    <X size={12} aria-hidden />
+                  </button>
+                </div>
+              )}
             </li>
           ))}
           {snapshots && snapshots.length === 0 && <li className="text-muted">{t("snap.empty")}</li>}

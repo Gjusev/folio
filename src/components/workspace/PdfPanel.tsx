@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
+import { useOutsideClose } from "./useOutsideClose";
 import type { LogIssue } from "@/lib/latex-log";
 
 const PdfViewer = dynamic(() => import("./PdfViewer"), {
@@ -36,6 +37,7 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
   const [pages, setPages] = useState(0);
   const [page, setPage] = useState(1);
   const [showLog, setShowLog] = useState(false);
+  const logRef = useOutsideClose();
   const failed = state.ok === false || Boolean(state.message);
   const zoom = (d: number) => setScale((s) => Math.max(0.4, Math.min(3, (s ?? 1) + d)));
 
@@ -147,7 +149,7 @@ export function PdfPanel({ state, fileName, onCompile, onReveal, onTextClick }: 
             </button>
           )}
           {state.log && (
-            <details className="relative">
+            <details className="relative" ref={logRef}>
               <summary className="cursor-pointer list-none hover:text-ink">{t("pdf.log")}</summary>
               <pre
                 className="absolute bottom-7 left-0 z-10 max-h-80 w-[min(640px,80vw)] overflow-auto rounded-lg border border-line bg-surface p-3 font-mono /* taste-skill-ignore mono: compiler log is literal output */ text-[11px] leading-snug whitespace-pre-wrap text-ink shadow-[0_8px_24px_rgba(0,0,0,0.12)]" /* taste-skill-ignore shadow: floating log popover */
