@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { compileProject } from "@/lib/compiler";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
 import { parseLatexLog } from "@/lib/latex-log";
-import { getOwnedProject, listFilesWithData } from "@/lib/projects";
+import { getViewableProject, listFilesWithData } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getViewableProject(user.id, (await params).id);
   enforceRateLimit(`compile:${user.id}`, 20, 60_000);
   const files = await listFilesWithData(project.id);
   const result = await compileProject(

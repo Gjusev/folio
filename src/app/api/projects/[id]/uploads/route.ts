@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { HttpError, enforceRateLimit, requireUser, route } from "@/lib/http";
 import { MAX_BINARY_BYTES, isBinaryPath } from "@/lib/paths";
-import { createFile, getOwnedProject } from "@/lib/projects";
+import { createFile, getEditableProject } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -11,7 +11,7 @@ type Ctx = { params: Promise<{ id: string }> };
  */
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getEditableProject(user.id, (await params).id);
   enforceRateLimit(`upload:${user.id}`, 60, 60_000);
   // Browsers always send Content-Length for multipart; a missing or chunked
   // length would let formData() buffer an unbounded body. Fail closed.

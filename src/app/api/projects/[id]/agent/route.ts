@@ -12,7 +12,7 @@ import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/li
 import { streamChat } from "@/lib/llm";
 import { resolveEndpoint } from "@/lib/llm-profiles";
 import { searchPapers } from "@/lib/papers";
-import { getFile, getOwnedProject, listFiles, setAiPlan } from "@/lib/projects";
+import { addAiMessage, getEditableProject, getFile, listFiles, setAiPlan } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -83,7 +83,7 @@ const STOPWORDS = new Set([
  */
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getEditableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
   enforceRateLimit(`ai:${user.id}`, 30, 10 * 60_000);
   enforceRateLimit(`agent:${user.id}`, 6, 10 * 60_000);
@@ -127,6 +127,8 @@ export const POST = route(async (req, { params }: Ctx) => {
           const plan = parsePlan(raw, keys);
           if (!plan) throw new HttpError(502, "La IA no devolvió un plan válido; prueba de nuevo");
           await setAiPlan(project.id, plan);
+          await addAiMessage(project.id, "user", "plan", input.instruction).catch(() => {});
+          await addAiMessage(project.id, "assistant", "plan", JSON.stringify(plan)).catch(() => {});
           send({ type: "plan", plan });
           send({ type: "done", latex: "", usedKeys: [], newPapers: [] });
           return;
@@ -219,6 +221,8 @@ export const POST = route(async (req, { params }: Ctx) => {
         const newPapers = evidence
           .filter((e) => !e.inBib && used.includes(e.key))
           .map((e) => ({ source: e.source, paperId: e.paperId, key: e.key }));
+        await addAiMessage(project.id, "user", "draft", input.instruction).catch(() => {});
+        await addAiMessage(project.id, "assistant", "draft", latex).catch(() => {});
         send({ type: "done", latex, usedKeys: used, newPapers });
       } catch (err) {
         const message = err instanceof HttpError ? err.message : "La redacción se interrumpió";

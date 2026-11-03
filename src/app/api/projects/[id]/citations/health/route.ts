@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { citationHealth, titleSimilarity } from "@/lib/citation-health";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
 import { searchPapers } from "@/lib/papers";
-import { getOwnedProject, listFiles } from "@/lib/projects";
+import { getViewableProject, listFiles } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,7 +14,7 @@ const MAX_UPGRADE_LOOKUPS = 5; // one OpenAlex search per candidate, on demand
  */
 export const GET = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
-  const project = await getOwnedProject(user.id, (await params).id);
+  const project = await getViewableProject(user.id, (await params).id);
   enforceRateLimit(`papers:${user.id}`, 30, 60_000);
 
   const files = (await listFiles(project.id)).map((f) => ({ path: f.path, content: f.content }));

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { diffProject } from "@/lib/compiler";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
 import { parseLatexLog } from "@/lib/latex-log";
-import { getOwnedProject, getSnapshotFiles, listFilesWithData } from "@/lib/projects";
+import { getSnapshotFiles, getViewableProject, listFilesWithData } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string; sid: string }> };
 
@@ -10,7 +10,7 @@ type Ctx = { params: Promise<{ id: string; sid: string }> };
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
   const { id, sid } = await params;
-  const project = await getOwnedProject(user.id, id);
+  const project = await getViewableProject(user.id, id);
   enforceRateLimit(`compile:${user.id}`, 20, 60_000);
   const snap = await getSnapshotFiles(project.id, sid);
   const oldFiles = Object.entries(snap).map(([path, content]) => ({ path, content }));
