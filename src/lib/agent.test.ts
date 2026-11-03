@@ -30,6 +30,23 @@ describe("enforceCiteKeys (STORM-style structural contract)", () => {
     expect(used).toEqual(["good2020key"]);
   });
 
+  it("filters the whole biblatex family, not just cite/citep/citet", () => {
+    const { latex: out, used } = enforceCiteKeys(
+      "\\textcite{madeup2024} and \\parencite{real2025, madeup2025} and \\citeauthor{real2025}",
+      ["real2025"],
+    );
+    expect(out).toBe(" and \\parencite{real2025} and \\citeauthor{real2025}");
+    expect(used).toEqual(["real2025"]);
+  });
+
+  it("keeps starred variants and optional arguments of family commands", () => {
+    const { latex: out } = enforceCiteKeys(
+      "\\textcite*[see][p.3]{real2025} vs \\autocite{madeup2024}",
+      ["real2025"],
+    );
+    expect(out).toBe("\\textcite*[see][p.3]{real2025} vs ");
+  });
+
   it("builds the draft prompt with the allowed-keys contract", () => {
     const messages = buildDraftMessages({
       instruction: "escribe trabajos relacionados sobre atención eficiente",

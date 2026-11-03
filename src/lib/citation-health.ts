@@ -35,13 +35,21 @@ function stripComments(tex: string): string {
 // \cite, \citep, \citet, \parencite, \textcite, \autocite, \footcite, …
 const CITE_RE = /\\[a-zA-Z]*cite[a-zA-Z]*\*?(?:\[[^\]]*\]){0,2}\{([^}]*)\}/g;
 
+/**
+ * The \cite-family command regex, shared with the drafting agent's key filter.
+ * Factory form: /g regexes carry lastIndex between uses.
+ */
+export function citeCommandRe(): RegExp {
+  return new RegExp(CITE_RE.source, CITE_RE.flags);
+}
+
 /** Keys cited anywhere in the project's .tex files, in first-use order. */
 export function citedKeys(texFiles: HealthInput): string[] {
   const seen = new Set<string>();
   for (const f of texFiles) {
     if (!f.path.endsWith(".tex")) continue;
     const src = stripComments(f.content);
-    for (const m of src.matchAll(CITE_RE)) {
+    for (const m of src.matchAll(citeCommandRe())) {
       for (const key of m[1].split(",")) {
         const k = key.trim();
         if (k) seen.add(k);
@@ -134,7 +142,7 @@ export function titleSimilarity(a: string, b: string): number {
  * and the surrounding text untouched.
  */
 export function replaceCiteKey(tex: string, from: string, to: string): string {
-  return tex.replace(CITE_RE, (whole, inner: string) => {
+  return tex.replace(citeCommandRe(), (whole, inner: string) => {
     if (!inner.split(",").some((k) => k.trim() === from)) return whole;
     const rebuilt = inner
       .split(",")
