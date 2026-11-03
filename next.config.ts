@@ -19,7 +19,7 @@ const contentSecurityPolicy = [
   "img-src 'self' blob: data:",
   "object-src 'none'",
   "frame-ancestors 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' ws: wss:",
 ].join("; ");
 
 const nextConfig: NextConfig = {
