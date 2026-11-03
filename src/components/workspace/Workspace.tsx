@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Pencil } from "lucide-react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
+import { ShareMenu } from "./ShareMenu";
 import { SnapshotsMenu } from "./SnapshotsMenu";
 import { bibKeys } from "@/lib/bibtex";
 import { api } from "@/lib/client/api";
@@ -26,6 +27,8 @@ type Props = {
     aiInstructions: string | null;
     aiStyleSample: string | null;
     aiPlan?: unknown;
+    /** Access level of the current user; the owner sees the share menu. */
+    role?: "owner" | "editor" | "viewer";
   };
   initialFiles: FileDoc[];
   aiEnabled: boolean;
@@ -469,6 +472,12 @@ export function Workspace({ project, initialFiles, aiEnabled }: Props) {
           {t(STATUS_KEY[docs.status])}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          {project.role === "owner" && <ShareMenu projectId={project.id} />}
+          {project.role === "viewer" && (
+            <span className="pill" title={t("share.hint")}>
+              {t("share.role.viewer")}
+            </span>
+          )}
           <details className="relative" ref={exportRef}>
             <summary className="btn cursor-pointer list-none">{t("ws.export")}</summary>
             <div
