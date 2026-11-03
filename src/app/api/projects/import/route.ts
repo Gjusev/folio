@@ -6,10 +6,11 @@ import { projectName } from "@/lib/validation";
 
 const MAX_ZIP_BYTES = 30_000_000;
 
-/** Creates a project from a ZIP of LaTeX sources (Overleaf or arXiv export). */
+/** Creates a project from a ZIP of LaTeX sources (Overleaf, Prism or arXiv export). */
 export const POST = route(async (req) => {
   const user = await requireUser(req);
-  enforceRateLimit(`import:${user.id}`, 10, 10 * 60_000);
+  // migración por lotes desde Prism/Overleaf
+  enforceRateLimit(`import:${user.id}`, 30, 10 * 60_000);
   // Fail closed on chunked/missing lengths (see uploads route).
   const length = Number(req.headers.get("content-length"));
   if (!Number.isInteger(length) || length <= 0) {
