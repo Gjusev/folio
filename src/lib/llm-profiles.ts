@@ -1,4 +1,5 @@
 import "server-only";
+import { lookup } from "node:dns/promises";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -71,8 +72,45 @@ export async function listProfiles(userId: string): Promise<Profile[]> {
   return fromEnv ? [...own, fromEnv] : own;
 }
 
+/**
+ * True for IP ranges this server must never be pointed at (SSRF guard):
+ * 0/8, 10/8, 127/8, 169.254/16 (link-local, incl. cloud metadata), 172.16/12,
+ * 192.168/16, ::1, fc00::/7 (unique-local), fe80::/10 (link-local) and
+ * IPv4-mapped IPv6. Pure, so it is unit-tested directly.
+ */
+export function isPrivateIp(ip: string): boolean {
+  const v4 = ip.split(".").map(Number);
+  if (v4.length === 4 && v4.every((n) => Number.isInteger(n) && n >= 0 && n <= 255)) {
+    const [a, b] = v4;
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    );
+  }
+  const v6 = ip.replace(/^\[|\]$/g, "").toLowerCase();
+  if (v6 === "::1" || v6 === "::") return true;
+  if (/^f[cd][0-9a-f]{0,2}:/.test(v6) || /^fe[89ab][0-9a-f]{0,2}:/.test(v6)) return true;
+  const mapped = v6.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  return mapped ? isPrivateIp(mapped[1]) : false;
+}
+
+/** LLM_ALLOW_LOCAL opts in to loopback/private targets, on an allowlisted port. */
+function localLlmAllowed(url: URL): boolean {
+  const flag = (process.env.LLM_ALLOW_LOCAL ?? "").toLowerCase();
+  if (flag !== "1" && flag !== "true" && flag !== "yes") return false;
+  const ports = (process.env.LLM_ALLOWED_LOCAL_PORTS ?? "11434")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return url.port !== "" && ports.includes(url.port);
+}
+
 /** https for remote endpoints; plain HTTP only on loopback (local runtimes). */
-export function validateBaseUrl(raw: string): URL {
+export async function validateBaseUrl(raw: string): Promise<URL> {
   let url: URL;
   try {
     url = new URL(raw);
@@ -86,6 +124,26 @@ export function validateBaseUrl(raw: string): URL {
     throw new HttpError(400, "Las URL remotas deben ser HTTPS; HTTP solo en localhost");
   if (url.username || url.password || url.search || url.hash)
     throw new HttpError(400, "La URL no puede incluir credenciales ni parámetros");
+  // SSRF guard: resolve the hostname and refuse internal-only targets. A host
+  // with at least one public record passes (CDNs legitimately mix A records);
+  // IP literals never hit the network. Blocks https://10.x-style URLs and
+  // public-looking names whose DNS lives in private ranges (169.254.169.254).
+  let ips: { address: string; family: number }[];
+  try {
+    ips = await lookup(url.hostname.replace(/^\[|\]$/g, ""), { all: true });
+  } catch {
+    throw new HttpError(400, "No se pudo resolver el host de la URL base");
+  }
+  if (ips.every((r) => isPrivateIp(r.address)) && !localLlmAllowed(url))
+    throw new HttpError(
+      400,
+      "La URL apunta a una dirección interna; usa un proveedor público o activa LLM_ALLOW_LOCAL",
+    );
+  // Residual TOCTOU: DNS rebinding can swap the record between this check and
+  // the actual fetch (nothing pins the IP at connect time). Closing it needs a
+  // custom lookup in the fetch agent that re-validates each address; accepted
+  // risk for now — profiles are per-user and the request line is built by us,
+  // never from the raw base URL.
   return url;
 }
 
@@ -99,11 +157,11 @@ export type ProfileInput = {
   enabled?: boolean;
 };
 
-function parseInput(input: ProfileInput) {
+async function parseInput(input: ProfileInput) {
   const label = input.label.trim();
   if (!label || label.length > 60) throw new HttpError(400, "Pon un nombre de hasta 60 caracteres");
   const kind = input.kind === "anthropic" ? "anthropic" : "openai";
-  const baseUrl = validateBaseUrl(input.baseUrl.trim().replace(/\/+$/, ""))
+  const baseUrl = (await validateBaseUrl(input.baseUrl.trim().replace(/\/+$/, "")))
     .toString()
     .replace(/\/+$/, "");
   const models = input.models
@@ -127,7 +185,7 @@ function parseInput(input: ProfileInput) {
 }
 
 export async function createProfile(userId: string, input: ProfileInput): Promise<Profile> {
-  const parsed = parseInput(input);
+  const parsed = await parseInput(input);
   if (input.apiKey && !sealConfigured())
     throw new HttpError(400, "Para guardar claves API define LLM_CREDENTIALS_KEY en el servidor");
   const [row] = await db()
@@ -147,7 +205,7 @@ export async function updateProfile(
   input: ProfileInput,
 ): Promise<Profile> {
   if (id === ENV_ID) throw new HttpError(403, "El perfil heredado del .env es de solo lectura");
-  const parsed = parseInput(input);
+  const parsed = await parseInput(input);
   if (input.apiKey && !sealConfigured())
     throw new HttpError(400, "Para guardar claves API define LLM_CREDENTIALS_KEY en el servidor");
   const [row] = await db()
