@@ -7,7 +7,7 @@ import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 
-type Item = { id: string; name: string; files: number; updatedAt: string };
+type Item = { id: string; name: string; files: number; updatedAt: string; role?: string | null };
 
 const RTF = {
   es: new Intl.RelativeTimeFormat("es"),
@@ -38,6 +38,8 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
   const [items, setItems] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"create" | "import" | null>(null);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"recent" | "name">("recent");
   const dialog = useRef<HTMLDialogElement>(null);
   const zipInput = useRef<HTMLInputElement>(null);
 
@@ -85,6 +87,30 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
     }
   }
 
+  async function duplicate(item: Item) {
+    setError(null);
+    try {
+      const r = await api<{ project: { id: string; name: string } }>(
+        "POST",
+        `/api/projects/${item.id}/duplicate`,
+      );
+      // Update local state: the list is client state, router.refresh() alone
+      // would not re-render rows already mounted.
+      setItems((xs) => [
+        {
+          id: r.project.id,
+          name: r.project.name,
+          files: item.files,
+          updatedAt: new Date().toISOString(),
+          role: "owner",
+        },
+        ...xs,
+      ]);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   async function remove(item: Item) {
     if (!confirm(t("projects.delete.confirm", { name: item.name }))) return;
     try {
@@ -94,6 +120,14 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
       setError((err as Error).message);
     }
   }
+
+  const visible = items
+    .filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
+    .sort((a, b) =>
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
 
   const tplName = (id: string) => t(`tpl.${id}.name` as MsgKey);
   const tplDesc = (id: string) => t(`tpl.${id}.desc` as MsgKey);
@@ -145,6 +179,29 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
         </div>
       </div>
 
+      {items.length > 3 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            className="input h-8 max-w-56 text-sm"
+            placeholder={t("projects.search.ph")}
+            value={query}
+            maxLength={80}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label={t("projects.search.ph")}
+          />
+          <select
+            className="select h-8 text-sm"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as "recent" | "name")}
+            aria-label={t("projects.sort")}
+          >
+            <option value="recent">{t("projects.sort.recent")}</option>
+            <option value="name">{t("projects.sort.name")}</option>
+          </select>
+        </div>
+      )}
+
       {error && (
         <p
           role="alert"
@@ -181,11 +238,20 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
             </tr>
           </thead>
           <tbody>
-            {items.map((p) => (
+            {visible.map((p) => (
               <tr key={p.id} className="group border-b border-rule hover:bg-raised">
                 <td className="max-w-0 py-0 pr-4">
-                  <Link href={`/projects/${p.id}`} className="block truncate py-3 font-medium">
-                    {p.name}
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className="flex items-center gap-1.5 truncate py-3 font-medium"
+                  >
+                    <span className="truncate">{p.name}</span>
+                    {p.role === "viewer" && (
+                      <span className="pill shrink-0">{t("share.role.viewer")}</span>
+                    )}
+                    {p.role === "editor" && (
+                      <span className="pill shrink-0">{t("share.role.editor")}</span>
+                    )}
                   </Link>
                 </td>
                 <td className="num hidden py-3 pr-4 text-right text-muted sm:table-cell">
@@ -193,20 +259,35 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
                 </td>
                 <td className="py-3 pr-4 whitespace-nowrap text-muted">{ago(p.updatedAt, lang)}</td>
                 <td className="w-0 py-2 text-right">
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-                    onClick={() => remove(p)}
-                    aria-label={`${t("projects.delete")} ${p.name}`}
-                  >
-                    {t("projects.delete")}
-                  </button>
+                  <span className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                      onClick={() => void duplicate(p)}
+                      aria-label={`${t("projects.duplicate")} ${p.name}`}
+                      title={t("projects.duplicate")}
+                    >
+                      {t("projects.duplicate")}
+                    </button>
+                    {p.role !== "viewer" && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                        onClick={() => remove(p)}
+                        aria-label={`${t("projects.delete")} ${p.name}`}
+                      >
+                        {t("projects.delete")}
+                      </button>
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <p className="mt-3 text-xs text-muted">{t("projects.import.prism")}</p>
 
       <dialog
         ref={dialog}
