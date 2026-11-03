@@ -181,15 +181,22 @@ export class DocumentStore {
 
   /**
    * Applies a change made on the server (e.g. a citation added to the .bib).
-   * Unsaved local edits are kept and rebased on the new version, never dropped.
+   * With a clean doc the server copy replaces ours. With unsaved local edits
+   * we must NOT rebase silently: the pending debounced save would PUT the
+   * stale local content on the new baseVersion and wipe the server change —
+   * so we raise the same conflict the 409 path uses and let the user merge.
    */
   replaceFromServer = (id: string, content: string, version: number) => {
     const d = this.docs.get(id);
     if (!d) return;
-    const hadLocalEdits = d.content !== d.saved;
-    d.saved = content;
-    d.version = version;
-    if (!hadLocalEdits) d.content = content;
+    if (d.content !== d.saved) {
+      d.conflict = true;
+      this.conflict = { fileId: id, path: d.path, content, version };
+    } else {
+      d.saved = content;
+      d.version = version;
+      d.content = content;
+    }
     this.emit();
   };
 

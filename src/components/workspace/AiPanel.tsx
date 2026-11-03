@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { AiAction, AgentPlan, EvidenceItem } from "@/lib/ai-prompts";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
@@ -73,6 +73,9 @@ export function AiPanel({
   const [question, setQuestion] = useState("");
   const [hint, setHint] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
+  // Leaving the workspace mid-stream must stop the generation: nobody is
+  // reading it and it keeps burning the user's ai rate-limit budget.
+  useEffect(() => () => abort.current?.abort(), []);
   const nextId = useRef(1);
   const busy = turns.some((t) => t.streaming);
   const [steerOpen, setSteerOpen] = useState(false);
@@ -457,7 +460,7 @@ export function AiPanel({
             <label className="flex items-center gap-2 text-xs">
               <span className="label">{t("ai.steer.length")}</span>
               <select
-                className="input h-7 w-auto text-xs"
+                className="select h-7 text-xs"
                 value={length}
                 onChange={(e) => setLength(e.target.value as typeof length)}
               >

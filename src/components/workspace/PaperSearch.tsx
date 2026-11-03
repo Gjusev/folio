@@ -54,6 +54,8 @@ type Props = {
   onBibUpdated: (file: FileDoc, key: string, added: boolean) => void;
   /** Syncs several server-side file changes (citation upgrades) into the editor. */
   onFilesUpdated?: (files: FileDoc[]) => void;
+  /** Persists pending local edits before the server reads/rewrites the .bib. */
+  flush?: () => Promise<void>;
 };
 
 function authorLine(a: string[]) {
@@ -72,6 +74,7 @@ export function PaperSearch({
   onCite,
   onBibUpdated,
   onFilesUpdated,
+  flush,
 }: Props) {
   const { t, lang } = useI18n();
   const [source, setSource] = useState<"all" | Source>("all");
@@ -180,6 +183,9 @@ export function PaperSearch({
     setAdding(paperId);
     setMessage(null);
     try {
+      // The server appends to the stored .bib; land our pending edits first
+      // or its response would clobber them (see replaceFromServer).
+      await flush?.();
       const r = await api<{ key: string; added: boolean; file: FileDoc }>(
         "POST",
         `/api/projects/${projectId}/citations`,
@@ -248,6 +254,8 @@ export function PaperSearch({
     setUpgrading(u.key);
     setMessage(null);
     try {
+      // The server rewrites the .bib and every \cite; land local edits first.
+      await flush?.();
       const r = await api<{ key: string; texFiles: number; files: FileDoc[] }>(
         "POST",
         `/api/projects/${projectId}/citations/upgrade`,
@@ -380,7 +388,7 @@ export function PaperSearch({
           <select
             id="paper-source"
             value={source}
-            className="h-7 rounded-md border border-control bg-surface px-1.5 text-xs text-ink"
+            className="select h-7 text-xs"
             onChange={(e) => changeSource(e.target.value as "all" | Source)}
           >
             <option value="all">{t("papers.source.all")}</option>
@@ -393,11 +401,7 @@ export function PaperSearch({
           <label htmlFor="paper-sort" className="sr-only">
             {t("papers.sort")}
           </label>
-          <select
-            id="paper-sort"
-            name="sort"
-            className="h-7 rounded-md border border-control bg-surface px-1.5 text-xs text-ink"
-          >
+          <select id="paper-sort" name="sort" className="select h-7 text-xs">
             <option value="relevance">{t("papers.sort.relevance")}</option>
             {source !== "s2" && <option value="cited">{t("papers.sort.cited")}</option>}
             <option value="recent">{t("papers.sort.recent")}</option>
@@ -415,7 +419,7 @@ export function PaperSearch({
               type="number"
               min={1900}
               max={2100}
-              className="num h-7 w-20 rounded-md border border-control bg-surface px-1.5 text-xs text-ink"
+              className="select num h-7 w-20 text-xs"
               placeholder="2020"
             />
           </label>
@@ -436,7 +440,16 @@ export function PaperSearch({
           </p>
         )}
 
-        {state === "loading" && <p className="p-4 text-sm text-muted">{t("papers.searching")}</p>}
+        {state === "loading" && (
+          <div className="space-y-2 p-3" aria-label={t("papers.searching")}>
+            {[64, 40, 52, 36, 58].map((w, i) => (
+              <div key={i} className="animate-pulse rounded-lg border border-line p-2.5">
+                <div className="h-3 rounded bg-raised" style={{ width: `${w}%` }} />
+                <div className="mt-2 h-2 w-1/3 rounded bg-raised" />
+              </div>
+            ))}
+          </div>
+        )}
 
         {recs && state !== "loading" && (
           <section aria-labelledby="recs-title" className="border-b border-line px-3 py-3">
