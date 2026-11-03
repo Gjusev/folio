@@ -25,6 +25,15 @@ async function compile(
 const doc = (body: string) =>
   `\\documentclass{article}\\usepackage{graphicx}\\begin{document}${body}\\end{document}`;
 
+async function postJson<T>(path: string, body: unknown): Promise<{ status: number; body: T }> {
+  const res = await fetch(`${URL_}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+    body: JSON.stringify(body),
+  });
+  return { status: res.status, body: (await res.json()) as T };
+}
+
 describe.skipIf(!URL_)("latex-compiler (real container)", () => {
   it.each(TEMPLATES.map((t) => [t.id, t] as const))(
     "compiles the %s template with its bibliography",
@@ -181,5 +190,61 @@ describe.skipIf(!URL_)("latex-compiler (real container)", () => {
       }),
     });
     expect(res.status).toBe(400);
+  }, 60_000);
+
+  it("counts words with texcount", async () => {
+    const { status, body } = await postJson<{ words: number; raw: string }>("/count", {
+      mainFile: "main.tex",
+      files: [{ path: "main.tex", content: doc("One two three four five six seven eight words.") }],
+    });
+    expect(status).toBe(200);
+    expect(body.words).toBeGreaterThan(0);
+  }, 60_000);
+
+  it("reports chktex warnings as machine-readable issues", async () => {
+    // `\ldots ` (command terminated with space) and straight quotes are
+    // classic chktex complaints; either one makes the test pass.
+    const tex = [
+      "\\documentclass{article}",
+      "\\begin{document}",
+      'He said \\ldots "straight quotes" here.',
+      "\\end{document}",
+    ].join("\n");
+    const { status, body } = await postJson<{
+      issues: { file: string; line: number; severity: string; code: number }[];
+    }>("/lint", {
+      mainFile: "main.tex",
+      files: [{ path: "main.tex", content: tex }],
+    });
+    expect(status).toBe(200);
+    expect(body.issues.length).toBeGreaterThan(0);
+    expect(body.issues.some((i) => i.file === "main.tex" && i.line === 3)).toBe(true);
+    expect(body.issues[0].severity).toMatch(/warning|error/i);
+  }, 60_000);
+
+  it("compiles and answers a forward synctex query (view) for line 1 of main.tex", async () => {
+    const { status, body } = await postJson<{
+      ok: boolean;
+      result?: { file: string; line: number; page: number; x: number; y: number };
+    }>("/synctex", {
+      mainFile: "main.tex",
+      files: [{ path: "main.tex", content: doc("Sync target at line one.") }],
+      mode: "view",
+      input: { line: 1, col: 1 },
+    });
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.result?.page).toBe(1);
+    expect(body.result?.file).toContain("main");
+  }, 120_000);
+
+  it("rejects path traversal in the synctex source file", async () => {
+    const { status } = await postJson("/synctex", {
+      mainFile: "main.tex",
+      files: [{ path: "main.tex", content: doc("hi") }],
+      mode: "view",
+      input: { line: 1, col: 1, file: "../etc/passwd" },
+    });
+    expect(status).toBe(400);
   }, 60_000);
 });
