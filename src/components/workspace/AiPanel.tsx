@@ -76,6 +76,46 @@ export function AiPanel({
   // Leaving the workspace mid-stream must stop the generation: nobody is
   // reading it and it keeps burning the user's ai rate-limit budget.
   useEffect(() => () => abort.current?.abort(), []);
+  // Seed the conversation with the persisted history (empty state = fresh).
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (seeded) return;
+    setSeeded(true);
+    api<{ messages: { role: string; action: string; content: string }[] | null }>(
+      "GET",
+      `/api/projects/${projectId}/ai`,
+    )
+      .then((r) => {
+        const msgs = (r.messages ?? []).filter((m) => m.content.trim());
+        if (msgs.length === 0) return;
+        setTurns((prev) => {
+          if (prev.length > 0) return prev; // live turns win over history
+          let n = 0;
+          const history: Turn[] = [];
+          for (const m of msgs) {
+            const isUser = m.role === "user";
+            const turn: Turn = {
+              id: --n,
+              action: (m.action as Turn["action"]) || "ask",
+              prompt: isUser ? m.content : "",
+              answer: isUser ? "" : m.content,
+              streaming: false,
+            };
+            // Rehydrate what can be re-rendered structurally.
+            if (!isUser && m.action === "plan") {
+              try {
+                turn.plan = JSON.parse(m.content) as AgentPlan;
+              } catch {
+                /* raw text fallback */
+              }
+            }
+            history.push(turn);
+          }
+          return history;
+        });
+      })
+      .catch(() => {});
+  }, [projectId, seeded]);
   const nextId = useRef(1);
   const busy = turns.some((t) => t.streaming);
   const [steerOpen, setSteerOpen] = useState(false);
