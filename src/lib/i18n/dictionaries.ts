@@ -112,6 +112,9 @@ export const es = {
   "pdf.empty.body":
     "Compila con el botón de arriba o con {kbd}. Haz clic en el texto del PDF para ir a esa frase en el código.",
   "pdf.empty.cta": "Compilar ahora",
+  "pdf.words": "{n} palabras",
+  "pdf.lint": "Lint",
+  "pdf.lint.none": "chktex no encontró avisos.",
   "pdf.opening": "Abriendo el PDF…",
   "pdf.loading": "Cargando el visor…",
   "pdf.error": "No se pudo mostrar el PDF.",
@@ -477,6 +480,9 @@ export const en: Dict = {
   "pdf.empty.body":
     "Compile with the button above or {kbd}. Click text in the PDF to jump to that sentence in the source.",
   "pdf.empty.cta": "Compile now",
+  "pdf.words": "{n} words",
+  "pdf.lint": "Lint",
+  "pdf.lint.none": "chktex found no warnings.",
   "pdf.opening": "Opening the PDF…",
   "pdf.loading": "Loading the viewer…",
   "pdf.error": "Could not display the PDF.",
@@ -836,6 +842,9 @@ export const de: Dict = {
   "pdf.empty.body":
     "Kompiliere mit der Schaltfläche oben oder mit {kbd}. Klicke auf Text im PDF, um zu der Stelle im Quelltext zu springen.",
   "pdf.empty.cta": "Jetzt kompilieren",
+  "pdf.words": "{n} Wörter",
+  "pdf.lint": "Lint",
+  "pdf.lint.none": "chktex fand keine Warnungen.",
   "pdf.opening": "PDF wird geöffnet…",
   "pdf.loading": "Viewer wird geladen…",
   "pdf.error": "PDF konnte nicht angezeigt werden.",

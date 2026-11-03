@@ -36,6 +36,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         size: f.size,
       }))}
       aiEnabled={await anyEndpoint(user.id)}
+      userName={user.name}
     />
   );
 }

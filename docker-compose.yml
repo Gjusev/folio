@@ -41,6 +41,27 @@ services:
     restart: unless-stopped
     networks: [compile]
 
+  # Optional live-collaboration relay (Yjs fan-out). Runs on the internal
+  # network with no published port; the web app reaches it at ws://collab:3001
+  # only when the operator sets COLLAB_URL (empty by default = feature off).
+  # The browser, not the server, opens the WebSocket: in production put the
+  # relay behind a same-origin wss:// reverse proxy or extend the CSP
+  # connect-src (see .env.example).
+  collab:
+    build: ./services/collab
+    environment:
+      # Signs/verifies relay tokens; reuses COMPILER_TOKEN when unset.
+      COLLAB_SECRET: ${COLLAB_SECRET:-}
+      COMPILER_TOKEN: ${COMPILER_TOKEN}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    restart: unless-stopped
+    networks: [collab]
+
   web:
     profiles: [app]
     build: .
@@ -48,6 +69,12 @@ services:
       DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@db:5432/folio
       COMPILER_URL: http://compiler:3001
       COMPILER_TOKEN: ${COMPILER_TOKEN}
+      # Empty = collaboration off (default). The URL is handed to the browser,
+      # so in the compose profile it must be ws://collab:3001 — which only
+      # resolves inside the docker network; real deployments expose the relay
+      # with a proxy and use a wss:// URL here.
+      COLLAB_URL: ${COLLAB_URL:-}
+      COLLAB_SECRET: ${COLLAB_SECRET:-}
       # 0 closes self-registration (existing accounts keep logging in).
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-1}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
@@ -62,6 +89,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
       compiler: { condition: service_started }
+      collab: { condition: service_started }
     # Not read_only: Next writes to .next at runtime. Limits still cap a
     # compromised web process (memory, CPU, processes, privilege gains).
     mem_limit: 1g
@@ -69,7 +97,7 @@ services:
     pids_limit: 256
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
-    networks: [default, compile]
+    networks: [default, compile, collab]
 
   # Optional local model server (OpenAI-compatible at http://127.0.0.1:11434/v1).
   #   docker compose --profile ollama up -d ollama
@@ -87,6 +115,9 @@ networks:
   default: {}
   # No route to the Internet: only the web app can reach the compiler.
   compile:
+    internal: true
+  # Same for the collab relay: it only listens.
+  collab:
     internal: true
 
 volumes:

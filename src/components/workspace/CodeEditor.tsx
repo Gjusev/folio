@@ -9,7 +9,16 @@ import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
+import {
+  Awareness,
+  applyAwarenessUpdate,
+  encodeAwarenessUpdate,
+  removeAwarenessStates,
+} from "y-protocols/awareness";
 import { useEffect, useRef, type RefObject } from "react";
+import { yCollab } from "y-codemirror.next";
+import * as Y from "yjs";
+import { base64ToBytes, connectCollab } from "@/lib/collab";
 
 export type EditorHandle = {
   /** Current selection of the active file. */
@@ -36,6 +45,12 @@ type Props = {
   label: string;
   /** Offer \cite keys and \label anchors as you type. */
   completions?: { citeKeys: string[]; labels: string[] };
+  /**
+   * Opt-in live collaboration (Yjs over the collab relay; see src/lib/collab).
+   * null/undefined = off: the editor behaves exactly as before. When set, the
+   * active file syncs with its room and remote peers show named cursors.
+   */
+  collab?: { url: string; token: string; user?: { name: string } } | null;
 };
 
 const theme = EditorView.theme({
@@ -61,6 +76,7 @@ export function CodeEditor({
   handleRef,
   label,
   completions,
+  collab,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -81,6 +97,11 @@ export function CodeEditor({
 
   const extensions = useRef<Extension[] | null>(null);
 
+  // Live collab state for the bound file (null while off or connecting).
+  const collabFile = useRef<string | null>(null);
+  const ytext = useRef<Y.Text | null>(null);
+  const collabExt = useRef<Extension | null>(null);
+
   // \cite{ and \ref{ completions from the project's bibliography and labels.
   const latexCompletions = (ctx: CompletionContext): CompletionResult | null => {
     const before = ctx.matchBefore(/\\(?:cite|ref|eqref|autoref)\{[^},]*$/);
@@ -97,7 +118,7 @@ export function CodeEditor({
   };
 
   // Only called from effects, never during render.
-  function stateFor(id: string) {
+  function baseExtensions(): Extension[] {
     extensions.current ??= [
       basicSetup,
       StreamLanguage.define(stex),
@@ -117,9 +138,21 @@ export function CodeEditor({
           cb.current.onChange(current.current, u.state.doc.toString());
       }),
     ];
+    return extensions.current;
+  }
+
+  function stateFor(id: string) {
+    // The collab-bound file never reuses a cached state: it went stale while
+    // another file was active (updates only reach the attached view), so it is
+    // always rebuilt from the Y.Doc, binding included.
+    if (id === collabFile.current && ytext.current && collabExt.current)
+      return EditorState.create({
+        doc: ytext.current.toString(),
+        extensions: [...baseExtensions(), collabExt.current],
+      });
     return (
       states.current.get(id) ??
-      EditorState.create({ doc: cb.current.getDoc(id), extensions: extensions.current })
+      EditorState.create({ doc: cb.current.getDoc(id), extensions: baseExtensions() })
     );
   }
 
@@ -148,12 +181,119 @@ export function CodeEditor({
   useEffect(() => {
     const v = view.current;
     if (!v || current.current === fileId) return;
-    states.current.set(current.current, v.state);
+    // Collab states are rebuilt from the Y.Doc on re-entry; cache local ones.
+    if (current.current !== collabFile.current) states.current.set(current.current, v.state);
     current.current = fileId;
     v.setState(stateFor(fileId));
     applyReveal();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- react to file switches only
   }, [fileId]);
+
+  // Live collaboration, opt-in via the `collab` prop. One room per file: the
+  // connection is torn down and reopened on file switches. The binding is
+  // attached only after the room state arrives (async), until then the editor
+  // is exactly the plain local one. Remote changes enter as normal editor
+  // transactions, so the autosave pipeline (and the 409 conflict banner) keep
+  // working unchanged.
+  useEffect(() => {
+    if (!collab) return;
+    const statesMap = states.current; // stable for the effect's lifetime
+    const doc = new Y.Doc();
+    const text = doc.getText("folio");
+    const aware = new Awareness(doc);
+    const net = {}; // origin marker: updates that came in over the wire
+    const name = collab.user?.name ?? "";
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    const palette = ["#2563eb", "#ea580c", "#059669", "#7c3aed", "#dc2626", "#c026d3"];
+    // No name given: colour-only cursor (no untranslated fallback label).
+    aware.setLocalStateField(
+      "user",
+      name
+        ? { name, color: palette[hash % palette.length] }
+        : { color: palette[hash % palette.length] },
+    );
+
+    const conn = connectCollab(
+      { url: collab.url, token: collab.token, fileId, clientId: doc.clientID },
+      {
+        onState(data, first, reconnect) {
+          for (const part of data ? data.split(",") : [])
+            if (part) Y.applyUpdate(doc, base64ToBytes(part), net);
+          if (text.toString() === "" && first) {
+            // Empty room and we are alone: seed with what the editor shows now
+            // (so local typing since mount is kept). Broadcast via the update
+            // listener below.
+            const content =
+              view.current && current.current === fileId
+                ? view.current.state.doc.toString()
+                : cb.current.getDoc(fileId);
+            if (content) doc.transact(() => text.insert(0, content));
+          } else if (text.toString() !== "" && (first || reconnect)) {
+            // Rejoin with a document the room does not know (restart, or we
+            // are repopulating a GC'd room): resend our full state, peers
+            // merge it (Yjs updates are idempotent for known operations).
+            conn.send(Y.encodeStateAsUpdate(doc));
+          }
+          if (collabFile.current) return; // binding already attached
+          collabFile.current = fileId;
+          ytext.current = text;
+          collabExt.current = yCollab(text, aware);
+          const v = view.current;
+          if (v && current.current === fileId) v.setState(stateFor(fileId));
+        },
+        onUpdate(update) {
+          Y.applyUpdate(doc, update, net);
+        },
+        onAwareness(update) {
+          applyAwarenessUpdate(aware, update, net);
+        },
+        onBye(client) {
+          removeAwarenessStates(aware, [client], net);
+        },
+      },
+    );
+
+    const onDocUpdate = (update: Uint8Array, origin: unknown) => {
+      // Local edits (origin = the y-codemirror binding) and the seed above
+      // are broadcast; anything applied from the network is not re-sent.
+      if (origin !== net) conn.send(update);
+    };
+    doc.on("update", onDocUpdate);
+    const onAwarenessUpdate = (
+      changes: { added: number[]; updated: number[]; removed: number[] },
+      origin: unknown,
+    ) => {
+      if (origin === net) return;
+      conn.sendAwareness(
+        encodeAwarenessUpdate(aware, [...changes.added, ...changes.updated, ...changes.removed]),
+      );
+    };
+    aware.on("update", onAwarenessUpdate);
+
+    return () => {
+      conn.close();
+      doc.off("update", onDocUpdate);
+      aware.off("update", onAwarenessUpdate);
+      aware.destroy();
+      doc.destroy();
+      if (collabFile.current === fileId) {
+        // Keep what the session shows as the file's local content, then go
+        // back to the plain editor: identical to the no-collab behaviour.
+        const local = EditorState.create({
+          doc: text.toString(),
+          extensions: baseExtensions(),
+        });
+        statesMap.set(fileId, local);
+        collabFile.current = null;
+        ytext.current = null;
+        collabExt.current = null;
+        const v = view.current;
+        if (v && current.current === fileId) v.setState(local);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reconnect on room/identity changes only
+  }, [collab?.url, collab?.token, collab?.user?.name, fileId]);
 
   useEffect(() => {
     handleRef.current = {

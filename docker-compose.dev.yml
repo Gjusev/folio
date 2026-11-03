@@ -3,8 +3,17 @@
 # bearer header — nothing else on the machine or network can submit jobs.
 # An `internal` network cannot publish ports, so in dev the compiler sits on
 # the default network instead. Use the full stack for the no-egress guarantee.
+# Same for the collab relay on 127.0.0.1:3002 (browsers connect directly and
+# tokens are HMAC-signed, so loopback exposure is authenticated); start it
+# only when testing collaboration:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build collab
 services:
   compiler:
     ports:
       - "127.0.0.1:3001:3001"
+    networks: [default]
+
+  collab:
+    ports:
+      - "127.0.0.1:3002:3001"
     networks: [default]
