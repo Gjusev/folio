@@ -8,7 +8,10 @@ RUN apt-get update \
       texlive-plain-generic \
       texlive-fonts-recommended texlive-science texlive-bibtex-extra \
       texlive-publishers biber \
+      chktex texlive-extra-utils \
  && rm -rf /var/lib/apt/lists/*
+# chktex: linter (/lint). texcount ships inside texlive-extra-utils (/count).
+# synctex ships inside texlive-binaries, already pulled by texlive-latex-base.
 
 WORKDIR /app
 COPY server.ts ./

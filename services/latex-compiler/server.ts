@@ -52,6 +52,43 @@ export type DiffRequest = {
   newFiles: { path: string; content: string; encoding?: "base64" }[];
 };
 export type CompileResult = { ok: boolean; log: string; pdf?: string; timedOut?: boolean };
+export type LintIssue = {
+  file: string;
+  line: number;
+  col: number;
+  severity: string;
+  code: number;
+  message: string;
+};
+export type LintResult = { issues: LintIssue[]; raw: string; error?: string; timedOut?: boolean };
+export type CountResult = {
+  words: number;
+  headerWords: number;
+  headers: number;
+  floats: number;
+  raw: string;
+};
+export type SynctexHit = {
+  file: string;
+  line: number;
+  col?: number;
+  page: number;
+  x: number;
+  y: number;
+};
+export type SynctexResult = {
+  ok: boolean;
+  result?: SynctexHit;
+  raw: string;
+  log?: string;
+  timedOut?: boolean;
+};
+export type SynctexRequest = {
+  mainFile: string;
+  files: CompileRequest["files"];
+  mode: "view" | "edit";
+  input: { line: number; col: number; file: string } | { page: number; x: number; y: number };
+};
 
 export function safePath(p: unknown): p is string {
   if (typeof p !== "string" || p.length === 0 || p.length > 200) return false;
@@ -91,6 +128,51 @@ export function parseDiffRequest(body: unknown): DiffRequest | string {
   )
     return "invalid mainFile";
   return { mainFile, oldFiles: oldV, newFiles: newV };
+}
+
+/**
+ * /synctex body: the same source validation as /compile, plus a query.
+ * view = source -> pdf, input {line, col, file?} (file defaults to mainFile and
+ * must pass the same path checks as any uploaded file).
+ * edit = pdf -> source, input {page, x, y} with the origin at the top-left
+ * corner, y growing downwards, in pt (1/72 in) — the synctex CLI convention.
+ */
+export function parseSynctexRequest(body: unknown): SynctexRequest | string {
+  const base = parseRequest(body);
+  if (typeof base === "string") return base;
+  const { mode, input } = body as Record<string, unknown>;
+  if (mode !== "view" && mode !== "edit") return "mode must be 'view' or 'edit'";
+  if (typeof input !== "object" || input === null) return "invalid input";
+  const i = input as Record<string, unknown>;
+  if (mode === "view") {
+    const { line, col, file } = i;
+    if (
+      typeof line !== "number" ||
+      !Number.isInteger(line) ||
+      line < 1 ||
+      typeof col !== "number" ||
+      !Number.isInteger(col) ||
+      col < 0
+    )
+      return "invalid input: line and col must be positive integers";
+    const f = typeof file === "string" ? file : base.mainFile;
+    if (!safePath(f) || !f.endsWith(".tex")) return "invalid input: file";
+    return { ...base, mode, input: { line, col, file: f } };
+  }
+  const { page, x, y } = i;
+  if (
+    typeof page !== "number" ||
+    !Number.isInteger(page) ||
+    page < 1 ||
+    typeof x !== "number" ||
+    !Number.isFinite(x) ||
+    x < 0 ||
+    typeof y !== "number" ||
+    !Number.isFinite(y) ||
+    y < 0
+  )
+    return "invalid input: page, x and y must be positive numbers";
+  return { ...base, mode, input: { page, x, y } };
 }
 
 function validateFiles(
@@ -211,6 +293,53 @@ function latexdiff(dir: string, oldMain: string, newMain: string, outPath: strin
   });
 }
 
+const TOOL_TIMEOUT_MS = 20_000;
+
+/**
+ * Spawns a TeX auxiliary tool (chktex, texcount, synctex) in a job directory:
+ * detached with its own process group so a timeout kills the whole tree,
+ * stdout captured, stderr discarded (these tools chat on it).
+ */
+function runTool(cmd: string, args: string[], cwd: string) {
+  return new Promise<{ code: number | null; out: string; timedOut: boolean }>((resolve) => {
+    const child = spawn(cmd, args, {
+      cwd,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        NODE_ENV: "production",
+        PATH: process.env.PATH ?? "/usr/bin:/bin",
+        HOME: cwd,
+        openin_any: "p",
+        openout_any: "p",
+        shell_escape: "f",
+      },
+    });
+    let out = "";
+    child.stdout.on("data", (c: Buffer) => {
+      out += c;
+    });
+    child.stderr.on("data", () => {});
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        process.kill(-child.pid!, "SIGKILL");
+      } catch {
+        /* already gone */
+      }
+    }, TOOL_TIMEOUT_MS);
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve({ code: -1, out, timedOut });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ code, out, timedOut });
+    });
+  });
+}
+
 /**
  * Visual diff of two versions: latexdiff --flatten merges each tree into one
  * document and marks changes (\DIFadd/\DIFdel); latexmk renders the result so
@@ -234,6 +363,150 @@ export async function diff(req: DiffRequest): Promise<CompileResult> {
   }
 }
 
+/**
+ * chktex -f placeholders: %f file, %l line, %c column, %d line length,
+ * %k Warning/Error, %n warning number, %m message. Fields are colon-separated;
+ * the message is everything after the sixth colon (messages may contain colons).
+ */
+export function parseChktex(raw: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  // chktex expands the "\n" of -f itself; also split on a literal "\n" in case
+  // a build prints it unexpanded.
+  for (const line of raw.split(/\\n|\n/)) {
+    const parts = line.split(":");
+    if (parts.length < 7) continue;
+    const [file, lineNo, col, , severity, code, ...message] = parts;
+    const lineN = Number(lineNo);
+    const codeN = Number(code);
+    if (!Number.isFinite(lineN) || !Number.isFinite(codeN)) continue;
+    const colN = Number(col);
+    issues.push({
+      file,
+      line: lineN,
+      col: Number.isFinite(colN) ? colN : 0,
+      severity: severity || "Warning",
+      code: codeN,
+      message: message.join(":").trim(),
+    });
+  }
+  return issues;
+}
+
+/** Lints the main file with chktex. It does not follow \input, and no PDF is built. */
+export async function lint(req: CompileRequest): Promise<LintResult> {
+  const dir = await mkdtemp(join(tmpdir(), "job-"));
+  try {
+    await writeFiles(dir, req.files);
+    const { code, out, timedOut } = await runTool(
+      "chktex",
+      ["-q", "-f", "%f:%l:%c:%d:%k:%n:%m\\n", req.mainFile],
+      dir,
+    );
+    if (timedOut) return { issues: [], raw: out, timedOut: true };
+    if (code === -1)
+      return { issues: [], raw: out, error: "chktex no pudo ejecutarse (¿falta el paquete?)" };
+    return { issues: parseChktex(out), raw: out };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * With -total -sum, texcount repeats the metric lines once per included file
+ * and once more for the grand total, so the LAST occurrence of each label is
+ * the number we want (the only file's counts when there are no includes).
+ */
+export function parseTexcount(raw: string): Omit<CountResult, "raw"> {
+  const last = (re: RegExp) => {
+    const found = [...raw.matchAll(re)];
+    return found.length ? Number(found[found.length - 1][1]) || 0 : 0;
+  };
+  return {
+    words: last(/Words in text:\s*(\d+)/g),
+    headerWords: last(/Words in headers:\s*(\d+)/g),
+    headers: last(/Number of headers:\s*(\d+)/g),
+    floats: last(/Number of floats\/tables\/figures:\s*(\d+)/g),
+  };
+}
+
+/** Word/heading/float counts with texcount; no PDF is built. */
+export async function count(req: CompileRequest): Promise<CountResult> {
+  const dir = await mkdtemp(join(tmpdir(), "job-"));
+  try {
+    await writeFiles(dir, req.files);
+    const { out } = await runTool("texcount", ["-total", "-sum", req.mainFile], dir);
+    return { ...parseTexcount(out), raw: out };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Reads the first Input/Output block of a synctex answer: for "view" that is
+ * the first PDF location for the source position; for "edit" the first source
+ * position for the clicked point.
+ */
+export function parseSynctex(
+  raw: string,
+  query?: { file: string; line: number },
+): SynctexHit | null {
+  const grab = (key: string) => raw.match(new RegExp(`^${key}:(.*)$`, "m"))?.[1]?.trim();
+  const page = Number(grab("Page"));
+  // "synctex view" (forward) emits only Output/Page/x/y blocks — no Input
+  // records; the source file/line are the query itself. "synctex edit"
+  // (inverse) emits Input:/Line:/Column: records instead.
+  const file = grab("Input") ?? query?.file;
+  if (!page || !file) return null;
+  const col = grab("Column");
+  const line = Number(grab("Line")) || query?.line || 0;
+  return {
+    file,
+    line,
+    ...(col !== undefined && col !== "" ? { col: Number(col) || 0 } : {}),
+    page,
+    x: Number(grab("x")) || 0,
+    y: Number(grab("y")) || 0,
+  };
+}
+
+/**
+ * Forward/inverse sync. Costs a full recompile (same as /compile) in a fresh
+ * job dir, because latexmk now always passes -synctex=1; then it queries the
+ * produced .synctex.gz. Best effort for sources in subfolders: synctex matches
+ * the -i file name against the names recorded at compile time.
+ */
+export async function synctex(req: SynctexRequest): Promise<SynctexResult> {
+  const dir = await mkdtemp(join(tmpdir(), "job-"));
+  try {
+    await writeFiles(dir, req.files);
+    const { code, timedOut } = await run(dir, req.mainFile);
+    if (timedOut) return { ok: false, raw: "", timedOut: true };
+    const base = req.mainFile.slice(0, -4);
+    const log = await readFile(join(dir, `${base}.log`), "utf8").catch(() => "");
+    const pdf = join(dir, `${base}.pdf`);
+    const built =
+      code === 0 &&
+      (await stat(pdf).then(
+        (s) => s.size > 0,
+        () => false,
+      ));
+    if (!built)
+      return { ok: false, raw: "", log: log.slice(-LOG_TAIL) || "[folio] LaTeX produced no PDF." };
+    const i = req.input;
+    // "edit" coordinates: page:x:y with the origin at the top-left corner and
+    // y growing downwards, in pt — as printed by `synctex view` (x:/y: lines).
+    const args =
+      "line" in i
+        ? ["view", "-i", `${i.line}:${i.col}:${i.file}`, "-o", pdf]
+        : ["edit", "-o", `${i.page}:${i.x}:${i.y}:${pdf}`];
+    const { out } = await runTool("synctex", args, dirname(pdf));
+    const hit = parseSynctex(out, "line" in i ? { file: i.file, line: i.line } : undefined);
+    return { ok: hit !== null, result: hit ?? undefined, raw: out };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 function run(cwd: string, mainFile: string): Promise<{ code: number | null; timedOut: boolean }> {
   return new Promise((resolve) => {
     const child = spawn(
@@ -245,6 +518,7 @@ function run(cwd: string, mainFile: string): Promise<{ code: number | null; time
         "-interaction=nonstopmode",
         "-halt-on-error",
         "-file-line-error",
+        "-synctex=1", // pass-through option: produces <job>.synctex.gz next to the PDF
         "-no-shell-escape",
         mainFile,
       ],
@@ -311,11 +585,13 @@ function readBody(req: IncomingMessage): Promise<string | null> {
   });
 }
 
+const ROUTES = new Set(["/compile", "/diff", "/lint", "/count", "/synctex"]);
+
 let active = 0;
 
 export const server = createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") return send(res, 200, { ok: true, active });
-  if (req.method !== "POST" || (req.url !== "/compile" && req.url !== "/diff"))
+  if (req.method !== "POST" || !ROUTES.has(String(req.url)))
     return send(res, 404, { error: "not found" });
   if (!authorized(req)) return send(res, 401, { error: "unauthorized" });
   if (active >= MAX_JOBS) return send(res, 429, { error: "compiler busy" });
@@ -333,11 +609,29 @@ export const server = createServer(async (req, res) => {
     } catch {
       return send(res, 400, { error: "invalid json" });
     }
-    const parsed = req.url === "/diff" ? parseDiffRequest(body) : parseRequest(body);
-    if (typeof parsed === "string") return send(res, 400, { error: parsed });
-    if (req.url === "/diff" && "oldFiles" in parsed) send(res, 200, await diff(parsed));
-    else if ("files" in parsed) send(res, 200, await compile(parsed));
-    else send(res, 400, { error: "invalid request" });
+    // Parse per route and dispatch; the url both selects the parser and the
+    // handler, so no extra narrowing of the parsed union is needed.
+    if (req.url === "/diff") {
+      const parsed = parseDiffRequest(body);
+      if (typeof parsed === "string") return send(res, 400, { error: parsed });
+      send(res, 200, await diff(parsed));
+    } else if (req.url === "/synctex") {
+      const parsed = parseSynctexRequest(body);
+      if (typeof parsed === "string") return send(res, 400, { error: parsed });
+      send(res, 200, await synctex(parsed));
+    } else if (req.url === "/lint") {
+      const parsed = parseRequest(body);
+      if (typeof parsed === "string") return send(res, 400, { error: parsed });
+      send(res, 200, await lint(parsed));
+    } else if (req.url === "/count") {
+      const parsed = parseRequest(body);
+      if (typeof parsed === "string") return send(res, 400, { error: parsed });
+      send(res, 200, await count(parsed));
+    } else {
+      const parsed = parseRequest(body);
+      if (typeof parsed === "string") return send(res, 400, { error: parsed });
+      send(res, 200, await compile(parsed));
+    }
   } catch (err) {
     if (err instanceof InvalidFile) return send(res, 400, { error: err.message });
     console.error(err);
