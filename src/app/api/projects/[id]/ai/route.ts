@@ -4,6 +4,7 @@ import { bibKeys } from "@/lib/bibtex";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { streamChat } from "@/lib/llm";
 import { anyEndpoint, resolveEndpoint } from "@/lib/llm-profiles";
+import { indexStatus, retrieve } from "@/lib/rag";
 import {
   addAiMessage,
   getFile,
@@ -49,11 +50,27 @@ export const POST = route(async (req, { params }: Ctx) => {
     .flatMap((f) => bibKeys(f.content))
     .slice(0, 300);
 
+  // RAG, best effort: top-8 chunks of the project's index for the instruction.
+  // Any failure (no index, no embedder, provider hiccup) leaves the chat intact.
+  let projectContext: { file: string; content: string }[] | undefined;
+  if (input.instruction) {
+    try {
+      if (await indexStatus(project.id)) {
+        const found = await retrieve(user.id, project.id, input.instruction);
+        if (found.length)
+          projectContext = found.map(({ file: f, content }) => ({ file: f, content }));
+      }
+    } catch {
+      /* silent by design: the chat works without retrieved fragments */
+    }
+  }
+
   const messages = buildMessages({
     ...input,
     filePath: file.path,
     document: file.content,
     bibKeys: keys,
+    projectContext,
   });
   const tokens = streamChat(messages, req.signal, endpoint);
 

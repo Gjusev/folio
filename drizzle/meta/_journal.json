@@ -43,6 +43,13 @@
       "when": 1793733283687,
       "tag": "0005_bizarre_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793791871831,
+      "tag": "0006_absent_sumo",
+      "breakpoints": true
     }
   ]
 }
