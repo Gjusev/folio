@@ -5,7 +5,7 @@
 const es = {
   // library
   "lib.title": "Bibliografía del proyecto",
-  "lib.summary": "{n} entradas · {cited} citadas · {unused} sin usar",
+  "lib.summary": "{n:entrada|entradas} · {cited:citada|citadas} · {unused:sin usar|sin usar}",
   "lib.graph": "Grafo de mi bibliografía",
   "lib.graph.hint": "Explora cómo se citan entre sí tus referencias.",
   "lib.filter.ph": "Filtrar por título, autor o clave…",
@@ -24,7 +24,7 @@ const es = {
   "lib.none":
     "Todavía no hay entradas .bib en el proyecto. Cita un paper desde Buscar o pega tu .bib como archivo.",
   "lib.nomatch": "Ninguna entrada coincide con el filtro.",
-  "lib.inGraph": "{n} con DOI, listas para el grafo",
+  "lib.inGraph": "{n} con DOI",
   // check
   "check.title": "Revisión del proyecto",
   "check.run": "Revisar proyecto",
@@ -32,15 +32,27 @@ const es = {
   "check.hint":
     "Citas sin usar o rotas, mejoras de preprint a publicado y la lista de envío: todo en un informe.",
   "check.verdict.ok": "Todo en orden: no hay nada pendiente.",
-  "check.verdict.n": "{n} cosas que mirar antes de enviar",
+  "check.verdict.n": "{n:cosa que mirar|cosas que mirar} antes de enviar",
   "check.citations": "Citas",
   "check.submission": "Lista de envío",
   "check.error": "La revisión falló",
+  "check.citations.ok": "{n:cita citada y definida|citas, todas definidas}",
+  "check.citations.bad": "Claves sin definir: {list}",
+  "check.unused.ok": "Todas las entradas del .bib se citan",
+  "check.unused.bad": "Sin citar ({n}): {list}",
+  "check.todos.ok": "Sin marcadores pendientes",
+  "check.todos.bad": "{n:marcador TODO/FIXME pendiente|marcadores TODO/FIXME pendientes}",
+  "check.figures.ok": "Todas las figuras referenciadas existen",
+  "check.figures.bad": "No encontradas: {list}",
+  "check.abstract.ok": "Resumen presente",
+  "check.abstract.bad": "Falta el resumen",
+  "check.keywords.ok": "Palabras clave presentes",
+  "check.keywords.bad": "Sin palabras clave (algunas revistas las piden)",
 };
 
 const en: Record<keyof typeof es, string> = {
   "lib.title": "Project bibliography",
-  "lib.summary": "{n} entries · {cited} cited · {unused} unused",
+  "lib.summary": "{n:entry|entries} · {cited:cited|cited} · {unused:unused|unused}",
   "lib.graph": "Graph of my bibliography",
   "lib.graph.hint": "See how your references cite each other.",
   "lib.filter.ph": "Filter by title, author or key…",
@@ -59,22 +71,34 @@ const en: Record<keyof typeof es, string> = {
   "lib.none":
     "No .bib entries in the project yet. Cite a paper from Search or paste your .bib as a file.",
   "lib.nomatch": "No entry matches the filter.",
-  "lib.inGraph": "{n} with a DOI, ready for the graph",
+  "lib.inGraph": "{n} with DOI",
   "check.title": "Project review",
   "check.run": "Review project",
   "check.running": "Reviewing…",
   "check.hint":
     "Unused or broken citations, preprint-to-published upgrades and the submission list: one report.",
   "check.verdict.ok": "All clear: nothing pending.",
-  "check.verdict.n": "{n} things to look at before submitting",
+  "check.verdict.n": "{n:thing to look at|things to look at} before submitting",
   "check.citations": "Citations",
   "check.submission": "Submission list",
   "check.error": "The review failed",
+  "check.citations.ok": "{n:citation, all defined|citations, all defined}",
+  "check.citations.bad": "Undefined keys: {list}",
+  "check.unused.ok": "Every .bib entry is cited",
+  "check.unused.bad": "Uncited ({n}): {list}",
+  "check.todos.ok": "No open markers",
+  "check.todos.bad": "{n:TODO/FIXME marker left|TODO/FIXME markers left}",
+  "check.figures.ok": "All referenced figures exist",
+  "check.figures.bad": "Not found: {list}",
+  "check.abstract.ok": "Abstract present",
+  "check.abstract.bad": "Abstract missing",
+  "check.keywords.ok": "Keywords present",
+  "check.keywords.bad": "No keywords (some journals require them)",
 };
 
 const de: Record<keyof typeof es, string> = {
   "lib.title": "Projekt-Bibliografie",
-  "lib.summary": "{n} Einträge · {cited} zitiert · {unused} unbenutzt",
+  "lib.summary": "{n:Eintrag|Einträge} · {cited:zitiert|zitiert} · {unused:unbenutzt|unbenutzt}",
   "lib.graph": "Graph meiner Bibliografie",
   "lib.graph.hint": "Sehen Sie, wie sich Ihre Referenzen gegenseitig zitieren.",
   "lib.filter.ph": "Nach Titel, Autor oder Schlüssel filtern …",
@@ -93,17 +117,29 @@ const de: Record<keyof typeof es, string> = {
   "lib.none":
     "Noch keine .bib-Einträge im Projekt. Zitieren Sie eine Arbeit über die Suche oder fügen Sie Ihre .bib als Datei ein.",
   "lib.nomatch": "Kein Eintrag passt zum Filter.",
-  "lib.inGraph": "{n} mit DOI, bereit für den Graphen",
+  "lib.inGraph": "{n} mit DOI",
   "check.title": "Projektprüfung",
   "check.run": "Projekt prüfen",
   "check.running": "Prüfe …",
   "check.hint":
     "Unbenutzte oder defekte Zitate, Upgrades von Preprint zu Publikation und die Einreichungsliste: ein Bericht.",
   "check.verdict.ok": "Alles in Ordnung: nichts offen.",
-  "check.verdict.n": "{n} Punkte vor der Einreichung ansehen",
+  "check.verdict.n": "{n:Punkt|Punkte} vor der Einreichung ansehen",
   "check.citations": "Zitate",
   "check.submission": "Einreichungsliste",
   "check.error": "Die Prüfung ist fehlgeschlagen",
+  "check.citations.ok": "{n:Zitat, alle definiert|Zitate, alle definiert}",
+  "check.citations.bad": "Undefinierte Schlüssel: {list}",
+  "check.unused.ok": "Alle .bib-Einträge werden zitiert",
+  "check.unused.bad": "Nicht zitiert ({n}): {list}",
+  "check.todos.ok": "Keine offenen Marker",
+  "check.todos.bad": "{n:offener TODO/FIXME-Marker|offene TODO/FIXME-Marker}",
+  "check.figures.ok": "Alle referenzierten Abbildungen existieren",
+  "check.figures.bad": "Nicht gefunden: {list}",
+  "check.abstract.ok": "Zusammenfassung vorhanden",
+  "check.abstract.bad": "Zusammenfassung fehlt",
+  "check.keywords.ok": "Schlagwörter vorhanden",
+  "check.keywords.bad": "Keine Schlagwörter (manche Zeitschriften verlangen sie)",
 };
 
 export const libraryDict = { es, en, de };

@@ -29,7 +29,11 @@ type Health = {
   }[];
 };
 
-type Check = { id: string; ok: boolean; detail: string };
+type Check = {
+  id: string;
+  ok: boolean;
+  detail: { code: string; vars?: Record<string, string | number> };
+};
 
 type Submission = { checks: Check[]; words: number | null };
 
@@ -236,7 +240,9 @@ export function CheckView({
                     </span>
                     <span className="min-w-0">
                       {t(SUBMISSION_LABEL[c.id] ?? "papers.submission.title")}{" "}
-                      <span className="text-muted">— {c.detail}</span>
+                      <span className="text-muted">
+                        — {t(c.detail.code as Parameters<typeof t>[0], c.detail.vars)}
+                      </span>
                     </span>
                   </li>
                 ))}

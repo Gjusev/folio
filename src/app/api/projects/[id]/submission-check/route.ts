@@ -6,7 +6,13 @@ import { getViewableProject, listFiles, listFilesWithData } from "@/lib/projects
 
 type Ctx = { params: Promise<{ id: string }> };
 
-type Check = { id: string; ok: boolean; detail: string };
+// The detail reaches the client as a message key + vars: the UI translates it
+// (the API itself has no locale).
+type Check = {
+  id: string;
+  ok: boolean;
+  detail: { code: string; vars?: Record<string, string | number> };
+};
 
 /**
  * Honest pre-submission checks over the project as it is stored: citation
@@ -29,16 +35,22 @@ export const GET = route(async (req, { params }: Ctx) => {
     ok: health.undefined.length === 0,
     detail:
       health.undefined.length === 0
-        ? `${health.cited.length} citas, todas definidas`
-        : `Claves sin definir: ${health.undefined.join(", ")}`,
+        ? { code: "check.citations.ok", vars: { n: health.cited.length } }
+        : { code: "check.citations.bad", vars: { list: health.undefined.join(", ") } },
   });
   checks.push({
     id: "unused",
     ok: health.unused.length === 0,
     detail:
       health.unused.length === 0
-        ? "Todas las entradas del .bib se citan"
-        : `Sin citar (${health.unused.length}): ${health.unused.slice(0, 6).join(", ")}${health.unused.length > 6 ? "…" : ""}`,
+        ? { code: "check.unused.ok" }
+        : {
+            code: "check.unused.bad",
+            vars: {
+              n: health.unused.length,
+              list: `${health.unused.slice(0, 6).join(", ")}${health.unused.length > 6 ? "…" : ""}`,
+            },
+          },
   });
 
   // 2. Leftover markers in .tex sources (comments included: be conservative).
@@ -49,7 +61,9 @@ export const GET = route(async (req, { params }: Ctx) => {
     id: "todos",
     ok: todos.length === 0,
     detail:
-      todos.length === 0 ? "Sin marcadores pendientes" : `${todos.length} marcadores TODO/FIXME`,
+      todos.length === 0
+        ? { code: "check.todos.ok" }
+        : { code: "check.todos.bad", vars: { n: todos.length } },
   });
 
   // 3. Figures referenced from LaTeX vs files present in the project.
@@ -68,8 +82,11 @@ export const GET = route(async (req, { params }: Ctx) => {
     ok: missing.length === 0,
     detail:
       missing.length === 0
-        ? "Todas las figuras referenciadas existen"
-        : `No encontradas: ${[...new Set(missing)].slice(0, 4).join(", ")}`,
+        ? { code: "check.figures.ok" }
+        : {
+            code: "check.figures.bad",
+            vars: { list: [...new Set(missing)].slice(0, 4).join(", ") },
+          },
   });
 
   // 4. Abstract and keywords present in the main file (structural sanity).
@@ -81,14 +98,12 @@ export const GET = route(async (req, { params }: Ctx) => {
   checks.push({
     id: "abstract",
     ok: hasAbstract,
-    detail: hasAbstract ? "Resumen presente" : "Falta el resumen",
+    detail: hasAbstract ? { code: "check.abstract.ok" } : { code: "check.abstract.bad" },
   });
   checks.push({
     id: "keywords",
     ok: hasKeywords,
-    detail: hasKeywords
-      ? "Palabras clave presentes"
-      : "Sin palabras clave (algunas revistas las piden)",
+    detail: hasKeywords ? { code: "check.keywords.ok" } : { code: "check.keywords.bad" },
   });
 
   // 5. Word count via the isolated compiler (best-effort: omitted if down).

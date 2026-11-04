@@ -10,7 +10,7 @@ const es = {
   "graph.back": "Volver al origen anterior",
   "graph.tikz": "TikZ",
   "graph.tikz.title": "Guardar el grafo como figura TikZ en el proyecto",
-  "graph.stats": "{n} papers · {m} conexiones",
+  "graph.stats": "{n:paper|papers} · {m} conexiones",
   "graph.partial": "Grafo parcial: OpenAlex limitó alguna lista",
   // canvas
   "graph.canvas":
@@ -70,7 +70,7 @@ const es = {
   "graph.detail.pdf": "PDF abierto",
   "graph.detail.publisher": "Página del editor",
   "graph.detail.authors.more": "y {n} más",
-  "graph.detail.references": "{n} referencias",
+  "graph.detail.references": "{n:referencia|referencias}",
   "graph.detail.loading": "Cargando la ficha…",
   "graph.detail.error": "No se pudo cargar la ficha completa",
   "graph.detail.cited.toast": "Añadido a tu bibliografía como {key}",
@@ -82,7 +82,7 @@ const es = {
   "graph.rel.related": "Sin citación directa, pero muy parecido",
   "graph.rel.mine": "Uno de tus papers",
   "graph.rel.sim": "Similitud {pct} %",
-  "graph.rel.shared": "{n} referencias en común",
+  "graph.rel.shared": "{n:referencia en común|referencias en común}",
   "graph.rel.cocited": "Citado junto al origen por {n} papers",
   "graph.rel.inGraph": "Citado por {n} papers del grafo",
   // mobile tabs
@@ -109,7 +109,7 @@ const es = {
   "graph.timeline.reset": "Todos los años",
   // RAG index of the project's own files (assistant panel)
   "rag.none": "Sin índice del proyecto",
-  "rag.status": "{n} fragmentos de {m} archivos · {date}",
+  "rag.status": "{n:fragmento|fragmentos} de {m:archivo|archivos} · {date}",
   "rag.index": "Indexar",
   "rag.indexing": "Indexando…",
 };
@@ -121,7 +121,7 @@ const en: Record<keyof typeof es, string> = {
   "graph.back": "Back to the previous origin",
   "graph.tikz": "TikZ",
   "graph.tikz.title": "Save the graph as a TikZ figure in the project",
-  "graph.stats": "{n} papers · {m} links",
+  "graph.stats": "{n:paper|papers} · {m} links",
   "graph.partial": "Partial graph: OpenAlex capped a list",
   "graph.canvas":
     "Similarity graph of “{title}”. Use the list on the left to move through it with the keyboard.",
@@ -175,7 +175,7 @@ const en: Record<keyof typeof es, string> = {
   "graph.detail.pdf": "Open-access PDF",
   "graph.detail.publisher": "Publisher page",
   "graph.detail.authors.more": "and {n} more",
-  "graph.detail.references": "{n} references",
+  "graph.detail.references": "{n:reference|references}",
   "graph.detail.loading": "Loading details…",
   "graph.detail.error": "The full details could not be loaded",
   "graph.detail.cited.toast": "Added to your bibliography as {key}",
@@ -186,7 +186,7 @@ const en: Record<keyof typeof es, string> = {
   "graph.rel.related": "No direct citation, but very similar",
   "graph.rel.mine": "One of your papers",
   "graph.rel.sim": "Similarity {pct}%",
-  "graph.rel.shared": "{n} references in common",
+  "graph.rel.shared": "{n:reference in common|references in common}",
   "graph.rel.cocited": "Cited alongside the origin by {n} papers",
   "graph.rel.inGraph": "Cited by {n} papers in the graph",
   "graph.m.list": "List",
@@ -208,7 +208,7 @@ const en: Record<keyof typeof es, string> = {
   "graph.timeline.count": "{shown} of {total} papers",
   "graph.timeline.reset": "All years",
   "rag.none": "No project index",
-  "rag.status": "{n} fragments from {m} files · {date}",
+  "rag.status": "{n:fragment|fragments} from {m:file|files} · {date}",
   "rag.index": "Index",
   "rag.indexing": "Indexing…",
 };
@@ -220,7 +220,7 @@ const de: Record<keyof typeof es, string> = {
   "graph.back": "Zurück zum vorherigen Ursprung",
   "graph.tikz": "TikZ",
   "graph.tikz.title": "Graph als TikZ-Abbildung im Projekt speichern",
-  "graph.stats": "{n} Arbeiten · {m} Verbindungen",
+  "graph.stats": "{n:Arbeit|Arbeiten} · {m} Verbindungen",
   "graph.partial": "Teilgraph: OpenAlex hat eine Liste begrenzt",
   "graph.canvas":
     "Ähnlichkeitsgraph von „{title}“. Mit der Liste links lässt er sich per Tastatur durchgehen.",
@@ -277,7 +277,7 @@ const de: Record<keyof typeof es, string> = {
   "graph.detail.pdf": "Open-Access-PDF",
   "graph.detail.publisher": "Seite des Verlags",
   "graph.detail.authors.more": "und {n} weitere",
-  "graph.detail.references": "{n} Referenzen",
+  "graph.detail.references": "{n:Referenz|Referenzen}",
   "graph.detail.loading": "Details werden geladen …",
   "graph.detail.error": "Die vollständigen Details konnten nicht geladen werden",
   "graph.detail.cited.toast": "Zu deiner Bibliografie hinzugefügt als {key}",
@@ -288,7 +288,7 @@ const de: Record<keyof typeof es, string> = {
   "graph.rel.related": "Keine direkte Zitation, aber sehr ähnlich",
   "graph.rel.mine": "Eine deiner Arbeiten",
   "graph.rel.sim": "Ähnlichkeit {pct} %",
-  "graph.rel.shared": "{n} gemeinsame Referenzen",
+  "graph.rel.shared": "{n:gemeinsame Referenz|gemeinsame Referenzen}",
   "graph.rel.cocited": "Zusammen mit dem Ursprung von {n} Arbeiten zitiert",
   "graph.rel.inGraph": "Von {n} Arbeiten im Graph zitiert",
   "graph.m.list": "Liste",
@@ -311,7 +311,7 @@ const de: Record<keyof typeof es, string> = {
   "graph.timeline.count": "{shown} von {total} Arbeiten",
   "graph.timeline.reset": "Alle Jahre",
   "rag.none": "Kein Projekt-Index",
-  "rag.status": "{n} Fragmente aus {m} Dateien · {date}",
+  "rag.status": "{n:Fragment|Fragmente} aus {m:Datei|Dateien} · {date}",
   "rag.index": "Indizieren",
   "rag.indexing": "Indiziere …",
 };
