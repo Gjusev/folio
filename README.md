@@ -126,6 +126,34 @@ paid models. See the [roadmap](docs/roadmap.md).
 
 You need Docker. No TeX installation is required.
 
+**From published images** (no clone needed). The images exist once `v0.1.0` is
+published — until then use the from-source commands below. `FOLIO_VERSION` pins
+a release and is documented in the header of the compose file.
+
+```bash
+mkdir folio && cd folio
+curl -fLO https://raw.githubusercontent.com/Gjusev/folio/master/docker-compose.release.yml
+```
+
+Create a `.env` next to it with four secrets — generate each value with the
+one-liner below:
+
+```
+POSTGRES_PASSWORD=<random>
+COMPILER_TOKEN=<random>
+COLLAB_SECRET=<random>
+LLM_CREDENTIALS_KEY=<random>
+```
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+docker compose -f docker-compose.release.yml up -d
+# → http://127.0.0.1:3000   (migrations run on start-up)
+```
+
+**From source:**
+
 ```bash
 git clone https://github.com/Gjusev/folio.git && cd folio
 cp .env.example .env
@@ -195,16 +223,17 @@ isolation tests.
 
 ## Documentation
 
-| Document                                             | What is in it                                                             |
-| ---------------------------------------------------- | ------------------------------------------------------------------------- |
-| [docs/architecture.md](docs/architecture.md)         | Components, stack, data model, design decisions, the compiler sandbox     |
-| [docs/deployment.md](docs/deployment.md)             | Docker Compose, reverse proxy, Dokploy, environment reference, operations |
-| [docs/ai.md](docs/ai.md)                             | Providers, BYOK, assistant, drafting agent, review mode, RAG, invariants  |
-| [docs/roadmap.md](docs/roadmap.md)                   | What shipped, what is next, known limits                                  |
-| [docs/brand-guidelines.md](docs/brand-guidelines.md) | Logo, colour, type, voice and the asset pipeline                          |
-| [SECURITY.md](SECURITY.md)                           | Threat model and how to report a vulnerability                            |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                   | Workflow and the rules every change follows                               |
-| [CHANGELOG.md](CHANGELOG.md)                         | Release notes                                                             |
+| Document                                                 | What is in it                                                                                                            |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [docs/architecture.md](docs/architecture.md)             | Components, stack, data model, design decisions, the compiler sandbox                                                    |
+| [docs/deployment.md](docs/deployment.md)                 | Docker Compose, reverse proxy, Dokploy, environment reference, operations                                                |
+| [docker-compose.release.yml](docker-compose.release.yml) | Prebuilt-image stack for self-hosting; pin a release with `FOLIO_VERSION` (see [docs/deployment.md](docs/deployment.md)) |
+| [docs/ai.md](docs/ai.md)                                 | Providers, BYOK, assistant, drafting agent, review mode, RAG, invariants                                                 |
+| [docs/roadmap.md](docs/roadmap.md)                       | What shipped, what is next, known limits                                                                                 |
+| [docs/brand-guidelines.md](docs/brand-guidelines.md)     | Logo, colour, type, voice and the asset pipeline                                                                         |
+| [SECURITY.md](SECURITY.md)                               | Threat model and how to report a vulnerability                                                                           |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                       | Workflow and the rules every change follows                                                                              |
+| [CHANGELOG.md](CHANGELOG.md)                             | Release notes                                                                                                            |
 
 ## Project layout
 
