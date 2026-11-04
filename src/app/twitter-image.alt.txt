@@ -1,0 +1,1 @@
+Folio: scientific writing in LaTeX, on your own server. Open source, self-hosted, Apache-2.0.

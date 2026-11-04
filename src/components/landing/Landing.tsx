@@ -4,6 +4,7 @@
 // that, and on the one time-boxed reason to switch: Prism closes on 2027-01-01.
 import Image from "next/image";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { LangSwitcher } from "@/lib/i18n/client";
 import { format, type Dict, type MsgKey } from "@/lib/i18n/dictionaries";
 import { FeatureBands } from "./FeatureBands";
@@ -25,7 +26,7 @@ export function Landing({ dict, daysLeft }: { dict: Dict; daysLeft: number }) {
 
       <header className="lp-top">
         <Link href="/" className="lp-wordmark" aria-label="Folio">
-          Folio
+          <Logo className="h-7 w-auto" />
         </Link>
         <nav aria-label={t("landing.nav")}>
           <LangSwitcher />

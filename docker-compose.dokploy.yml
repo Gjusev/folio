@@ -62,6 +62,7 @@ services:
       DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD}@db:5432/folio
       COMPILER_URL: http://compiler:3001
       COMPILER_TOKEN: ${COMPILER_TOKEN}
+      APP_URL: ${APP_URL:-}
       COLLAB_URL: ${COLLAB_URL:-}
       COLLAB_SECRET: ${COLLAB_SECRET:-}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-1}
