@@ -82,10 +82,18 @@ services:
     networks: [default, compile]
 
 networks:
-  default: {}
+  # Explicit subnets: the shared host's Docker address pools are exhausted
+  # ("all predefined address pools have been fully subnetted").
+  default:
+    ipam:
+      config:
+        - subnet: 10.213.0.0/24
   # No route to the Internet: only the web app can reach the compiler.
   compile:
     internal: true
+    ipam:
+      config:
+        - subnet: 10.213.1.0/24
 
 volumes:
   pgdata: {}
