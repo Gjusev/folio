@@ -200,8 +200,17 @@ export function CodeEditor({
     const statesMap = states.current; // stable for the effect's lifetime
     const doc = new Y.Doc();
     const text = doc.getText("folio");
+    // Collaborative undo on the Y.Text: the y-codemirror binding registers
+    // itself as a tracked origin, so only local edits land on the stack;
+    // remote updates (origin `net` below) are never undone. captureTimeout
+    // groups typing bursts into one undo step.
+    const um = new Y.UndoManager(text, {
+      trackedOrigins: new Set([null]),
+      captureTimeout: 400,
+    });
     const aware = new Awareness(doc);
     const net = {}; // origin marker: updates that came in over the wire
+    const seed = {}; // origin marker: seeding an empty room — not undoable
     const name = collab.user?.name ?? "";
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
@@ -228,7 +237,7 @@ export function CodeEditor({
               view.current && current.current === fileId
                 ? view.current.state.doc.toString()
                 : cb.current.getDoc(fileId);
-            if (content) doc.transact(() => text.insert(0, content));
+            if (content) doc.transact(() => text.insert(0, content), seed);
           } else if (text.toString() !== "" && (first || reconnect)) {
             // Rejoin with a document the room does not know (restart, or we
             // are repopulating a GC'd room): resend our full state, peers
@@ -238,7 +247,40 @@ export function CodeEditor({
           if (collabFile.current) return; // binding already attached
           collabFile.current = fileId;
           ytext.current = text;
-          collabExt.current = yCollab(text, aware);
+          // yCollab ships no Mod-z keymap (only beforeinput handlers), so
+          // intercept the keys above basicSetup's local-history keymap —
+          // that one desyncs the editor from the Y.Doc.
+          collabExt.current = [
+            yCollab(text, aware, { undoManager: um }),
+            Prec.high(
+              keymap.of([
+                {
+                  key: "Mod-z",
+                  preventDefault: true,
+                  run: () => {
+                    um.undo();
+                    return true;
+                  },
+                },
+                {
+                  key: "Mod-Shift-z",
+                  preventDefault: true,
+                  run: () => {
+                    um.redo();
+                    return true;
+                  },
+                },
+                {
+                  key: "Mod-y",
+                  preventDefault: true,
+                  run: () => {
+                    um.redo();
+                    return true;
+                  },
+                },
+              ]),
+            ),
+          ];
           const v = view.current;
           if (v && current.current === fileId) v.setState(stateFor(fileId));
         },
@@ -276,6 +318,7 @@ export function CodeEditor({
       doc.off("update", onDocUpdate);
       aware.off("update", onAwarenessUpdate);
       aware.destroy();
+      um.destroy();
       doc.destroy();
       if (collabFile.current === fileId) {
         // Keep what the session shows as the file's local content, then go
