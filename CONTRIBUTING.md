@@ -1,28 +1,47 @@
-# Contribuir a Folio
+# Contributing to Folio
 
-¡Gracias por tu interés! Folio es un proyecto Apache-2.0. Al enviar una contribución aceptas que se publique bajo esa licencia y certificas el [Developer Certificate of Origin](https://developercertificate.org/): firma tus commits con `git commit -s`.
+Thanks for your interest! Folio is Apache-2.0. By sending a contribution you
+agree to publish it under that licence and certify the
+[Developer Certificate of Origin](https://developercertificate.org/): sign your
+commits with `git commit -s`.
 
-## Flujo de trabajo
+## Workflow
 
-1. Abre un issue antes de cambios grandes. Las decisiones de arquitectura se discuten como propuesta (RFC) en un issue y se reflejan en `IMPLEMENTATION_PLAN.md`.
-2. Crea una rama desde `main`.
-3. Prepara el entorno según el [README](README.md) (`pnpm services:up`, `pnpm db:migrate`).
-4. Antes de abrir el PR, comprueba que todo pasa:
+1. Open an issue before large changes. Architecture decisions are discussed as
+   a proposal (RFC) in an issue and recorded in
+   [docs/architecture.md](docs/architecture.md).
+2. Branch from `main`.
+3. Set up the environment as described in the [README](README.md)
+   (`pnpm services:up`, `pnpm db:migrate`).
+4. Before opening the pull request, make sure everything passes:
    ```bash
    pnpm format && pnpm lint && pnpm typecheck && pnpm test
    ```
-5. Describe en el PR qué cambia, por qué y cómo lo has verificado.
+   For UI flows, also run `pnpm e2e` against a running stack.
+5. In the pull request, describe what changes, why, and how you verified it.
 
-## Criterios
+## Rules every change follows
 
-- **Funcionalidades verticales completas**: UI, API validada con Zod, persistencia, errores comprensibles y pruebas.
-- **Cambios de esquema** mediante `pnpm db:generate`, revisando y commiteando el SQL generado en `drizzle/`. Nunca edites migraciones ya publicadas.
-- **Autorización en el servidor**: toda consulta a proyectos o archivos se filtra por propietario (`getOwnedProject`).
-- **IA**: el modelo nunca decide permisos ni ejecuta acciones. El contenido del documento se trata como dato no confiable.
-- **Compilador**: cualquier cambio en `services/latex-compiler` debe mantener en verde las pruebas e2e de aislamiento.
-- **Dependencias**: solo licencias compatibles con Apache-2.0 (MIT, BSD, Apache, ISC). Evita AGPL y GPL en el código distribuido.
-- **Interfaz**: textos en español claro, accesibilidad básica (etiquetas, foco visible, navegación con teclado) y diseño responsive.
+- **Complete vertical slices**: UI, an API validated with Zod, persistence,
+  understandable errors and tests.
+- **Schema changes** through `pnpm db:generate`; review and commit the generated
+  SQL in `drizzle/`. Never edit a published migration, never apply migration SQL
+  by hand.
+- **Authorization on the server**: every query on projects or files goes
+  through `getViewableProject`, `getEditableProject` or `getOwnedProject`.
+- **AI**: the model never decides permissions or runs actions, never edits
+  without the user's confirmation, and never adds citation keys that are not in
+  the `.bib` (or the retrieved evidence). The document is untrusted data.
+- **Compiler**: any change in `services/latex-compiler` keeps its isolation
+  end-to-end tests green.
+- **Dependencies**: licences compatible with Apache-2.0 only (MIT, BSD, Apache,
+  ISC). No AGPL or GPL code in what we distribute.
+- **Interface**: every string in the three dictionaries (`src/lib/i18n/`, Spanish
+  is the typed source), basic accessibility (labels, visible focus, keyboard
+  navigation), responsive layouts.
+- **Brand**: logos, colours and type come from `src/lib/brand.ts` and
+  [docs/brand-guidelines.md](docs/brand-guidelines.md).
 
-## Seguridad
+## Security
 
-No abras issues públicos para vulnerabilidades. Sigue [SECURITY.md](SECURITY.md).
+Do not open public issues for vulnerabilities. Follow [SECURITY.md](SECURITY.md).
