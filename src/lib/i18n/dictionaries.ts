@@ -246,6 +246,8 @@ const baseEs = {
   "settings.llm.testOk": "Conexión correcta",
   "settings.llm.test.needKey": "Vuelve a escribir la clave para probar",
   "settings.llm.env": "Heredado del .env del servidor",
+  "settings.llm.env.shared":
+    "Todos los usuarios de esta instancia pueden usar esta clave del .env. Para que cada uno use la suya (BYOK), define LLM_ENV_SHARED=false y reinicia.",
   "settings.llm.empty":
     "Aún no hay proveedores. Añade uno aquí o define LLM_BASE_URL y LLM_MODEL en el servidor.",
   "settings.llm.keyMissing":
@@ -624,6 +626,8 @@ const baseEn = {
   "settings.llm.testOk": "Connection OK",
   "settings.llm.test.needKey": "Re-enter the key to test",
   "settings.llm.env": "Inherited from the server's .env",
+  "settings.llm.env.shared":
+    "Everyone on this instance can use this .env key. To require each user to bring their own (BYOK), set LLM_ENV_SHARED=false and restart.",
   "settings.llm.empty":
     "No providers yet. Add one here, or define LLM_BASE_URL and LLM_MODEL on the server.",
   "settings.llm.keyMissing":
@@ -997,6 +1001,8 @@ const baseDe = {
   "settings.llm.testOk": "Verbindung OK",
   "settings.llm.test.needKey": "Gib den Schlüssel erneut ein, um zu testen",
   "settings.llm.env": "Vom .env des Servers geerbt",
+  "settings.llm.env.shared":
+    "Alle Nutzer dieser Instanz können diesen .env-Schlüssel verwenden. Damit jeder seinen eigenen mitbringt (BYOK), setze LLM_ENV_SHARED=false und starte neu.",
   "settings.llm.empty":
     "Noch keine Anbieter. Füge hier einen hinzu oder definiere LLM_BASE_URL und LLM_MODEL auf dem Server.",
   "settings.llm.keyMissing":

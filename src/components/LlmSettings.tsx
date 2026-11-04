@@ -349,6 +349,9 @@ export function LlmSettings({ initialProfiles, initialRoutes, sealConfigured }: 
             ))}
           </ul>
         )}
+        {profiles.some((p) => p.readonly) && (
+          <p className="text-xs leading-4 text-muted">{t("settings.llm.env.shared")}</p>
+        )}
       </section>
 
       <section className="space-y-3">

@@ -25,6 +25,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- BYOK policy for AI keys: `LLM_ENV_SHARED=false` removes the server's `.env`
+  key from every account, so each user must add their own provider in Settings
+  (keys are per-user, sealed at rest, never returned to the browser — the UI
+  only ever sees whether one exists). While the default `true` stands, Settings
+  warns that everyone on the instance can use the `.env` key. Verified live:
+  with the flag off, the profile list is empty and the assistant answers 503
+  even with a configured environment key.
 - Section executor for the drafting agent: each plan row drafts against an
   explicit word budget (reported honestly, never truncated), a second critique
   pass flags unsupported claims, citation misuse and structure issues (shown

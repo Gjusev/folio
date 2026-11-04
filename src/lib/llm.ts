@@ -6,14 +6,14 @@ import type { Endpoint } from "@/lib/llm-profiles";
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 export function llmConfigured(): boolean {
-  const { LLM_BASE_URL, LLM_MODEL } = env();
-  return Boolean(LLM_BASE_URL && LLM_MODEL);
+  const { LLM_BASE_URL, LLM_MODEL, LLM_ENV_SHARED } = env();
+  return Boolean(LLM_BASE_URL && LLM_MODEL && LLM_ENV_SHARED);
 }
 
 /** The .env endpoint, as an Endpoint (back-compat for callers without profiles). */
 export function envEndpoint(): Endpoint | null {
-  const { LLM_BASE_URL, LLM_API_KEY, LLM_MODEL } = env();
-  if (!LLM_BASE_URL || !LLM_MODEL) return null;
+  const { LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, LLM_ENV_SHARED } = env();
+  if (!LLM_BASE_URL || !LLM_MODEL || !LLM_ENV_SHARED) return null;
   return {
     id: "env",
     label: LLM_MODEL,

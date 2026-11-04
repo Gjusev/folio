@@ -107,6 +107,8 @@ Para guardar claves de proveedores desde la página de Ajustes, define también 
 
 ¿Perdiste la contraseña de tu instancia? No hay enlace de recuperación (Folio no asume servidor de correo): el administrador la restablece en el servidor con `pnpm reset-password usuario@ejemplo.org`.
 
+**Claves de IA por usuario (BYOK).** Cada usuario puede dar su propia clave en Ajustes (cifrada en reposo con `LLM_CREDENTIALS_KEY`, nunca sale del servidor y nunca vuelve al navegador — la interfaz solo ve si existe). Los protocolos habituales están soportados: cualquier endpoint compatible con OpenAI y la Messages API nativa de Anthropic. La clave del `.env` es la excepción: mientras `LLM_ENV_SHARED` esté activo (por defecto), **todos** los usuarios de la instancia pueden usarla — práctico para un despliegue personal, inaceptable en uno compartido; ponlo a `false` y cada uno pasa a usar solo la suya. En colaboración, el asistente siempre corre con la clave de quien lo invoca; el relay de collab solo transporta texto y cursores, nunca claves.
+
 En este modo el compilador está en una red sin salida a Internet y solo la app web puede alcanzarlo. Pon un proxy inverso con TLS (Caddy, nginx, Traefik) delante del puerto 3000. Las cookies de sesión se marcan `Secure` en producción.
 
 ## Calidad
