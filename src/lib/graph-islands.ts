@@ -77,8 +77,10 @@ export function layoutIslands(g: Graph, opts: IslandLayoutOptions = {}): void {
   if (g.order < 2) return;
 
   const nodes = g.nodes();
-  const edges: { from: string; to: string }[] = [];
-  g.forEachEdge((_e, _attrs, source, target) => edges.push({ from: source, to: target }));
+  // Edge attributes travel with the edges: ForceAtlas2 reads `weight`, and
+  // dropping it inside islands would flatten a similarity graph to a plain one.
+  const edges: { from: string; to: string; attrs: Record<string, unknown> }[] = [];
+  g.forEachEdge((_e, attrs, source, target) => edges.push({ from: source, to: target, attrs }));
   const components = componentsOf(nodes, edges);
 
   if (components.length === 1) {
@@ -99,8 +101,9 @@ export function layoutIslands(g: Graph, opts: IslandLayoutOptions = {}): void {
         y: 100 * Math.sin(angle) + (rng?.() ?? 0),
       });
     });
-    for (const { from, to } of edges)
-      if (members.has(from) && members.has(to) && !sub.hasEdge(from, to)) sub.addEdge(from, to);
+    for (const { from, to, attrs } of edges)
+      if (members.has(from) && members.has(to) && !sub.hasEdge(from, to))
+        sub.addEdge(from, to, { ...attrs });
 
     forceAtlas2.assign(sub, { iterations, settings });
 

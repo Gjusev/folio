@@ -116,3 +116,25 @@ describe("layoutIslands", () => {
     }
   });
 });
+
+describe("layoutIslands with weighted edges", () => {
+  it("keeps edge weights inside every island so similarity shapes the layout", () => {
+    // Two islands force the per-island branch. Inside the big one, a-b is a
+    // strong tie and a-c a weak one: weighted attraction must put b nearer.
+    const g = new Graph({ multi: false });
+    for (const n of ["a", "b", "c", "x", "y"]) g.addNode(n, { x: 0, y: 0, size: 5 });
+    g.addEdge("a", "b", { weight: 1 });
+    g.addEdge("a", "c", { weight: 0.05 });
+    g.addEdge("x", "y", { weight: 1 });
+    layoutIslands(g, {
+      iterations: 250,
+      settings: { adjustSizes: false, gravity: 1, scalingRatio: 10, edgeWeightInfluence: 1 },
+    });
+    const d = (p: string, q: string) => {
+      const a = g.getNodeAttributes(p);
+      const b = g.getNodeAttributes(q);
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    expect(d("a", "b")).toBeLessThan(d("a", "c") * 0.8);
+  });
+});
