@@ -76,13 +76,10 @@ async function once(key: string, make: () => Promise<CitationGraph>): Promise<Ci
     graphCache.set(key, graph);
     return graph;
   });
-  // Errors are never cached: a later retry starts clean.
-  building.set(
-    key,
-    p.catch((err) => {
-      throw err;
-    }),
-  );
+  // Store the SAME promise the caller awaits: a detached .catch copy would
+  // reject with nobody listening (vitest fails the run on it). Errors are
+  // never cached — the map entry is dropped in finally, so a retry starts clean.
+  building.set(key, p);
   try {
     return await p;
   } finally {
