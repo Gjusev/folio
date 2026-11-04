@@ -405,7 +405,15 @@ export async function oaBatch(ids: string[]): Promise<OaWork[]> {
     }),
     "OpenAlex",
   );
-  return data.results;
+  // The batch endpoint sometimes answers with the same record twice; every
+  // consumer keys by id (a repeated node would throw in the graph builder).
+  const seen = new Set<string>();
+  return (data.results ?? []).filter((w) => {
+    const id = w.id;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 /* ---------------- recommendations ---------------- */

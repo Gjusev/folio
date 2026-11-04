@@ -74,6 +74,7 @@ export function buildSigmaGraph(data: CitationGraph, theme: CanvasTheme, seedKey
   const n = data.nodes.length || 1;
 
   for (const node of data.nodes) {
+    if (g.hasNode(node.id)) continue; // upstream data hiccup: never crash the page
     const focal = node.role === "origin" || node.role === "mine";
     const i = rank.get(node.id) ?? 0;
     const angle = (2 * Math.PI * i * 0.618033988749895) % (2 * Math.PI); // golden-angle spread

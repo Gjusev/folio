@@ -456,6 +456,14 @@ describe("unifyDuplicates", () => {
     const y = work("y", [], { title: "representation LEARNING a review", year: 2013, citedBy: 2 });
     expect(unifyDuplicates([x, y], new Set()).works.map((w) => w.id)).toEqual(["y"]);
   });
+
+  it("drops a repeated id (a reference that also appears in the citing sample)", () => {
+    const a = work("W1", ["r1"], { title, year: 2018 });
+    const again = work("W1", ["r1"], { title, year: 2018 });
+    const b = work("W2", ["r2"], { title: "Another paper entirely different", year: 2020 });
+    const { works } = unifyDuplicates([a, again, b], new Set());
+    expect(works.map((w) => w.id)).toEqual(["W1", "W2"]);
+  });
 });
 
 describe("outside lists", () => {

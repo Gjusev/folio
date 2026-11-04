@@ -166,6 +166,13 @@ export function unifyDuplicates(
   works: SimWork[],
   protectedIds: Set<string>,
 ): { works: SimWork[]; alias: Map<string, string> } {
+  // The same record can reach the pool twice — a reference that also shows up
+  // in the citing sample (OpenAlex's citation graph is not acyclic-clean).
+  // Same id IS the same paper: drop the repeats before title-matching (an id
+  // repeated downstream would render the same node twice).
+  const seen = new Set<string>();
+  works = works.filter((w) => (seen.has(w.id) ? false : (seen.add(w.id), true)));
+
   // Group by normalized title, then chain-merge same-title records whose
   // publication years are close (preprint 2018 / published 2019).
   const byTitle = new Map<string, SimWork[]>();
