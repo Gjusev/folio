@@ -1,0 +1,91 @@
+# Dokploy / Traefik deployment: same stack as docker-compose.yml but with no
+# host-published ports and no profiles (Traefik routes by domain instead).
+# Required env (Dokploy -> Environment): POSTGRES_PASSWORD, COMPILER_TOKEN,
+# COLLAB_SECRET, LLM_CREDENTIALS_KEY. Optional: COLLAB_URL (wss://...), ALLOW_REGISTRATION.
+name: folio
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: folio
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    restart: unless-stopped
+    networks: [default]
+
+  compiler:
+    build: ./services/latex-compiler
+    environment:
+      COMPILER_TOKEN: ${COMPILER_TOKEN:?set COMPILER_TOKEN}
+      MAX_CONCURRENT_JOBS: "2"
+      JOB_TIMEOUT_MS: "45000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 256
+    restart: unless-stopped
+    networks: [compile]
+
+  collab:
+    build: ./services/collab
+    environment:
+      COLLAB_SECRET: ${COLLAB_SECRET:-}
+      COMPILER_TOKEN: ${COMPILER_TOKEN}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    restart: unless-stopped
+    # collab is public (wss) via its own Traefik domain; Dokploy attaches
+    # dokploy-network to it, so it is not on an internal-only network here.
+    networks: [default]
+
+  web:
+    build: .
+    image: folio:0.1.0
+    environment:
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD}@db:5432/folio
+      COMPILER_URL: http://compiler:3001
+      COMPILER_TOKEN: ${COMPILER_TOKEN}
+      COLLAB_URL: ${COLLAB_URL:-}
+      COLLAB_SECRET: ${COLLAB_SECRET:-}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-1}
+      LLM_ENV_SHARED: ${LLM_ENV_SHARED:-false}
+      LLM_CREDENTIALS_KEY: ${LLM_CREDENTIALS_KEY:-}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+      OPENALEX_MAILTO: ${OPENALEX_MAILTO:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+    depends_on:
+      db: { condition: service_healthy }
+      compiler: { condition: service_started }
+      collab: { condition: service_started }
+    mem_limit: 1g
+    cpus: 2.0
+    pids_limit: 256
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    networks: [default, compile]
+
+networks:
+  default: {}
+  # No route to the Internet: only the web app can reach the compiler.
+  compile:
+    internal: true
+
+volumes:
+  pgdata: {}
