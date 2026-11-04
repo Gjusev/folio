@@ -10,13 +10,24 @@ import { Wordmark } from "./Wordmark";
 
 const MIN_PASSWORD = 10;
 
+// Same rule as the landing CTA: point at the repo's install section when the
+// URL is known, otherwise stay on this app.
+const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL ?? "";
+const SELF_HOST_URL = REPO_URL ? `${REPO_URL}#quick-start-docker` : "/login";
+
 const BENEFITS = [
   { icon: FileCheck2, t: "auth.register.b1.t", d: "auth.register.b1.d" },
   { icon: Quote, t: "auth.register.b2.t", d: "auth.register.b2.d" },
   { icon: ServerCog, t: "auth.register.b3.t", d: "auth.register.b3.d" },
 ] as const;
 
-export function AuthForm({ mode }: { mode: "login" | "register" }) {
+export function AuthForm({
+  mode,
+  registrationOpen = true,
+}: {
+  mode: "login" | "register";
+  registrationOpen?: boolean;
+}) {
   const router = useRouter();
   const { t, lang } = useI18n();
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +67,37 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       setError((err as Error).message);
       setBusy(false);
     }
+  }
+
+  // A dead form lies: with registration closed the page says so and points
+  // elsewhere instead of rendering inputs that can only fail.
+  if (isRegister && !registrationOpen) {
+    return (
+      <main className="flex min-h-full items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm text-center">
+          <Wordmark href="/" />
+          <div className="sheet mt-6 space-y-4 p-6">
+            <h1 className="text-[22px] leading-7 font-semibold">{t("auth.closed.t")}</h1>
+            <p className="text-sm leading-6 text-muted">{t("auth.closed.d")}</p>
+            <Link href={SELF_HOST_URL} className="btn btn-primary w-full">
+              {t("landing.cta.selfhost")}
+            </Link>
+            <p className="text-sm text-muted">
+              {t("auth.toLogin")}{" "}
+              <Link
+                className="font-medium text-accent underline-offset-4 hover:underline"
+                href="/login"
+              >
+                {t("auth.toLogin.action")}
+              </Link>
+            </p>
+          </div>
+          <div className="mt-4 flex justify-center">
+            <LangSwitcher />
+          </div>
+        </div>
+      </main>
+    );
   }
 
   const form = (
@@ -173,15 +215,17 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </button>
         {isRegister && <p className="text-center text-xs text-muted">{t("auth.privacy")}</p>}
       </form>
-      <p className="mt-6 text-center text-sm text-muted">
-        {isRegister ? t("auth.toLogin") : t("auth.toRegister")}{" "}
-        <Link
-          className="font-medium text-accent underline-offset-4 hover:underline"
-          href={isRegister ? "/login" : "/register"}
-        >
-          {isRegister ? t("auth.toLogin.action") : t("auth.toRegister.action")}
-        </Link>
-      </p>
+      {(isRegister || registrationOpen) && (
+        <p className="mt-6 text-center text-sm text-muted">
+          {isRegister ? t("auth.toLogin") : t("auth.toRegister")}{" "}
+          <Link
+            className="font-medium text-accent underline-offset-4 hover:underline"
+            href={isRegister ? "/login" : "/register"}
+          >
+            {isRegister ? t("auth.toLogin.action") : t("auth.toRegister.action")}
+          </Link>
+        </p>
+      )}
       <div className="mt-4 flex justify-center">
         <LangSwitcher />
       </div>

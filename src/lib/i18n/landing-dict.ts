@@ -94,6 +94,9 @@ const es = {
   "auth.demo.opt": "Empezar con el proyecto demo",
   "auth.demo.opt.d": "Un artículo terminado que compila, para probar Folio en dos minutos.",
   "auth.privacy": "Tus datos no salen de este servidor.",
+  "auth.closed.t": "El registro está cerrado en esta instancia",
+  "auth.closed.d":
+    "Este servidor no acepta cuentas nuevas. Folio es autoalojado: puedes levantar tu propia instancia en tres comandos.",
   // onboarding (empty project list)
   "onb.welcome": "Te damos la bienvenida, {name}",
   "onb.welcome.sub": "Elige cómo empezar. Siempre puedes cambiar de rumbo.",
@@ -197,6 +200,9 @@ const en: Record<keyof typeof es, string> = {
   "auth.demo.opt": "Start with the demo project",
   "auth.demo.opt.d": "A finished paper that compiles, to try Folio in two minutes.",
   "auth.privacy": "Your data does not leave this server.",
+  "auth.closed.t": "Registration is closed on this instance",
+  "auth.closed.d":
+    "This server accepts no new accounts. Folio is self-hosted: you can run your own in three commands.",
   "onb.welcome": "Welcome, {name}",
   "onb.welcome.sub": "Choose how to start. You can always change course.",
   "onb.demo.t": "Explore with the demo project",
@@ -301,6 +307,9 @@ const de: Record<keyof typeof es, string> = {
   "auth.demo.opt.d":
     "Eine fertige Arbeit, die kompiliert, um Folio in zwei Minuten auszuprobieren.",
   "auth.privacy": "Deine Daten verlassen diesen Server nicht.",
+  "auth.closed.t": "Die Registrierung ist auf dieser Instanz geschlossen",
+  "auth.closed.d":
+    "Dieser Server nimmt keine neuen Konten an. Folio ist selbst gehostet: Du kannst deine eigene Instanz mit drei Befehlen betreiben.",
   "onb.welcome": "Willkommen, {name}",
   "onb.welcome.sub": "Wähle, wie du anfangen willst. Du kannst jederzeit umschwenken.",
   "onb.demo.t": "Mit dem Demo-Projekt erkunden",
