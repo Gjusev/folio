@@ -858,7 +858,7 @@ const baseDe = {
   "pdf.log": "Vollständiges Protokoll",
   "pdf.seconds": "· {s} s",
   "papers.search": "Literatursuche",
-  "papers.placeholder": "Titel, Autoren, Thema oder DOI",
+  "papers.placeholder": "Titel, Autor, Thema, DOI",
   "papers.button": "Suchen",
   "papers.sort": "Sortieren",
   "papers.sort.relevance": "Relevanteste",

@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Literature graph: OpenAlex can return the same work both among an origin's
+  references and in its citing sample; the duplicated node reached the graph
+  builder and crashed the whole page when exploring from that origin. Duplicates
+  are now dropped at three layers (pool unification, batch fetch, builder guard).
+- BibTeX authors written as "Family, Given" (the bundled template's form) were
+  displayed with given names ("Ashish, Noam"); surnames are now read in either
+  BibTeX order across the library, the graph list and node labels.
+- Localisation: real plurals for countable strings (`{n:singular|plural}` —
+  "1 Eintrag" instead of "1 Einträge"), the PDF zoom control no longer says
+  "Ajustar" in every language, and the submission report's per-check details are
+  translated (the API now returns message keys instead of Spanish text).
+- Editor header wraps to a second row on phones instead of pushing the compile
+  button off-screen; the landing page's install command wraps by words instead
+  of being cut mid-flag; shorter German placeholders where inputs are narrow.
+
+### Added
+
+- `pnpm reset-password <email>`: admin-side password reset for self-hosted
+  instances (no email server is assumed).
+
 ## [0.1.0] - 2026-11-04
 
 First release. Self-hosted, multi-user LaTeX editor with isolated compilation,
