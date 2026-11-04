@@ -32,6 +32,8 @@ export type AiContext = {
   instruction: string;
   log: string;
   history: { role: "user" | "assistant"; content: string }[];
+  /** Fragments retrieved from the project's RAG index (best effort, optional). */
+  projectContext?: { file: string; content: string }[];
 };
 
 /* ---------------- drafting agent ---------------- */
@@ -209,6 +211,21 @@ export function parsePlan(raw: string, bibKeys: string[]): AgentPlan | null {
 
 const MAX_DOC = 24_000;
 
+/** Total budget for retrieved project fragments inside the chat prompt. */
+const MAX_FRAGMENTS = 6_000;
+
+function projectContextBlock(frags: { file: string; content: string }[]): string {
+  const blocks: string[] = [];
+  let left = MAX_FRAGMENTS;
+  for (const f of frags) {
+    if (left <= 0) break;
+    const body = f.content.slice(0, left);
+    left -= body.length;
+    blocks.push(`[${f.file}]\n${body}`);
+  }
+  return `PROJECT FRAGMENTS retrieved from the user's own index (they may be outdated):\n"""\n${blocks.join("\n\n")}\n"""`;
+}
+
 /** Keeps the part of the document around the selection when it is too long. */
 export function windowAround(doc: string, anchor: string, max = MAX_DOC): string {
   if (doc.length <= max) return doc;
@@ -227,6 +244,7 @@ export function buildMessages(c: AiContext): ChatMessage[] {
   if (c.selection) parts.push(`SELECTION:\n"""\n${c.selection}\n"""`);
   if (c.action === "continue") parts.push(`TEXT BEFORE CURSOR:\n"""\n${c.beforeCursor}\n"""`);
   if (c.log) parts.push(`COMPILE LOG (tail):\n"""\n${c.log}\n"""`);
+  if (c.projectContext?.length) parts.push(projectContextBlock(c.projectContext));
   if (c.instruction) parts.push(`REQUEST: ${c.instruction}`);
   return [
     { role: "system", content: SYSTEM },

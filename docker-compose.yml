@@ -4,7 +4,10 @@ name: folio
 
 services:
   db:
-    image: postgres:17-alpine
+    # pgvector image (same Postgres 17) so RAG embeddings work; the pgdata
+    # volume persists, so switching requires recreating the container:
+    #   docker compose down db && docker compose up -d db
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: folio
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}

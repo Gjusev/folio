@@ -13,6 +13,22 @@ import {
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 
+/** Dimensions of the embedding column (pgvector): the OpenAI-standard 1536.
+ *  A model returning another dimensionality is rejected with a clear error in
+ *  rag.ts instead of a cryptic INSERT failure. */
+export const EMBED_DIMS = 1536;
+
+// node-postgres returns vectors as "[1,2,...]" strings; send them back the same way.
+const embedding = customType<{ data: number[]; driverData: string }>({
+  dataType: () => `vector(${EMBED_DIMS})`,
+  toDriver: (v) => JSON.stringify(v),
+  fromDriver: (v) =>
+    v
+      .replace(/^\[|\]$/g, "")
+      .split(",")
+      .map(Number),
+});
+
 export const users = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
   email: text().notNull().unique(),
@@ -172,6 +188,26 @@ export const aiMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_messages_project_idx").on(t.projectId, t.createdAt)],
+);
+
+/** RAG index: chunks of a project's text files with their embeddings, so the
+ *  assistant can answer questions about the user's own .tex/.bib. Rebuilt in
+ *  full on every indexing run (no incremental updates by design). */
+export const ragChunks = pgTable(
+  "rag_chunks",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    file: text().notNull(),
+    // Position of the chunk within its file (0-based).
+    idx: integer().notNull(),
+    content: text().notNull(),
+    embedding: embedding("embedding").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("rag_chunks_project_idx").on(t.projectId)],
 );
 
 /** Third-party integrations (Zotero…); payloads sealed with LLM_CREDENTIALS_KEY. */
