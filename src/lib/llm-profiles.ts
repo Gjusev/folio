@@ -24,8 +24,8 @@ import type { Profile, Task } from "@/lib/llm-presets";
 const ENV_ID = "env";
 
 function envProfile(): Profile | null {
-  const { LLM_BASE_URL, LLM_API_KEY, LLM_MODEL } = env();
-  if (!LLM_BASE_URL || !LLM_MODEL) return null;
+  const { LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, LLM_ENV_SHARED } = env();
+  if (!LLM_BASE_URL || !LLM_MODEL || !LLM_ENV_SHARED) return null;
   return {
     id: ENV_ID,
     label: LLM_MODEL.split("/").pop() ?? LLM_MODEL,

@@ -8,6 +8,10 @@ const schema = z.object({
   LLM_BASE_URL: z.union([z.literal(""), z.url()]).default(""),
   LLM_API_KEY: z.string().default(""),
   LLM_MODEL: z.string().default(""),
+  // BYOK policy: the .env key is shared by EVERY user of the instance while
+  // this is true (the single-user default). Set it to false on a multi-user
+  // instance to require each user to add their own provider in Settings.
+  LLM_ENV_SHARED: z.stringbool().or(z.boolean()).default(true),
   OPENALEX_MAILTO: z.union([z.literal(""), z.email()]).default(""),
   OPENALEX_API_KEY: z.string().default(""),
   // 1/true (default) keeps self-registration open for dev; production operators
