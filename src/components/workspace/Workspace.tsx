@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Pencil } from "lucide-react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
+import { ArxivExport } from "./ArxivExport";
 import { ShareMenu } from "./ShareMenu";
 import { SnapshotsMenu } from "./SnapshotsMenu";
 import { bibKeys } from "@/lib/bibtex";
@@ -106,6 +107,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
     warnings: [],
   });
   const [notice, setNotice] = useState<string | null>(null);
+  const [arxivOpen, setArxivOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const pdfUrl = useRef<string | undefined>(undefined);
 
@@ -628,6 +630,16 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
               >
                 {t("ws.export.zip")}
               </a>
+              <button
+                type="button"
+                className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-raised"
+                onClick={() => {
+                  exportRef.current?.removeAttribute("open");
+                  setArxivOpen(true);
+                }}
+              >
+                {t("ws.export.arxiv")}
+              </button>
             </div>
           </details>
           <SnapshotsMenu
@@ -669,6 +681,20 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
             {t("common.close")}
           </button>
         </div>
+      )}
+
+      {arxivOpen && (
+        <ArxivExport
+          projectId={project.id}
+          mainFile={mainFile}
+          log={compile.log}
+          files={docs.files.map((f) => ({
+            path: f.path,
+            content: docs.store.getDoc(f.id),
+            binary: f.binary,
+          }))}
+          onClose={() => setArxivOpen(false)}
+        />
       )}
 
       {isDesktop ? (
