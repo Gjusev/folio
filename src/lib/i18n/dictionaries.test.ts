@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { DICTS, format } from "./dictionaries";
+import { DICTS, format, negotiateLang } from "./dictionaries";
+
+describe("negotiateLang", () => {
+  it("picks the highest-q supported language", () => {
+    expect(negotiateLang("de-DE,de;q=0.9,en;q=0.8")).toBe("de");
+    expect(negotiateLang("fr;q=0.9,es-MX;q=0.8,en;q=0.5")).toBe("es");
+    expect(negotiateLang("en-GB,en;q=0.9")).toBe("en");
+  });
+
+  it("honours q-values over order", () => {
+    expect(negotiateLang("es;q=0.4, de;q=0.9")).toBe("de");
+  });
+
+  it("ignores q=0 and unsupported languages, falling back to English", () => {
+    expect(negotiateLang("es;q=0, fr")).toBe("en");
+    expect(negotiateLang("ja,zh;q=0.9")).toBe("en");
+    expect(negotiateLang("")).toBe("en");
+    expect(negotiateLang(null)).toBe("en");
+    expect(negotiateLang(undefined)).toBe("en");
+  });
+
+  it("matches the primary subtag case-insensitively and tolerates junk", () => {
+    expect(negotiateLang("ES-ar")).toBe("es");
+    expect(negotiateLang(";;q=x, de;q=oops")).toBe("de");
+    expect(negotiateLang("*")).toBe("en");
+  });
+});
 
 describe("format", () => {
   it("substitutes plain vars", () => {

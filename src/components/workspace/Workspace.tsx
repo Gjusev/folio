@@ -12,6 +12,7 @@ import { useI18n } from "@/lib/i18n/client";
 import type { AgentPlan } from "@/lib/ai-prompts";
 import type { LogIssue } from "@/lib/latex-log";
 import { AiPanel } from "./AiPanel";
+import { ReviewPanel } from "./ReviewPanel";
 import { CodeEditor, type EditorHandle } from "./CodeEditor";
 import { FileTree } from "./FileTree";
 import { PapersPanel } from "@/components/papers/PapersPanel";
@@ -37,8 +38,8 @@ type Props = {
   userName?: string;
 };
 
-type SideTab = "files" | "papers" | "assistant";
-type MobileView = "files" | "editor" | "pdf" | "papers" | "assistant";
+type SideTab = "files" | "papers" | "assistant" | "review";
+type MobileView = "files" | "editor" | "pdf" | "papers" | "assistant" | "review";
 
 const STATUS_KEY: Record<
   SaveStatus,
@@ -96,7 +97,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
   // The drafting agent is a main character now: give its tab more room.
   const sidePanel = useRef<PanelImperativeHandle | null>(null);
   useEffect(() => {
-    sidePanel.current?.resize(side === "assistant" ? "32%" : "22%");
+    sidePanel.current?.resize(side === "assistant" || side === "review" ? "32%" : "22%");
   }, [side]);
   const [mobile, setMobile] = useState<MobileView>("editor");
   const [compile, setCompile] = useState<CompileState>({
@@ -429,6 +430,20 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
     />
   );
 
+  const review = (
+    <ReviewPanel
+      projectId={project.id}
+      enabled={aiEnabled}
+      active={side === "review" || mobile === "review"}
+      getFiles={() => docs.files.map((f) => ({ path: f.path, content: docs.store.getDoc(f.id) }))}
+      flush={docs.store.flush}
+      onOpenAt={(path, line) => {
+        const target = docs.files.find((f) => f.path === path);
+        if (target) open(target.id, line);
+      }}
+    />
+  );
+
   const editorSheet = (
     <div className="sheet flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line px-4 text-sm">
@@ -511,6 +526,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
     ["files", t("projects.files")],
     ["papers", lang === "en" ? "Papers" : lang === "de" ? "Literatur" : "Artículos"],
     ["assistant", lang === "en" ? "Assistant" : lang === "de" ? "Assistent" : "Asistente"],
+    ["review", t("rv.tab")],
   ];
 
   const sidebar = (
@@ -533,6 +549,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
         <div className={side === "files" ? "h-full" : "hidden"}>{files}</div>
         <div className={side === "papers" ? "h-full" : "hidden"}>{papers}</div>
         <div className={side === "assistant" ? "h-full" : "hidden"}>{assistant}</div>
+        <div className={side === "review" ? "h-full" : "hidden"}>{review}</div>
       </div>
     </aside>
   );
@@ -682,6 +699,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
                 ["pdf", "PDF"],
                 ["papers", sideTabs[1][1]],
                 ["assistant", sideTabs[2][1]],
+                ["review", sideTabs[3][1]],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -706,6 +724,9 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
             </div>
             <div className={mobile === "assistant" ? "sheet h-full overflow-hidden" : "hidden"}>
               {assistant}
+            </div>
+            <div className={mobile === "review" ? "sheet h-full overflow-hidden" : "hidden"}>
+              {review}
             </div>
           </div>
         </>

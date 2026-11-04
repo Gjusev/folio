@@ -11,10 +11,13 @@ export class ApiError extends Error {
 }
 
 // Known server messages, localized on the client. The cookie is read directly
-// because this helper runs outside React.
+// because this helper runs outside React; without one, <html lang> carries the
+// language the server negotiated from Accept-Language.
 function lang(): string {
   const m = /(?:^|;\s*)folio_lang=(\w{2})/.exec(document.cookie);
-  return m && m[1] in DICTS ? m[1] : DEFAULT_LANG;
+  if (m && m[1] in DICTS) return m[1];
+  const html = document.documentElement.lang.slice(0, 2);
+  return html in DICTS ? html : DEFAULT_LANG;
 }
 
 const MESSAGES: [RegExp, MsgKey][] = [

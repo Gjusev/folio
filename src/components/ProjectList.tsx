@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type SubmitEvent } from "react";
+import { Compass, FilePlus2, FolderInput } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
@@ -32,12 +33,22 @@ function ago(iso: string, lang: keyof typeof RTF) {
   return "";
 }
 
-export function ProjectList({ initial, templateIds }: { initial: Item[]; templateIds: string[] }) {
+export function ProjectList({
+  initial,
+  templateIds,
+  userName,
+  welcome = false,
+}: {
+  initial: Item[];
+  templateIds: string[];
+  userName?: string;
+  welcome?: boolean;
+}) {
   const router = useRouter();
   const { t, lang } = useI18n();
   const [items, setItems] = useState(initial);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"create" | "import" | null>(null);
+  const [busy, setBusy] = useState<"create" | "import" | "demo" | null>(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"recent" | "name">("recent");
   const dialog = useRef<HTMLDialogElement>(null);
@@ -53,6 +64,20 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
       const { project } = await api<{ project: { id: string } }>("POST", "/api/projects", {
         name,
         template: String(form.get("template") ?? "article"),
+      });
+      router.push(`/projects/${project.id}`);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(null);
+    }
+  }
+
+  async function loadDemo() {
+    setBusy("demo");
+    setError(null);
+    try {
+      const { project } = await api<{ project: { id: string } }>("POST", "/api/projects/demo", {
+        lang,
       });
       router.push(`/projects/${project.id}`);
     } catch (err) {
@@ -137,14 +162,16 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 id="projects-title" className="text-[22px] leading-7 font-semibold">
-            {t("projects.title")}
+            {welcome && userName ? t("onb.welcome", { name: userName }) : t("projects.title")}
           </h1>
           <p className="mt-0.5 text-sm text-muted">
-            {items.length === 0
-              ? t("projects.empty.hint")
-              : items.length === 1
-                ? t("projects.count.one")
-                : t("projects.count", { n: items.length })}
+            {welcome && items.length === 0
+              ? t("onb.welcome.sub")
+              : items.length === 0
+                ? t("projects.empty.hint")
+                : items.length === 1
+                  ? t("projects.count.one")
+                  : t("projects.count", { n: items.length })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -161,21 +188,35 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
               if (f) void importZip(f);
             }}
           />
-          <button
-            type="button"
-            className="btn"
-            onClick={() => zipInput.current?.click()}
-            disabled={busy !== null}
-          >
-            {busy === "import" ? t("projects.import.busy") : t("projects.import")}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => dialog.current?.showModal()}
-          >
-            {t("projects.new")}
-          </button>
+          {items.length > 0 && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void loadDemo()}
+              disabled={busy !== null}
+            >
+              {busy === "demo" ? t("onb.demo.busy") : t("projects.demo")}
+            </button>
+          )}
+          {items.length > 0 && (
+            <>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => zipInput.current?.click()}
+                disabled={busy !== null}
+              >
+                {busy === "import" ? t("projects.import.busy") : t("projects.import")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => dialog.current?.showModal()}
+              >
+                {t("projects.new")}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -212,27 +253,46 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
       )}
 
       {items.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-control px-6 py-14">
-          <p className="text-base font-medium">{t("projects.empty.head")}</p>
-          <p className="mt-1 max-w-md text-sm text-muted">{t("projects.empty.body")}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-6 grid gap-3 lg:grid-cols-3">
+          <div className="flex flex-col rounded-xl border border-accent/50 bg-accent-soft p-5">
+            <Compass aria-hidden className="h-5 w-5 text-accent" />
+            <h2 className="mt-3 text-base font-semibold">{t("onb.demo.t")}</h2>
+            <p className="mt-1 mb-5 grow text-sm leading-6 text-muted">{t("onb.demo.d")}</p>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary self-start"
+              onClick={() => void loadDemo()}
+              disabled={busy !== null}
+              autoFocus={welcome}
+            >
+              {busy === "demo" ? t("onb.demo.busy") : t("onb.demo.cta")}
+            </button>
+          </div>
+          <div className="flex flex-col rounded-xl border border-line bg-surface p-5">
+            <FilePlus2 aria-hidden className="h-5 w-5 text-muted" />
+            <h2 className="mt-3 text-base font-semibold">{t("onb.tpl.t")}</h2>
+            <p className="mt-1 mb-5 grow text-sm leading-6 text-muted">{t("onb.tpl.d")}</p>
+            <button
+              type="button"
+              className="btn self-start"
               onClick={() => dialog.current?.showModal()}
             >
               {t("projects.empty.tpl")}
             </button>
+          </div>
+          <div className="flex flex-col rounded-xl border border-line bg-surface p-5">
+            <FolderInput aria-hidden className="h-5 w-5 text-muted" />
+            <h2 className="mt-3 text-base font-semibold">{t("onb.import.t")}</h2>
+            <p className="mt-1 mb-5 grow text-sm leading-6 text-muted">{t("onb.import.d")}</p>
             <button
               type="button"
-              className="btn"
+              className="btn self-start"
               onClick={() => zipInput.current?.click()}
               disabled={busy !== null}
             >
               {busy === "import" ? t("projects.import.busy") : t("projects.import")}
             </button>
           </div>
-          <p className="mt-3 max-w-md text-xs text-muted">{t("projects.empty.migrate")}</p>
         </div>
       ) : (
         <table className="mt-6 w-full border-collapse text-sm">

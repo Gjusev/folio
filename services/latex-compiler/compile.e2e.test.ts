@@ -1,6 +1,8 @@
 // End-to-end tests against the real compiler container.
 // Run with: COMPILER_E2E_URL=http://127.0.0.1:3001 pnpm test
 import { describe, expect, it } from "vitest";
+import { demoProject } from "../../src/lib/demo";
+import { LANGS } from "../../src/lib/i18n/dictionaries";
 import { TEMPLATES } from "../../src/lib/templates";
 
 const URL_ = process.env.COMPILER_E2E_URL;
@@ -44,6 +46,19 @@ describe.skipIf(!URL_)("latex-compiler (real container)", () => {
       expect(body.ok).toBe(true);
       expect(Buffer.from(body.pdf!, "base64").subarray(0, 5).toString()).toBe("%PDF-");
       expect(body.log).not.toMatch(/Citation .* undefined/);
+    },
+    90_000,
+  );
+
+  it.each(LANGS.map((l) => [l, demoProject(l)] as const))(
+    "compiles the %s demo project: resolved citations, no errors",
+    async (_lang, demo) => {
+      const { status, body } = await compile(demo.files);
+      expect(status).toBe(200);
+      expect(body.log.match(/^.*:\d+: .*$/m)?.[0] ?? "").toBe("");
+      expect(body.ok).toBe(true);
+      expect(body.log).not.toMatch(/Citation .* undefined/);
+      expect(body.log).not.toMatch(/Reference .* undefined/);
     },
     90_000,
   );

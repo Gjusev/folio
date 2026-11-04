@@ -12,7 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: dict["projects.title"] };
 }
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: PageProps<"/projects">) {
+  const welcome = (await searchParams).welcome === "1";
   const user = await requirePageUser();
   const { dict } = await getDict();
   const projects = await listProjects(user.id);
@@ -39,6 +40,8 @@ export default async function ProjectsPage() {
               updatedAt: p.updatedAt.toISOString(),
             }))}
             templateIds={TEMPLATES.map((t) => t.id)}
+            userName={user.name.split(" ")[0]}
+            welcome={welcome}
           />
         </div>
       </main>

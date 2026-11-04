@@ -25,6 +25,36 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Review mode (AI critique): a "Review" tab in the editor. The author picks the
+  scope (the whole document, or individual sections across files), the aspects
+  (clarity, structure, argument, evidence, citations, language, math, format),
+  the reviewer's profile (colleague, journal reviewer, "Reviewer 2") and an
+  optional focus. It returns a summary, per-aspect scores and comments that
+  point to real lines. The server drops any location or quotation it cannot
+  verify against the text it sent, never edits a file, and the result can be
+  filtered by severity and aspect, dismissed, and copied as Markdown.
+- Demo project: a finished, localised (es/en/de) reading note that compiles out
+  of the box (equations, a TikZ figure, a table, real citations, one deliberately
+  uncited entry for the citation-health panel). Offered at sign-up (checked by
+  default), on the welcome screen, and from the project list.
+- Onboarding: a new sign-up page with the product pitch, show/hide password and
+  a live length hint; after sign-up the user lands in the demo project or on a
+  welcome screen with three ways to start (demo, template, import).
+- Landing page redesigned: one sentence as the layout, a live Prism
+  countdown, sentences with switches, a "stages" slider driven by real product
+  screenshots (`pnpm exec node scripts/landing-shots.mjs` regenerates them), and
+  a self-hosted typeface.
+- `docker-compose.dokploy.yml`: the stack for Dokploy/Traefik deployments, with
+  no published host ports and explicit subnets.
+
+### Changed
+
+- The interface language now follows the browser's `Accept-Language` (es, en,
+  de) when no language has been chosen explicitly; unsupported languages fall
+  back to English instead of Spanish. The language switcher still wins.
+
+### Added (earlier in this release)
+
 - BYOK policy for AI keys: `LLM_ENV_SHARED=false` removes the server's `.env`
   key from every account, so each user must add their own provider in Settings
   (keys are per-user, sealed at rest, never returned to the browser — the UI
