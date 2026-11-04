@@ -539,7 +539,9 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
-      <header className="flex h-12 shrink-0 items-center gap-2 px-3">
+      {/* On phones the action group wraps to a second row instead of pushing
+          the compile button off-screen. */}
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1 sm:h-12 sm:flex-nowrap sm:py-0">
         <Link href="/projects" className="btn btn-ghost btn-sm">
           {t("ws.back")}
         </Link>
