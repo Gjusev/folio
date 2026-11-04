@@ -1,22 +1,30 @@
-# Política de seguridad
+# Security policy
 
-## Notificar una vulnerabilidad
+## Reporting a vulnerability
 
-Usa los **avisos de seguridad privados de GitHub** (pestaña _Security_ → _Report a vulnerability_) del repositorio. No publiques detalles en issues. Confirmaremos la recepción en un plazo de 5 días laborables y coordinaremos la divulgación tras publicar la corrección.
+Use **GitHub's private security advisories** for this repository (the
+_Security_ tab → _Report a vulnerability_). Do not post details in issues. We
+acknowledge reports within 5 business days and coordinate disclosure once a fix
+is released.
 
-## Modelo de amenazas (resumen)
+## Threat model (summary)
 
-| Superficie            | Control                                                                                                                                                                                                            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| LaTeX no confiable    | Servicio separado, red sin salida, rootfs de solo lectura, sin capacidades, límites de memoria, pids y tiempo, sin `\write18`, `openin_any=p`/`openout_any=p`, `latexmk -norc`, rutas validadas. Pruebas e2e en CI |
-| Acceso a datos        | Todas las consultas se filtran por propietario. Los IDs ajenos devuelven 404                                                                                                                                       |
-| Sesiones              | Token aleatorio de 256 bits, con solo su SHA-256 en BD. Cookie `HttpOnly`, `SameSite=Lax` y `Secure` en producción                                                                                                 |
-| Contraseñas           | scrypt (N=2^17, r=8, p=1) con sal y comparación en tiempo constante                                                                                                                                                |
-| CSRF                  | Comprobación de `Origin` en métodos mutantes, cuerpos JSON obligatorios y `SameSite=Lax`                                                                                                                           |
-| Abuso                 | Límites de peticiones en login, registro, compilación, IA y Crossref                                                                                                                                               |
-| IA (prompt injection) | El modelo no tiene herramientas ni permisos. El documento se marca como dato. Los cambios requieren confirmación del usuario                                                                                       |
-| SSRF                  | OpenAlex usa un host fijo; la entrada del usuario solo llega como texto de búsqueda o un id validado (`W\d+`), nunca como URL. El endpoint LLM lo fija el operador, no el usuario                                  |
-| Importación de ZIP    | Límites antes y después de descomprimir (50 MB), rutas validadas igual que el resto del proyecto, formatos comprobados por firma de bytes. Nada del ZIP toca el disco de la app                                    |
-| Figuras servidas      | Solo formatos comprobados al subir; respuesta con `Content-Security-Policy: sandbox` para que nada servido ejecute script                                                                                          |     |
+| Surface               | Controls                                                                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Untrusted LaTeX       | Separate service on a network with no egress, read-only root filesystem, no capabilities, memory/PID/time limits, no `\write18`, `openin_any=p`/`openout_any=p`, `latexmk -norc`, validated paths. End-to-end tests in CI |
+| Data access           | Every query is scoped to the owner or a project member; other users' ids answer 404. Viewers cannot write                                                                                                                 |
+| Sessions              | Random 256-bit token, only its SHA-256 stored. Cookie `HttpOnly`, `SameSite=Lax`, `Secure` in production                                                                                                                  |
+| Passwords             | scrypt (N=2^17, r=8, p=1) with salt and constant-time comparison                                                                                                                                                          |
+| CSRF                  | `Origin` check on mutating methods, JSON bodies required, `SameSite=Lax`                                                                                                                                                  |
+| Abuse                 | Rate limits on login (per IP and per e-mail), registration, compilation, imports, search, AI, review and sharing; client IP taken from the last `X-Forwarded-For` entry                                                   |
+| AI (prompt injection) | The model has no tools or permissions; the document is marked as data; changes require user confirmation; cite keys and review locations are verified on the server                                                       |
+| Provider keys         | Per user, sealed with AES-256-GCM, never returned to the browser; the server-wide key can be withheld (`LLM_ENV_SHARED=false`)                                                                                            |
+| SSRF                  | Search APIs use fixed hosts and validated ids. User provider URLs are resolved and rejected if they point to loopback/private ranges (unless explicitly allowed); redirects are refused                                   |
+| ZIP import            | Limits before and after decompression (50 MB), paths validated like any project file, formats checked by byte signature; nothing from the ZIP touches the app's disk                                                      |
+| Served figures        | Only formats verified at upload; responses carry `Content-Security-Policy: sandbox`                                                                                                                                       |
+| Live collaboration    | Room tokens signed with HMAC and bound to project, user and file; the relay closes connections whose room does not match the token                                                                                        |
+| Browser               | Production CSP, `X-Frame-Options: SAMEORIGIN`, `nosniff`, a restrictive `Permissions-Policy`                                                                                                                              |
 
-Límites conocidos (v0.1): el rate limiting está en memoria (una sola instancia) y los trabajos de compilación de distintos usuarios comparten contenedor, uno tras otro. Ver `IMPLEMENTATION_PLAN.md` §4.
+Known limits: rate limiting is kept in memory (one web instance), and compile
+jobs from different users share one hardened container, sequentially. See
+[docs/architecture.md](docs/architecture.md#the-latex-compiler-sandbox).

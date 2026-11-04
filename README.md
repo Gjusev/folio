@@ -1,140 +1,231 @@
-# Folio
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/banner-dark.png">
+  <img alt="Folio — the open-source LaTeX editor for scientific papers" src="docs/brand/banner-light.png">
+</picture>
 
-**Escritura científica en LaTeX, en tu propio servidor.** Folio es un editor LaTeX autoalojable (Apache-2.0) con compilación aislada, exploración real de literatura académica, figuras, plantillas de revista y un asistente de IA compatible con cualquier API de tipo OpenAI (vLLM, Ollama, Mistral, DeepSeek, OpenAI, OpenRouter…).
+**Scientific writing in LaTeX, on your own server.** Folio is a self-hosted LaTeX
+editor (Apache-2.0) with sandboxed compilation, real literature search, a
+Connected-Papers-style citation graph, versions with visual diffs, and an
+optional AI assistant and reviewer that work with any provider — and never edit
+your document without your confirmation.
 
-Tus documentos se guardan en tu Postgres. Cambiar de modelo es cambiar una variable de entorno.
+Your documents live in your own Postgres. Switching models is changing a setting.
 
-|                                 Editor                                 |                          Explorador de literatura                          |
-| :--------------------------------------------------------------------: | :------------------------------------------------------------------------: |
-| ![Editor con PDF, lint y contador de palabras](screenshots/editor.png) | ![Grafo de similitud con timeline y ficha](screenshots/graph-explorer.png) |
+|                           Editor + compiled PDF                           |                                  Literature explorer                                   |
+| :-----------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
+| ![Editor with source, compiled PDF and file tree](docs/images/editor.jpg) | ![Similarity graph with list, timeline and paper card](docs/images/graph-explorer.jpg) |
+|                            **Project library**                            |                                   **AI review mode**                                   |
+|     ![Bibliography with cited/unused status](docs/images/library.jpg)     |    ![Review panel with scope, aspects and reviewer profile](docs/images/review.jpg)    |
 
-## ¿Vienes de Prism? Migra en dos pasos
+## Coming from Prism? Migrate in two steps
 
-Prism cierra el **1 de enero de 2027** y borra los datos. Tu trabajo no tiene por qué irse con él:
+Prism closes on **1 January 2027** and deletes its data. Your work does not have
+to go with it:
 
-1. En Prism: **Settings → Data Controls → Export all** (ZIP con tus fuentes).
-2. En Folio: crea una cuenta, **Importar ZIP** — el importador acepta el export de Prism tal cual (hay un test e2e que lo verifica con un fixture del formato), detecta el archivo principal y descarta los artefactos que no compilan. También sirve para proyectos de Overleaf y fuentes de arXiv.
+1. In Prism: **Settings → Data Controls → Export all** (a ZIP with your sources).
+2. In Folio: create an account and use **Import ZIP**. The importer takes the
+   Prism export as-is (an end-to-end test checks it against a fixture of the
+   format), finds the main file and drops build artefacts. It also accepts
+   Overleaf projects and arXiv sources.
 
-A partir de ahí: documentos en tu Postgres, exportación ZIP en todo momento y Apache-2.0.
+From then on your documents are in your Postgres, exportable as ZIP at any time.
 
-## Por qué Folio (frente a Prism)
+## Try it in a minute
 
-| Crítica a Prism                                      | Folio                                                                                                          |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Solo nube; tus borradores viven en servidores ajenos | Autoalojado: documentos en tu Postgres, compilación en tu máquina                                              |
-| Cierre anunciado para 2027                           | Apache-2.0, exportación ZIP de fuentes en todo momento                                                         |
-| Compilaciones lentas con errores crípticos           | `latexmk` local en contenedor aislado, en segundos; errores `archivo:línea` que saltan a su línea al pulsarlos |
-| La IA altera citas                                   | La IA es opcional y solo cita claves que existen en tu `.bib`; jamás edita sin tu confirmación                 |
-| Exportación solo a PDF                               | PDF y ZIP con todas las fuentes                                                                                |
-| Sin API ni control                                   | Es tu servidor: API incluida, red del compilador sin salida a Internet                                         |
+Every new account can start with a **demo project**: a short, finished paper
+(equations, a TikZ figure, a table, real citations) that compiles out of the
+box, in English, Spanish or German. Click a sentence in the PDF, cite a paper,
+save a version, ask for a review.
 
-**Lo que Folio aún no tiene** (honestidad ante todo): exportación a DOCX, autocompletado consciente del contexto completo del documento (por ahora: claves de cita y `\label`), y la colaboración en tiempo real es experimental y opt-in (`COLLAB_URL`; requiere el relay de `services/collab`). Ver [roadmap](IMPLEMENTATION_PLAN.md).
+## Features
 
-## Qué hace
+**Write and compile**
 
-- **Editor** LaTeX (CodeMirror 6) con autoguardado y control de versiones optimista: si dos pestañas editan el mismo archivo, Folio te pregunta qué versión conservar y nunca sobrescribe en silencio.
-- **Autocompletado** de `\cite{}`, `\ref{}`, `\eqref{}` y `\autoref{}` con las claves reales de tu `.bib` y los `\label{}` del proyecto.
-- **Compilación** con `latexmk` + BibTeX en un servicio aislado. PDF continuo con zoom, errores que llevan a su línea al pulsarlos, **lint** (`chktex`) y **contador de palabras** (`texcount`) integrados.
-- **PDF ↔ código exacto**: haz clic en cualquier frase del PDF y el editor salta a esa línea del fuente (SyncTeX; y al revés: desde un error, el PDF salta a la página).
-- **Búsqueda de artículos** unificada en tres motores gratuitos y sin clave (OpenAlex, Semantic Scholar, arXiv): una sola caja, la fuente es un filtro, los resultados se mezclan y deduplican por DOI; también por DOI o identificador de arXiv. Ordena por relevancia, citas o fecha, filtra acceso abierto y añade la cita al `.bib` con un clic.
-- **Explorador de literatura** estilo Connected Papers: el grafo es de **similitud** (acoplamiento bibliográfico + co-citación + citación directa), no una estrella de citas. Clic en un nodo para su ficha completa (abstract, resumen en una frase, temas, enlaces, relación con el origen); doble clic para explorar desde ese paper — con historial para volver. Listas de previos/derivados, **línea temporal** por años e **islas rotuladas** en el grafo de tu bibliografía.
-- **Biblioteca del proyecto**: todas tus entradas `.bib` con citada/sin usar, filtro, y salto a la línea exacta del editor.
-- **Salud de citas y revisión de envío**: claves sin definir, entradas sin usar, mejora de preprint de arXiv a versión publicada (con verificación conservadora), marcadores `\todo` olvidados, figuras rotas, resumen/palabras clave y recuento de palabras — un informe con veredicto.
-- **Agente de redacción**: describe una sección («trabajos relacionados sobre atención eficiente»), Folio busca literatura real, la muestra como evidencia y redacta el LaTeX en streaming. Las citas quedan limitadas estructuralmente a claves existentes o a la evidencia recuperada: cualquier clave inventada se elimina en el servidor antes de mostrarte el borrador, y las referencias nuevas solo entran al `.bib` cuando tú aceptas. También genera un **plan por secciones** que queda guardado en el proyecto.
-- **RAG sobre tus documentos** (opcional): indexa tus `.tex`/`.bib` con el modelo de embeddings de tu proveedor y el asistente responde con los fragmentos relevantes de tu propio proyecto como contexto.
-- **Recomendaciones** de artículos a partir de tu bibliografía (Semantic Scholar, con vecinos de OpenAlex como respaldo; el motor se muestra siempre).
-- **Versiones (snapshots)**: guarda el estado del proyecto con etiqueta, compara con un **diff visual latexdiff** (PDF con añadidos/eliminaciones marcados) y restaura con deshacer automático.
-- **Compartir con roles**: invita por email a coautores como editores o lectores (los lectores compilan y exportan, no escriben).
-- **Colaboración en tiempo real** (experimental, opt-in): edición concurrente con cursores remotos sobre Yjs y Ctrl+Z que solo deshace tus propios cambios.
-- **IA multi-proveedor**: ajustes con presets (OpenRouter con privacidad por defecto, OpenAI, Anthropic nativo, Gemini, Mistral, DeepSeek, xAI, Ollama, vLLM, custom), claves cifradas en reposo (AES-256-GCM) y enrutado por tarea: modelo barato para buscar, fuerte para redactar. Sin perfiles, el `.env` sigue funcionando igual.
-- **Figuras**: sube PNG/JPG/PDF arrastrándolos a la lista de archivos; se comprueba que el contenido coincida con el formato y se incluyen al compilar.
-- **Plantillas**: artículo, IEEE, Elsevier (elsarticle), REVTeX, AMS, tesis con capítulos, presentación beamer y carta de respuesta a revisores.
-- **Exportación** a PDF y ZIP de fuentes, y **grafo → TikZ** para incluir la figura en el propio paper.
-- **Interfaz en español, inglés y alemán**: se cambia con un selector y la cookie recuerda tu elección, también en los mensajes de error.
-- **Instalable como app** (PWA): «Instalar Folio» en el navegador, sin Electron.
+- LaTeX editor (CodeMirror 6) with autosave and optimistic concurrency: if two
+  tabs edit the same file, Folio asks which version to keep and never
+  overwrites silently.
+- Autocompletion for `\cite{}`, `\ref{}`, `\eqref{}` and `\autoref{}` from your
+  real `.bib` keys and `\label{}`s.
+- Compilation with `latexmk` + BibTeX/biber in an isolated service with no
+  internet access. Continuous PDF with zoom, errors that jump to their line,
+  `chktex` lint and `texcount` word counts.
+- **Exact PDF ↔ source**: click any sentence in the PDF and the editor jumps to
+  its line (SyncTeX), and from an error to its page.
+- Templates: article, IEEE, Elsevier (elsarticle), REVTeX, AMS, thesis with
+  chapters, beamer and a response-to-reviewers letter.
+- Figures: drag PNG/JPG/PDF into the file list; content is checked against the
+  format before it is stored.
+- Export to PDF and to a ZIP of all sources.
 
-Las decisiones de diseño, el modelo de seguridad y el roadmap están en [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md); el historial por entregas con su verificación, en [`CHANGELOG.md`](CHANGELOG.md).
+**Cite and explore the literature**
 
-## Requisitos
+- Unified search across free, key-less sources (OpenAlex, Semantic Scholar,
+  arXiv): one box, the source is a filter, results merged and deduplicated by
+  DOI. Search by text, DOI or arXiv id; sort by relevance, citations or date;
+  add the citation to your `.bib` with one click.
+- **Literature explorer** in the style of Connected Papers: a _similarity_
+  graph (bibliographic coupling + co-citation + direct citation), not a star of
+  citations. Click a node for its full card, double-click to explore from it
+  (with history), prior/derivative work lists, a year timeline and labelled
+  islands for your own bibliography. Export the graph to TikZ.
+- Project library: every `.bib` entry with cited/unused status, filtering and a
+  jump to its line.
+- Citation health and submission check: undefined keys, unused entries,
+  arXiv-preprint → published-version upgrades (conservatively verified),
+  forgotten `\todo`s, broken figures, abstract/keywords and word count.
+- Recommendations from your bibliography (Semantic Scholar, OpenAlex neighbours
+  as fallback; the engine is always shown). Zotero library sync.
 
-- Node.js ≥ 24 y pnpm (`corepack enable`)
-- Docker (Postgres y el compilador LaTeX; no necesitas TeX instalado)
+**AI, on your terms (optional)**
 
-## Puesta en marcha (desarrollo)
+- **Review mode**: an AI critique with filters you choose — scope (the whole
+  document or individual sections), aspects (clarity, structure, argument,
+  evidence, citations, language, math, format), the reviewer's profile
+  (colleague, journal reviewer, "Reviewer 2") and an optional focus. Every
+  comment points to a real line; locations and quotations the server cannot
+  verify against the text it sent are dropped. Filter by severity and aspect,
+  dismiss, copy the report as Markdown.
+- **Drafting agent**: describe a section, Folio retrieves real literature as
+  evidence and streams the LaTeX. Citations are structurally limited to keys in
+  your `.bib` or the retrieved evidence — invented keys are removed on the
+  server. It can plan the paper section by section, draft each with a word
+  budget, critique the draft and verify its citations against a real compile.
+- Assistant chat with your document (improve, explain, continue, fix the
+  compile error), optionally grounded in your own project via RAG.
+- Any provider: presets for OpenRouter (privacy on by default), OpenAI,
+  Anthropic (native Messages API), Gemini, Mistral, DeepSeek, xAI, Ollama, vLLM
+  or any OpenAI-compatible endpoint. Keys are per user and sealed at rest
+  (AES-256-GCM); route cheap models to search and strong ones to drafting.
+
+**Work together, keep history**
+
+- Versions (snapshots) with labels, a visual **latexdiff** PDF between any two
+  versions, and restore with automatic undo.
+- Share with roles: invite co-authors as editors or viewers (viewers compile and
+  export, never write).
+- Real-time collaboration (experimental, opt-in): concurrent editing with remote
+  cursors over Yjs; Ctrl+Z only undoes your own changes.
+
+**Yours to run**
+
+- Interface in English, Spanish and German, picked from the browser and
+  switchable at any time.
+- Installable as an app (PWA), no Electron.
+- Self-hosted, Apache-2.0, with a sandboxed compiler that never runs in the web
+  process.
+
+### What Folio does not do (yet)
+
+DOCX export; autocompletion aware of the whole document's context (today: cite
+keys and labels); SSO/OIDC (local accounts only); multi-instance web deployments
+(rate limits live in memory). Real-time collaboration is experimental. The AI
+features are tested against fake OpenAI-compatible servers in CI, not against
+paid models. See the [roadmap](docs/roadmap.md).
+
+## Quick start (Docker)
+
+You need Docker. No TeX installation is required.
+
+```bash
+git clone https://github.com/Gjusev/folio.git && cd folio
+cp .env.example .env
+# Fill COMPILER_TOKEN, POSTGRES_PASSWORD and LLM_CREDENTIALS_KEY with random values:
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+docker compose --profile app up -d --build
+# → http://127.0.0.1:3000   (migrations run on start-up)
+```
+
+Open the app, create an account and keep "Start with the demo project" ticked.
+Literature search works without any key.
+
+Put a TLS reverse proxy (Caddy, nginx, Traefik) in front of port 3000 for
+anything beyond your own machine. Production deployments, Dokploy, live
+collaboration behind `wss://` and every environment variable are covered in
+[docs/deployment.md](docs/deployment.md).
+
+## Development
+
+Requirements: Node.js ≥ 24 and pnpm (`corepack enable`), Docker.
 
 ```bash
 pnpm install
-cp .env.example .env
-# Genera un secreto para el compilador y ponlo en COMPILER_TOKEN:
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-
-pnpm services:up      # Postgres + compilador LaTeX (la primera vez construye la imagen TeX, unos minutos)
-pnpm db:migrate       # crea las tablas
-pnpm dev              # http://localhost:3000
+cp .env.example .env          # set COMPILER_TOKEN (see above)
+pnpm services:up              # Postgres + LaTeX compiler (first build takes a few minutes)
+pnpm db:migrate
+pnpm dev                      # http://localhost:3000
 ```
 
-Abre la app, crea una cuenta y elige una plantilla. La búsqueda de artículos funciona sin ninguna clave.
+### Turning on AI
 
-### Activar la IA
-
-Configura un endpoint compatible con OpenAI en `.env` y reinicia `pnpm dev`:
+Add a provider in **Settings** (per user), or set a server-wide endpoint in
+`.env`:
 
 ```bash
-# Local, sin coste, con Ollama vía Docker:
+# Local and free, with Ollama in Docker:
 docker compose --profile ollama up -d ollama
-docker compose exec ollama ollama pull qwen3:4b      # o qwen3:0.6b en máquinas modestas
-# .env
+docker compose exec ollama ollama pull qwen3:4b
 LLM_BASE_URL=http://127.0.0.1:11434/v1
 LLM_MODEL=qwen3:4b
 
-# O un proveedor:
+# Or a hosted provider:
 LLM_BASE_URL=https://api.mistral.ai/v1
 LLM_API_KEY=...
 LLM_MODEL=mistral-small-latest
 ```
 
-Sin `LLM_BASE_URL`, el resto de Folio funciona igual y el panel del asistente explica cómo activarlo.
+Without any provider the rest of Folio works the same and the AI panels explain
+how to enable them. On a shared instance set `LLM_ENV_SHARED=false` so nobody
+uses the server's key and everyone brings their own. Details:
+[docs/ai.md](docs/ai.md).
 
-## Despliegue autoalojado (todo en Docker)
-
-```bash
-cp .env.example .env   # define COMPILER_TOKEN, POSTGRES_PASSWORD y, opcionalmente, LLM_*
-docker compose --profile app up -d --build
-# http://127.0.0.1:3000  (las migraciones se aplican al arrancar)
-```
-
-Para guardar claves de proveedores desde la página de Ajustes, define también `LLM_CREDENTIALS_KEY` (cifra las claves en la base de datos; si lo rotas, hay que reintroducirlas). Las suscripciones de consumidor (ChatGPT Plus, Claude Pro, Gemini AI Pro) no pueden usarse por API desde una app: solo claves API.
-
-¿Perdiste la contraseña de tu instancia? No hay enlace de recuperación (Folio no asume servidor de correo): el administrador la restablece en el servidor con `pnpm reset-password usuario@ejemplo.org`.
-
-**Claves de IA por usuario (BYOK).** Cada usuario puede dar su propia clave en Ajustes (cifrada en reposo con `LLM_CREDENTIALS_KEY`, nunca sale del servidor y nunca vuelve al navegador — la interfaz solo ve si existe). Los protocolos habituales están soportados: cualquier endpoint compatible con OpenAI y la Messages API nativa de Anthropic. La clave del `.env` es la excepción: mientras `LLM_ENV_SHARED` esté activo (por defecto), **todos** los usuarios de la instancia pueden usarla — práctico para un despliegue personal, inaceptable en uno compartido; ponlo a `false` y cada uno pasa a usar solo la suya. En colaboración, el asistente siempre corre con la clave de quien lo invoca; el relay de collab solo transporta texto y cursores, nunca claves.
-
-En este modo el compilador está en una red sin salida a Internet y solo la app web puede alcanzarlo. Pon un proxy inverso con TLS (Caddy, nginx, Traefik) delante del puerto 3000. Las cookies de sesión se marcan `Secure` en producción.
-
-## Calidad
+## Quality
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm format:check
-pnpm test             # unitarios + integración contra Postgres (requiere pnpm services:up)
-pnpm e2e              # flujos reales en navegador contra el stack (citas, grafo, editor, collab)
+pnpm format:check && pnpm lint && pnpm typecheck
+pnpm test        # unit + integration against real Postgres (needs pnpm services:up)
+pnpm e2e         # real browser flows against a running stack (E2E_BASE_URL)
 
-# Pruebas de seguridad y de las plantillas contra el contenedor real:
-COMPILER_E2E_URL=http://127.0.0.1:3001 COMPILER_TOKEN=<tu token> pnpm vitest run services/latex-compiler
+# Compiler isolation and template/demo compilation against the real container:
+COMPILER_E2E_URL=http://127.0.0.1:3001 COMPILER_TOKEN=<token> pnpm vitest run services/latex-compiler
 ```
 
-La CI (`.github/workflows/ci.yml`) ejecuta todo lo anterior, incluidas las pruebas de aislamiento del compilador.
+CI (`.github/workflows/ci.yml`) runs all of the above, including the compiler's
+isolation tests.
 
-## Estructura
+## Documentation
+
+| Document                                             | What is in it                                                             |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)         | Components, stack, data model, design decisions, the compiler sandbox     |
+| [docs/deployment.md](docs/deployment.md)             | Docker Compose, reverse proxy, Dokploy, environment reference, operations |
+| [docs/ai.md](docs/ai.md)                             | Providers, BYOK, assistant, drafting agent, review mode, RAG, invariants  |
+| [docs/roadmap.md](docs/roadmap.md)                   | What shipped, what is next, known limits                                  |
+| [docs/brand-guidelines.md](docs/brand-guidelines.md) | Logo, colour, type, voice and the asset pipeline                          |
+| [SECURITY.md](SECURITY.md)                           | Threat model and how to report a vulnerability                            |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                   | Workflow and the rules every change follows                               |
+| [CHANGELOG.md](CHANGELOG.md)                         | Release notes                                                             |
+
+## Project layout
 
 ```
-src/app/            páginas y API (route handlers de Next.js)
-src/lib/            dominio: auth, proyectos, importador ZIP, grafo de similitud, IA, RAG
-src/components/     interfaz (workspace, explorador de grafos, pestaña de artículos)
-services/latex-compiler/   servicio de compilación aislado (sin dependencias)
-services/collab/    relay WebSocket de edición colaborativa (opt-in)
-drizzle/            migraciones SQL versionadas
+src/app/                   pages and API (Next.js route handlers)
+src/lib/                   domain: auth, projects, importer, similarity graph, AI, review, RAG, i18n
+src/components/            UI (workspace, graph explorer, papers tab, landing)
+services/latex-compiler/   the isolated compile service (no dependencies)
+services/collab/           WebSocket relay for live collaboration (opt-in)
+drizzle/                   versioned SQL migrations
+scripts/                   migrations, password reset, brand and screenshot generators
+test/e2e/                  Playwright specs against a running stack
+docs/                      documentation, brand assets and images
 ```
 
-## Licencia
+## License and credits
 
-[Apache-2.0](LICENSE). TeX Live se instala en la imagen del compilador a partir de paquetes de Debian y no se redistribuye en este repositorio. El patrón del visor PDF continuo está adaptado de [assistant-ui/open-prism](https://github.com/assistant-ui/open-prism) (MIT).
+[Apache-2.0](LICENSE). TeX Live is installed in the compiler image from Debian
+packages and is not redistributed in this repository. The continuous PDF viewer
+pattern is adapted from [assistant-ui/open-prism](https://github.com/assistant-ui/open-prism)
+(MIT). The Switzer typeface is by the Indian Type Foundry, used under the
+[ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl). The landing
+page uses the First Folio title page (British Library, CC0) and "Printing in a
+letterpress" by Subhashish Panigrahi (CC BY-SA 4.0), both via Wikimedia Commons.

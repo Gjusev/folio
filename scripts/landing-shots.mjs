@@ -40,7 +40,11 @@ await page.getByText(/Page 1 of \d+/).waitFor({ timeout: 90_000 });
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${OUT}/editor.png` });
 
-await page.getByRole("tab").filter({ hasText: /Papers/ }).first().click();
+await page
+  .getByRole("tab")
+  .filter({ hasText: /Papers/ })
+  .first()
+  .click();
 await page.locator("#papers-tab-library").click();
 await page.waitForTimeout(800);
 await page.screenshot({ path: `${OUT}/library.png` });
@@ -50,11 +54,11 @@ await page.fill("#paper-q", "10.48550/arXiv.1706.03762");
 await page.press("#paper-q", "Enter");
 await page.getByText("Attention Is All You Need").first().waitFor({ timeout: 30_000 });
 await page
-    .locator("[role=tabpanel]")
-    .filter({ hasText: "Attention Is All You Need" })
-    .first()
-    .getByTestId("explore")
-    .click();
+  .locator("[role=tabpanel]")
+  .filter({ hasText: "Attention Is All You Need" })
+  .first()
+  .getByTestId("explore")
+  .click();
 await page.getByTestId("graph-explorer").waitFor({ timeout: 60_000 });
 await page.waitForFunction(() => (window.__folioGraph?.ids().length ?? 0) > 1, undefined, {
   timeout: 60_000,

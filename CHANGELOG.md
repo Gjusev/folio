@@ -47,8 +47,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `docker-compose.dokploy.yml`: the stack for Dokploy/Traefik deployments, with
   no published host ports and explicit subnets.
 
+- Brand identity: a mark (an open folio — the source leaf in ink, the result
+  leaf in teal), an outlined Switzer wordmark, palette, typography and voice in
+  `docs/brand-guidelines.md`. `node scripts/brand-assets.mts` renders every
+  asset from `src/lib/brand.ts`: SVG logos, app and maskable icons, favicon,
+  the Open Graph/Twitter image, GitHub's social preview and README banners.
+- Documentation rewritten in English: README, `docs/architecture.md`,
+  `docs/deployment.md` (with an environment reference), `docs/ai.md`,
+  `docs/roadmap.md`, an English summary of the November audits, and English
+  CONTRIBUTING, SECURITY and RELEASE.
+
 ### Changed
 
+- The app logo is the new mark and wordmark (inline SVG that follows light and
+  dark themes); new `APP_URL` variable for absolute Open Graph URLs.
+- `IMPLEMENTATION_PLAN.md` and `reviews/` were replaced by `docs/`; the
+  per-iteration notes remain in the git history.
 - The interface language now follows the browser's `Accept-Language` (es, en,
   de) when no language has been chosen explicitly; unsupported languages fall
   back to English instead of Spanish. The language switcher still wins.
