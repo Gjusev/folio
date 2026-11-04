@@ -48,3 +48,5 @@ next-env.d.ts
 *.stackdump
 .taste-skill/
 test-results/
+public/landing/shots/
+assets/
