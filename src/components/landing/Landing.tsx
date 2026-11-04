@@ -15,9 +15,20 @@ import "./landing.css";
 
 const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL ?? "";
 
+// Without open registration the honest action is "run your own".
+const SELF_HOST_URL = REPO_URL ? `${REPO_URL}#quick-start-docker` : "/login";
+
 const rise = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
-export function Landing({ dict, daysLeft }: { dict: Dict; daysLeft: number }) {
+export function Landing({
+  dict,
+  daysLeft,
+  registrationOpen,
+}: {
+  dict: Dict;
+  daysLeft: number;
+  registrationOpen: boolean;
+}) {
   const t = (k: MsgKey, vars?: Record<string, string | number>) => format(dict, k, vars);
 
   return (
@@ -73,8 +84,8 @@ export function Landing({ dict, daysLeft }: { dict: Dict; daysLeft: number }) {
               {t("landing.hero.sub")}
             </p>
             <div className="lp-actions lp-rise" style={rise(1)}>
-              <Link href="/register" className="btn-lp">
-                {t("landing.cta.main")}
+              <Link href={registrationOpen ? "/register" : SELF_HOST_URL} className="btn-lp">
+                {t(registrationOpen ? "landing.cta.main" : "landing.cta.selfhost")}
               </Link>
               <a href="#feat-title" className="link-lp">
                 {t("landing.cta.more")}
@@ -118,7 +129,7 @@ export function Landing({ dict, daysLeft }: { dict: Dict; daysLeft: number }) {
                   {t("landing.prism.step1")}
                 </li>
                 <li data-reveal style={rise(3)}>
-                  <Link href="/register" className="link-lp">
+                  <Link href={registrationOpen ? "/register" : SELF_HOST_URL} className="link-lp">
                     {t("landing.prism.step2")}
                   </Link>
                 </li>
@@ -185,8 +196,8 @@ export function Landing({ dict, daysLeft }: { dict: Dict; daysLeft: number }) {
           </h2>
           <div className="lp-close-foot" data-reveal style={rise(1)}>
             <p>{t("landing.close.p")}</p>
-            <Link href="/register" className="btn-lp on-dark">
-              {t("landing.close.cta")}
+            <Link href={registrationOpen ? "/register" : SELF_HOST_URL} className="btn-lp on-dark">
+              {t(registrationOpen ? "landing.close.cta" : "landing.cta.selfhost")}
             </Link>
           </div>
         </section>

@@ -14,6 +14,7 @@ const es = {
     "Folio es el editor LaTeX de código abierto para artículos científicos: compila sin instalar TeX, cita desde una biblioteca y conserva cada versión.",
   "landing.cta.main": "Probar el proyecto demo",
   "landing.cta.more": "Ver qué incluye",
+  "landing.cta.selfhost": "Instálalo en tu servidor",
   // landing: Prism clock
   "landing.prism.h": "Prism cierra en {n:día|días}.",
   "landing.prism.closed": "Prism ya ha cerrado.",
@@ -123,6 +124,7 @@ const en: Record<keyof typeof es, string> = {
     "Folio is the open-source LaTeX editor for scientific papers: compile without installing TeX, cite from a library, keep every version.",
   "landing.cta.main": "Try the demo project",
   "landing.cta.more": "See what is inside",
+  "landing.cta.selfhost": "Run it on your server",
   "landing.prism.h": "Prism closes in {n:day|days}.",
   "landing.prism.closed": "Prism has closed.",
   "landing.prism.until": "until 1 January 2027",
@@ -221,6 +223,7 @@ const de: Record<keyof typeof es, string> = {
     "Folio ist der Open-Source-LaTeX-Editor für wissenschaftliche Arbeiten: kompilieren ohne TeX-Installation, aus einer Bibliothek zitieren, jede Version behalten.",
   "landing.cta.main": "Demo-Projekt ausprobieren",
   "landing.cta.more": "Ansehen, was drinsteckt",
+  "landing.cta.selfhost": "Auf deinem Server betreiben",
   "landing.prism.h": "Prism schließt in {n:Tag|Tagen}.",
   "landing.prism.closed": "Prism ist geschlossen.",
   "landing.prism.until": "bis zum 1. Januar 2027",
