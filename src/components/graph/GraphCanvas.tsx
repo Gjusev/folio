@@ -533,8 +533,21 @@ export function GraphCanvas(props: GraphCanvasProps) {
 function Resizer() {
   const sigma = useSigma();
   useEffect(() => {
-    const ro = new ResizeObserver(() => sigma.resize());
-    ro.observe(sigma.getContainer());
+    const el = sigma.getContainer();
+    let last = `${el.clientWidth}x${el.clientHeight}`;
+    const ro = new ResizeObserver(() => {
+      sigma.resize();
+      const now = `${el.clientWidth}x${el.clientHeight}`;
+      if (now === last) return;
+      // The size at mount can be the pre-layout one (side panels still
+      // unmeasured, e.g. fullscreen portal before the grid settles): sigma
+      // resizes its renderer but never re-fits the camera, so nodes fitted to
+      // the stale width end up clipped behind the panels. Re-fit on real size
+      // changes; user zoom/pan doesn't resize the container, so it is safe.
+      last = now;
+      void sigma.getCamera().reset({ duration: 0 });
+    });
+    ro.observe(el);
     return () => ro.disconnect();
   }, [sigma]);
   return null;
