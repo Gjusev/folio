@@ -10,7 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17-alpine
+        # pgvector image (same as docker-compose.yml): migration 0006 does
+        # CREATE EXTENSION vector, which plain postgres:17-alpine lacks.
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_USER: folio
           POSTGRES_PASSWORD: folio
@@ -54,6 +56,8 @@ jobs:
             --read-only --tmpfs /tmp:size=512m --cap-drop ALL --security-opt no-new-privileges \
             --memory 1g --pids-limit 256 folio-compiler
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3001/health && break; sleep 1; done
+          # Fail this step (not the tests) if the container never came up.
+          curl -sf http://127.0.0.1:3001/health
       - name: Security and compilation tests against the real container
         run: pnpm vitest run services/latex-compiler/compile.e2e.test.ts
         env:
