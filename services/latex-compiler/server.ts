@@ -52,6 +52,8 @@ export type DiffRequest = {
   newFiles: { path: string; content: string; encoding?: "base64" }[];
 };
 export type CompileResult = { ok: boolean; log: string; pdf?: string; timedOut?: boolean };
+export type ArxivPackageFile = { path: string; encoding: "utf8" | "base64"; content: string };
+export type ArxivResult = CompileResult & { package?: { files: ArxivPackageFile[] } };
 export type LintIssue = {
   file: string;
   line: number;
@@ -241,6 +243,115 @@ export async function compile(req: CompileRequest): Promise<CompileResult> {
   try {
     await writeFiles(dir, req.files);
     return await render(dir, req.mainFile);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+const GRAPHIC_EXT = ["pdf", "png", "jpg", "jpeg"];
+
+/**
+ * The arXiv source package, collected from the uploaded file CONTENTS:
+ * the \input/\include closure of the main file (extension optional, relative
+ * to the including file, then by bare name the way kpathsea searches the
+ * tree), every \includegraphics figure, the .bib files behind
+ * \bibliography/\addbibresource, and — when a bibliography is used — the
+ * .bbl latexmk generated next to the main file. Referenced-but-missing files
+ * are simply left out (TeX would have errored on them). No aux garbage.
+ */
+async function collectPackage(jobDir: string, req: CompileRequest): Promise<ArxivPackageFile[]> {
+  const byPath = new Map(req.files.map((f) => [f.path, f]));
+  const dirOf = (p: string) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/") + 1) : "");
+  const normalize = (p: string) => {
+    const out: string[] = [];
+    for (const part of p.split("/")) {
+      if (part === "..") out.pop();
+      else if (part !== "." && part !== "") out.push(part);
+    }
+    return out.join("/");
+  };
+  // TeX resolution: as written (if it already carries a known extension),
+  // else with each candidate extension appended; relative to the including
+  // file, then relative to the MAIN file's directory (latexmk runs with -cd,
+  // so that is TeX's working directory), then the bare name from the tree
+  // root. For root-level mains the main-relative and bare candidates
+  // coincide, which is harmless.
+  const candidates = (from: string, name: string, exts: string[]) => {
+    const hasExt = exts.some((e) => name.toLowerCase().endsWith(`.${e}`));
+    const names = hasExt ? [name] : exts.map((e) => `${name}.${e}`);
+    return names.flatMap((n) => {
+      const rel = normalize(dirOf(from) + n);
+      if (byPath.has(rel)) return [rel];
+      const fromMain = normalize(dirOf(req.mainFile) + n);
+      if (byPath.has(fromMain)) return [fromMain];
+      return byPath.has(n) ? [n] : [];
+    });
+  };
+
+  const texClosure: CompileRequest["files"] = [];
+  const bibs = new Set<string>();
+  const figures = new Set<string>();
+  let usesBibliography = false;
+  const seen = new Set<string>();
+  const queue = [req.mainFile];
+  // \s* and \*? matter: "\input {a}" and "\includegraphics*{x}" are legal TeX
+  // and must not silently drop the file from the package.
+  while (queue.length) {
+    const path = queue.shift()!;
+    if (seen.has(path)) continue; // loop-safe
+    seen.add(path);
+    const f = byPath.get(path);
+    if (!f) continue;
+    texClosure.push(f); // base64 .tex still ships, just not scanned
+    if (f.encoding === "base64") continue;
+    for (const m of f.content.matchAll(/\\(?:input|include)\s*\{([^}]+)\}/g))
+      for (const p of candidates(path, m[1]!.trim(), ["tex"])) queue.push(p);
+    for (const m of f.content.matchAll(/\\includegraphics\*?\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g))
+      for (const p of candidates(path, m[1]!.trim(), GRAPHIC_EXT)) figures.add(p);
+    for (const m of f.content.matchAll(/\\bibliography\s*\{([^}]+)\}/g)) {
+      usesBibliography = true;
+      for (const name of m[1]!.split(",")) {
+        const n = name.trim();
+        if (n) for (const p of candidates(path, n, ["bib"])) bibs.add(p);
+      }
+    }
+    for (const m of f.content.matchAll(/\\addbibresource\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
+      usesBibliography = true;
+      for (const p of candidates(path, m[1]!.trim(), ["bib"])) bibs.add(p);
+    }
+  }
+
+  const files: ArxivPackageFile[] = texClosure.map((f) =>
+    f.encoding === "base64"
+      ? { path: f.path, encoding: "base64", content: f.content }
+      : { path: f.path, encoding: "utf8", content: f.content },
+  );
+  for (const paths of [bibs, figures])
+    for (const p of paths) {
+      const f = byPath.get(p)!;
+      files.push(
+        f.encoding === "base64"
+          ? { path: p, encoding: "base64", content: f.content }
+          : { path: p, encoding: "utf8", content: f.content },
+      );
+    }
+  // arXiv recompiles bibliographies from the .bbl, not the .bib toolchain.
+  if (usesBibliography) {
+    const bblPath = `${req.mainFile.slice(0, -4)}.bbl`;
+    const bbl = await readFile(join(jobDir, bblPath), "utf8").catch(() => null);
+    if (bbl !== null) files.push({ path: bblPath, encoding: "utf8", content: bbl });
+  }
+  return files;
+}
+
+/** /arxiv: a full compile; on success the response also carries the source package. */
+export async function arxiv(req: CompileRequest): Promise<ArxivResult> {
+  const dir = await mkdtemp(join(tmpdir(), "job-"));
+  try {
+    await writeFiles(dir, req.files);
+    const result = await render(dir, req.mainFile);
+    if (!result.ok) return result; // exactly what /compile answers
+    return { ...result, package: { files: await collectPackage(dir, req) } };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -585,7 +696,7 @@ function readBody(req: IncomingMessage): Promise<string | null> {
   });
 }
 
-const ROUTES = new Set(["/compile", "/diff", "/lint", "/count", "/synctex"]);
+const ROUTES = new Set(["/compile", "/diff", "/lint", "/count", "/synctex", "/arxiv"]);
 
 let active = 0;
 
@@ -627,6 +738,10 @@ export const server = createServer(async (req, res) => {
       const parsed = parseRequest(body);
       if (typeof parsed === "string") return send(res, 400, { error: parsed });
       send(res, 200, await count(parsed));
+    } else if (req.url === "/arxiv") {
+      const parsed = parseRequest(body);
+      if (typeof parsed === "string") return send(res, 400, { error: parsed });
+      send(res, 200, await arxiv(parsed));
     } else {
       const parsed = parseRequest(body);
       if (typeof parsed === "string") return send(res, 400, { error: parsed });

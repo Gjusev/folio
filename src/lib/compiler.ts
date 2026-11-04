@@ -4,6 +4,16 @@ import { HttpError } from "@/lib/http";
 
 export type CompileOutput = { ok: boolean; log: string; pdf?: string; timedOut?: boolean };
 
+export type ArxivFile = { path: string; encoding: "utf8" | "base64"; content: string };
+export type ArxivOutput = {
+  ok: boolean;
+  log: string;
+  pdf?: string;
+  timedOut?: boolean;
+  /** Present on success: the closure of files an arXiv submission needs. */
+  package?: { files: ArxivFile[] };
+};
+
 /** Sends sources to the isolated compiler service. LaTeX never runs in this process. */
 export async function compileProject(
   mainFile: string,
@@ -63,6 +73,18 @@ export async function diffProject(
     throw new HttpError(502, "El compilador rechazó el diff");
   }
   return (await res.json()) as CompileOutput;
+}
+
+/**
+ * Builds the arXiv source package inside the isolated compiler service: it
+ * compiles (same cost as /compile), then returns the closure of files an
+ * arXiv submission needs (\input tree, figures, .bib, generated .bbl).
+ */
+export async function arxivProject(
+  mainFile: string,
+  files: { path: string; content: string; encoding?: "base64" }[],
+): Promise<ArxivOutput> {
+  return postTool("/arxiv", { mainFile, files }, 90_000, "paquete de arXiv");
 }
 
 export type LintIssue = {

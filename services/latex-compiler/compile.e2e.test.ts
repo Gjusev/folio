@@ -262,4 +262,112 @@ describe.skipIf(!URL_)("latex-compiler (real container)", () => {
     });
     expect(status).toBe(400);
   }, 60_000);
+
+  type ArxivBody = {
+    ok: boolean;
+    log: string;
+    pdf?: string;
+    timedOut?: boolean;
+    package?: { files: { path: string; encoding: string; content: string }[] };
+  };
+  const arxiv = (
+    files: { path: string; content: string; encoding?: string }[],
+    mainFile = "main.tex",
+  ) => postJson<ArxivBody>("/arxiv", { mainFile, files });
+
+  it("arxiv: packages the demo project exactly (closure, .bib, .bbl) and keeps the pdf", async () => {
+    const { status, body } = await arxiv(demoProject("en").files);
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(Buffer.from(body.pdf!, "base64").subarray(0, 5).toString()).toBe("%PDF-");
+    const paths = body.package!.files.map((f) => f.path);
+    expect(paths[0]).toBe("main.tex"); // main file leads
+    expect([...paths].sort()).toEqual([
+      "figures/attention.tex",
+      "main.bbl",
+      "main.tex",
+      "references.bib",
+    ]);
+    const bbl = body.package!.files.find((f) => f.path === "main.bbl")!;
+    expect(bbl.encoding).toBe("utf8");
+    expect(bbl.content).toContain("bibitem");
+    const tex = body.package!.files.find((f) => f.path === "figures/attention.tex")!;
+    expect(tex.encoding).toBe("utf8");
+    expect(tex.content).toContain("tikzpicture");
+  }, 90_000);
+
+  it("arxiv: includes a PNG figure base64, tex sources utf8", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    const { status, body } = await arxiv([
+      { path: "main.tex", content: doc("\\includegraphics[width=2cm]{figures/dot.png}") },
+      { path: "figures/dot.png", content: png, encoding: "base64" },
+    ]);
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    const fig = body.package!.files.find((f) => f.path === "figures/dot.png");
+    expect(fig?.encoding).toBe("base64");
+    expect(fig?.content).toBe(png); // passed through as uploaded
+    expect(body.package!.files.find((f) => f.path === "main.tex")?.encoding).toBe("utf8");
+  }, 60_000);
+
+  it("arxiv: \\input{/etc/passwd} answers exactly like /compile", async () => {
+    const files = [{ path: "main.tex", content: doc("\\input{/etc/passwd}") }];
+    const viaCompile = await postJson<{ ok: boolean; log: string }>("/compile", {
+      mainFile: "main.tex",
+      files,
+    });
+    const viaArxiv = await arxiv(files);
+    expect(viaArxiv.status).toBe(viaCompile.status);
+    expect(viaArxiv.body.ok).toBe(false);
+    expect(viaArxiv.body.package).toBeUndefined(); // failures answer like /compile, no package
+    expect(viaArxiv.body.log).not.toMatch(/root:x:0:0/);
+    expect(viaArxiv.body.log).toMatch(/not allowed|not found/i);
+  }, 90_000);
+
+  it("arxiv: aux garbage never appears in package.files", async () => {
+    const { body } = await arxiv(demoProject("es").files);
+    expect(body.ok).toBe(true);
+    const junk = /\.(aux|log|synctex(\.gz)?|out|blg|fls|fdb_latexmk|toc)$/;
+    expect(body.package!.files.filter((f) => junk.test(f.path))).toEqual([]);
+    expect(body.package!.files.length).toBe(4);
+  }, 90_000);
+
+  it("arxiv: a subfolder main resolves bare \\input from the MAIN directory (latexmk -cd)", async () => {
+    // sections/a.tex says \input{b}; TeX resolves b from paper/ (the cwd),
+    // not from paper/sections/. The package must ship all three files.
+    const { status, body } = await arxiv(
+      [
+        { path: "paper/main.tex", content: doc("\\input{sections/a} Compiled.") },
+        { path: "paper/sections/a.tex", content: "From A. \\input{b}" },
+        { path: "paper/b.tex", content: "From B." },
+      ],
+      "paper/main.tex",
+    );
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect([...body.package!.files.map((f) => f.path)].sort()).toEqual([
+      "paper/b.tex",
+      "paper/main.tex",
+      "paper/sections/a.tex",
+    ]);
+  }, 90_000);
+
+  it("arxiv: legal spacing and starred forms are not dropped (\\input {a}, \\includegraphics*)", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    const { status, body } = await arxiv([
+      {
+        path: "main.tex",
+        content: doc("\\input {a} \\includegraphics* [width=1cm]{figures/dot.png}"),
+      },
+      { path: "a.tex", content: "Spaced input." },
+      { path: "figures/dot.png", content: png, encoding: "base64" },
+    ]);
+    expect(status).toBe(200);
+    expect(body.ok).toBe(true);
+    const paths = body.package!.files.map((f) => f.path);
+    expect(paths).toContain("a.tex");
+    expect(paths).toContain("figures/dot.png");
+  }, 60_000);
 });
