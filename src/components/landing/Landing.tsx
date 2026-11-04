@@ -120,7 +120,7 @@ export function Landing({ dict }: { dict: Dict }) {
               <p className="num text-xs font-medium text-accent">1</p>
               <h3 className="mt-1 text-sm font-semibold">{t("landing.stack.1.t")}</h3>
               <p className="mt-1 text-sm leading-5 text-muted">{t("landing.stack.1.d")}</p>
-              <pre className="mt-3 overflow-x-auto rounded-md bg-raised p-2.5 font-mono text-xs leading-5 text-ink">
+              <pre className="mt-3 rounded-md bg-raised p-2.5 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-ink">
                 <code>cp .env.example .env{"\n"}docker compose --profile app up -d --build</code>
               </pre>
             </li>
