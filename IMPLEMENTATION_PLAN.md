@@ -332,6 +332,20 @@ Ultracode: flujo de trabajo de 6 agentes (3 builds + 3 verificaciones, ~566k tok
 - Los tests del agente RAG sembraban el perfil con la cookie en vez del userId y nunca habían corrido contra BD real (estaban saltados hasta la imagen pgvector): corregidos al integrar, junto con la coerción Date del `max(created_at)` de node-postgres.
 - Honestidad: RAG no probado con embeddings de pago; el coseno en JS basta a esta escala (sin índice ANN); el binding de sala no tiene e2e cruzando proyectos (tests de unidad + smoke lo cubren).
 
+### Iteración 9 (2026-11-04): landing de migración y v0.1.0 lista para publicar
+
+Flujo de trabajo de 6 agentes (landing + release + e2e de seguridad, cada uno con verificador independiente) más trabajo inline; 61 commits.
+
+| Hito                                | Estado | Verificación                                                                                                                                                                                                                                                                                    |
+| ----------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Landing con ruta de migración Prism | Hecho  | Hero honesto, bloque Prism (cierre 2027-01-01 + Export all), 6 características verificables, quickstart literal, footer con repo solo si `NEXT_PUBLIC_REPO_URL`. Estado vacío de proyectos con la misma guía. i18n es/en/de por tipos                                                           |
+| v0.1.0 empaquetada                  | Hecho  | `CHANGELOG.md` (Keep a Changelog) contrastado commit a commit; `RELEASE.md` con checklist del mantenedor y sección «qué NO está»; versión 0.1.0; CI **arreglada de verdad** (postgres→pgvector: `CREATE EXTENSION vector` rompía `pnpm test` en CI; health-check del compilador que no fallaba) |
+| e2e de seguridad collab             | Hecho  | Un usuario de otro proyecto no puede acuñar token para fichero ajeno (404 en ambas variantes) ni entrar con token válido a sala ajena (relay 4001, probado en vivo)                                                                                                                             |
+| README real                         | Hecho  | Capturas de la app real (editor, explorador, biblioteca, landing), sección «Migra en dos pasos», todo lo nuevo documentado                                                                                                                                                                      |
+| Bug de la ronda anterior            | Hecho  | `pnpm test` salía con código 1 (Unhandled Rejection): una copia `.catch` de la promesa en la caché de grafos rechazaba sin nadie escuchando — CI habría roto. Arreglado y con salida 0 verificada                                                                                               |
+
+**Batería**: prettier/eslint/tsc · 319 tests con exit 0 · build · e2e 9/9 + 2 skips documentados (collab opt-in) · 3 ejecuciones consecutivas del doble clic estabilizado (el nodo elegido debe quedar en la zona media: el primer clic anima la cámara si está en el borde y el segundo cae fuera).
+
 **Pendiente (roadmap investigación, no construido)**
 
 - Planificador con presupuesto por sección, pasada de crítica y verificación de citas contra el PDF (ítem 3, forma grande).
