@@ -57,6 +57,7 @@ OIDC, OpenAI-compatible gateway, Postgres with pgvector).
 | `files`                      | Path, text content or binary (`bytea`), size, optimistic-concurrency `version`      |
 | `project_members`            | Sharing: `editor` or `viewer` per user                                              |
 | `snapshots`                  | Labelled copies of the text files, for diff and restore                             |
+| `comments`                   | Threaded comments on a file selection (`anchor_start/end/quote`), resolve state     |
 | `ai_messages`                | Persisted assistant conversations (trimmed to the latest 200 per project)           |
 | `llm_profiles`, `llm_routes` | Per-user providers (keys sealed with AES-256-GCM) and task → profile routing        |
 | `rag_chunks`                 | Paragraph and `.bib`-entry chunks with `vector(1536)` embeddings                    |

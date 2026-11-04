@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Pencil } from "lucide-react";
+import { MessageSquare, Pencil } from "lucide-react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
 import { ArxivExport } from "./ArxivExport";
+import { CommentsDrawer, type CommentDto, type CommentDraft } from "./CommentsDrawer";
 import { ShareMenu } from "./ShareMenu";
 import { SnapshotsMenu } from "./SnapshotsMenu";
 import { bibKeys } from "@/lib/bibtex";
+import { relocateAnchor } from "@/lib/anchors";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { AgentPlan } from "@/lib/ai-prompts";
@@ -111,11 +113,90 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
   const [copied, setCopied] = useState(false);
   const pdfUrl = useRef<string | undefined>(undefined);
 
+  // Comments: the data lives here so the header badge and the editor markers
+  // survive the drawer closing.
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<CommentDto[] | null>(null);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [commentDraft, setCommentDraft] = useState<CommentDraft | null>(null);
+  const [focusComment, setFocusComment] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{
+    fileId: string;
+    from: number;
+    to: number;
+    text: string;
+  } | null>(null);
+  // Author id of the current user, learned from the first comment they post
+  // (the session cookie pins one user per browser, so caching it is enough).
+  const [myId, setMyId] = useState<string | null>(null);
+  useEffect(() => {
+    const cached = localStorage.getItem("folio:uid");
+    if (cached) setMyId(cached);
+  }, []);
+
+  const reloadComments = useCallback(() => {
+    api<{ comments: CommentDto[] }>("GET", `/api/projects/${project.id}/comments`)
+      .then((r) => {
+        setComments(r.comments);
+        setCommentsError(null);
+      })
+      .catch((err) => setCommentsError((err as Error).message));
+  }, [project.id]);
+
+  // On mount, on drawer open, and when the active file changes (the server
+  // relocates anchors against the current content of each file).
+  useEffect(() => {
+    reloadComments();
+  }, [reloadComments, activeId, commentsOpen]);
+
+  function commentPosted(c: CommentDto) {
+    if (myId) return;
+    localStorage.setItem("folio:uid", c.authorId);
+    setMyId(c.authorId);
+  }
+
   const active = docs.files.find((f) => f.id === activeId) ?? null;
   const keys = docs.files
     .filter((f) => f.path.endsWith(".bib"))
     .flatMap((f) => bibKeys(docs.store.getDoc(f.id)));
   const canCite = Boolean(active?.path.endsWith(".tex"));
+
+  const unresolved = comments?.filter((c) => !c.resolvedAt).length ?? 0;
+
+  // Gutter markers for the active file: one per anchored comment, on the
+  // 1-based line its anchor starts on (relocated when the file changed since).
+  const commentMarkers = useMemo(() => {
+    if (!active || !comments) return [];
+    const content = docs.store.getDoc(active.id);
+    const out: { id: string; line: number }[] = [];
+    for (const c of comments) {
+      if (c.fileId !== active.id || c.anchorStart == null || c.anchorEnd == null) continue;
+      const at = relocateAnchor(content, c.anchorQuote ?? "", c.anchorStart, c.anchorEnd) ?? {
+        start: Math.min(c.anchorStart, content.length),
+      };
+      out.push({ id: c.id, line: content.slice(0, at.start).split("\n").length });
+    }
+    return out;
+  }, [active, comments, docs.store]);
+
+  // Live selection of the active .tex file; powers “Comment on selection”.
+  const texSelection =
+    selection && active && selection.fileId === active.id && active.path.endsWith(".tex")
+      ? selection.text.trim()
+        ? selection
+        : null
+      : null;
+
+  function markerClicked(line: number) {
+    // Prefer the first open thread on that line, else the first comment.
+    const hit =
+      commentMarkers.find(
+        (m) => m.line === line && !comments?.find((c) => c.id === m.id)?.resolvedAt,
+      ) ?? commentMarkers.find((m) => m.line === line);
+    if (!hit) return;
+    setFocusComment(hit.id);
+    setCommentsOpen(true);
+  }
 
   // Autocomplete sources for the editor: bib keys and \label anchors.
   const completions = useMemo(() => {
@@ -453,6 +534,26 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
         {active?.path === mainFile && (
           <span className="text-xs text-muted">{t("editor.main")}</span>
         )}
+        {texSelection && active && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm ml-auto shrink-0"
+            data-testid="comment-on-selection"
+            onClick={() => {
+              setCommentDraft({
+                fileId: active.id,
+                anchor: {
+                  start: texSelection.from,
+                  end: texSelection.to,
+                  quote: texSelection.text.slice(0, 500),
+                },
+              });
+              setCommentsOpen(true);
+            }}
+          >
+            {t("cm.onSelection", { n: texSelection.text.length })}
+          </button>
+        )}
       </div>
       {docs.conflict && (
         <div
@@ -499,6 +600,9 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
             completions={completions}
             label={t("editor.label")}
             collab={collab ? { ...collab, user: userName ? { name: userName } : undefined } : null}
+            comments={commentMarkers}
+            onMarkerClick={markerClicked}
+            onSelectionChange={(sel) => setSelection(sel ? { ...sel, fileId: active.id } : null)}
           />
         ) : (
           <p className="p-6 text-sm text-muted">{t("editor.pick")}</p>
@@ -600,6 +704,27 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
           {t(STATUS_KEY[docs.status])}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          <span className="relative inline-flex">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              data-testid="comments-toggle"
+              aria-label={t("cm.title")}
+              aria-expanded={commentsOpen}
+              title={t("cm.title")}
+              onClick={() => setCommentsOpen((o) => !o)}
+            >
+              <MessageSquare size={14} aria-hidden />
+            </button>
+            {unresolved > 0 && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-semibold text-white"
+              >
+                {unresolved > 9 ? "9+" : unresolved}
+              </span>
+            )}
+          </span>
           {project.role === "owner" && <ShareMenu projectId={project.id} />}
           {project.role === "viewer" && (
             <span className="pill" title={t("share.hint")}>
@@ -694,6 +819,24 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
             binary: f.binary,
           }))}
           onClose={() => setArxivOpen(false)}
+        />
+      )}
+
+      {commentsOpen && (
+        <CommentsDrawer
+          projectId={project.id}
+          role={project.role ?? "viewer"}
+          myId={myId}
+          comments={comments}
+          error={commentsError}
+          draft={commentDraft}
+          focusId={focusComment}
+          flush={docs.store.flush}
+          onClose={() => setCommentsOpen(false)}
+          onMutated={reloadComments}
+          onPosted={commentPosted}
+          onDraftDone={() => setCommentDraft(null)}
+          onFocusHandled={() => setFocusComment(null)}
         />
       )}
 

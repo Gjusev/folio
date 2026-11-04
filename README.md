@@ -105,6 +105,9 @@ save a version, ask for a review.
   export, never write).
 - Real-time collaboration (experimental, opt-in): concurrent editing with remote
   cursors over Yjs; Ctrl+Z only undoes your own changes.
+- Inline comments anchored to a source selection: threaded discussions across
+  all project files with replies and resolve/reopen; the anchor relocates when
+  the surrounding text is edited.
 
 **Yours to run**
 
