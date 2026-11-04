@@ -10,7 +10,7 @@ services:
     image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: folio
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: folio
     ports:
       - "127.0.0.1:5432:5432"
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     networks: [default]
 
-  # Untrusted LaTeX runs here, never in the web process. See IMPLEMENTATION_PLAN.md section 4.
+  # Untrusted LaTeX runs here, never in the web process. See docs/architecture.md.
   compiler:
     build: ./services/latex-compiler
     environment:
@@ -71,13 +71,14 @@ services:
     # Tags the built image locally so it can be retagged/pushed for releases.
     image: folio:0.1.0
     environment:
-      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@db:5432/folio
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/folio
       COMPILER_URL: http://compiler:3001
       COMPILER_TOKEN: ${COMPILER_TOKEN}
       # Empty = collaboration off (default). The URL is handed to the browser,
       # so in the compose profile it must be ws://collab:3001 — which only
       # resolves inside the docker network; real deployments expose the relay
       # with a proxy and use a wss:// URL here.
+      APP_URL: ${APP_URL:-}
       COLLAB_URL: ${COLLAB_URL:-}
       COLLAB_SECRET: ${COLLAB_SECRET:-}
       # 0 closes self-registration (existing accounts keep logging in).

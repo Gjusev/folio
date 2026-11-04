@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Folio mark: a white sheet on the stone frame, with the accent period. -->
-  <rect width="512" height="512" rx="112" fill="#f6f5f1" />
-  <rect x="72" y="72" width="368" height="368" rx="40" fill="#ffffff" stroke="#e6e5df" stroke-width="4" />
-  <circle cx="256" cy="340" r="44" fill="#1b6c80" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#141413"/><g transform="translate(88 88) scale(5.25)"><path fill="#f6f5f1" d="M6 12L29 18V56L6 50Z"/><path fill="#5fb3c8" d="M35 18L58 12V50L35 56Z"/></g></svg>

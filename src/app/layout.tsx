@@ -11,10 +11,15 @@ import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
+  const description = DICTS[lang]["meta.description"];
   return {
+    // Absolute URLs for the Open Graph image; set APP_URL to the public origin.
+    metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
     title: { default: "Folio", template: "%s · Folio" },
-    description: DICTS[lang]["meta.description"],
-    icons: { icon: "/icon.svg", apple: "/icon-192.png" },
+    description,
+    icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }] },
+    openGraph: { type: "website", siteName: "Folio", title: "Folio", description },
+    twitter: { card: "summary_large_image", title: "Folio", description },
   };
 }
 
