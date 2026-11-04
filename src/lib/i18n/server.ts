@@ -1,10 +1,12 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { DICTS, DEFAULT_LANG, LANG_COOKIE, isLang, type Dict, type Lang } from "./dictionaries";
+import { cookies, headers } from "next/headers";
+import { DICTS, LANG_COOKIE, isLang, negotiateLang, type Dict, type Lang } from "./dictionaries";
 
+/** Explicit choice (cookie) > browser preference (Accept-Language) > English. */
 export async function getLang(): Promise<Lang> {
   const v = (await cookies()).get(LANG_COOKIE)?.value;
-  return isLang(v) ? v : DEFAULT_LANG;
+  if (isLang(v)) return v;
+  return negotiateLang((await headers()).get("accept-language"));
 }
 
 export async function getDict(): Promise<{ lang: Lang; dict: Dict }> {

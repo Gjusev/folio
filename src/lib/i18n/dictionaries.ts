@@ -5,10 +5,14 @@
 import { graphDict } from "./graph-dict";
 import { landingDict } from "./landing-dict";
 import { libraryDict } from "./library-dict";
+import { reviewDict } from "./review-dict";
 
 export const LANGS = ["es", "en", "de"] as const;
 export type Lang = (typeof LANGS)[number];
-export const DEFAULT_LANG: Lang = "es";
+// Fallback when neither the cookie nor Accept-Language names a supported
+// language. English is the neutral choice for visitors from anywhere; Spanish
+// and German browsers are served in their own language via negotiateLang().
+export const DEFAULT_LANG: Lang = "en";
 export const LANG_COOKIE = "folio_lang";
 
 const baseEs = {
@@ -399,7 +403,13 @@ const baseEs = {
   "api.badPaperId": "Identificador no válido para esa fuente",
 } as const;
 
-export const es = { ...baseEs, ...graphDict.es, ...libraryDict.es, ...landingDict.es };
+export const es = {
+  ...baseEs,
+  ...graphDict.es,
+  ...libraryDict.es,
+  ...landingDict.es,
+  ...reviewDict.es,
+};
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
 
@@ -1153,13 +1163,45 @@ const baseDe = {
   "api.badPaperId": "Ungültige Kennung für diese Quelle",
 };
 
-export const en: Dict = { ...baseEn, ...graphDict.en, ...libraryDict.en, ...landingDict.en };
-export const de: Dict = { ...baseDe, ...graphDict.de, ...libraryDict.de, ...landingDict.de };
+export const en: Dict = {
+  ...baseEn,
+  ...graphDict.en,
+  ...libraryDict.en,
+  ...landingDict.en,
+  ...reviewDict.en,
+};
+export const de: Dict = {
+  ...baseDe,
+  ...graphDict.de,
+  ...libraryDict.de,
+  ...landingDict.de,
+  ...reviewDict.de,
+};
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };
 
 export function isLang(v: string | undefined): v is Lang {
   return !!v && (LANGS as readonly string[]).includes(v);
+}
+
+/**
+ * Picks the UI language from an Accept-Language header: the supported language
+ * with the highest q (ties keep header order); anything else falls back to
+ * DEFAULT_LANG. An explicit folio_lang cookie always wins over this.
+ */
+export function negotiateLang(header: string | null | undefined): Lang {
+  let best: { lang: Lang; q: number } | null = null;
+  for (const part of (header ?? "").split(",")) {
+    const [tag, ...params] = part.trim().split(";");
+    const primary = tag.trim().toLowerCase().split("-")[0];
+    if (!isLang(primary)) continue;
+    const qParam = params.map((p) => p.trim()).find((p) => p.startsWith("q="));
+    const parsed = qParam ? Number(qParam.slice(2)) : 1;
+    const q = Number.isFinite(parsed) ? parsed : 1;
+    if (q <= 0) continue;
+    if (!best || q > best.q) best = { lang: primary, q };
+  }
+  return best?.lang ?? DEFAULT_LANG;
 }
 
 /**

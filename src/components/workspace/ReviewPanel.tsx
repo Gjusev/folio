@@ -1,0 +1,483 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { ClipboardCheck, ClipboardCopy, Eye, EyeOff, X } from "lucide-react";
+import { api } from "@/lib/client/api";
+import { useI18n } from "@/lib/i18n/client";
+import type { MsgKey } from "@/lib/i18n/dictionaries";
+import {
+  ASPECTS,
+  RIGORS,
+  SEVERITIES,
+  projectSections,
+  reviewToMarkdown,
+  type Aspect,
+  type Review,
+  type Rigor,
+  type Severity,
+  type SourceFile,
+} from "@/lib/review";
+
+type Saved = { review: Review; sections: number; truncated: boolean };
+
+// The last result is kept per project in this browser (a review costs tokens;
+// losing it on reload would be a poor trade). useSyncExternalStore keeps SSR
+// and hydration consistent: the server snapshot is always "nothing saved".
+const listeners = new Set<() => void>();
+const key = (id: string) => `folio:review:${id}`;
+const read = (id: string) => localStorage.getItem(key(id));
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    listeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function write(id: string, value: Saved | null) {
+  if (value) localStorage.setItem(key(id), JSON.stringify(value));
+  else localStorage.removeItem(key(id));
+  listeners.forEach((l) => l());
+}
+
+const SEV_PILL: Record<Severity, string> = {
+  major: "bg-[var(--pill-negative-bg)] text-[var(--pill-negative-ink)]",
+  minor: "bg-[var(--pill-warning-bg)] text-[var(--pill-warning-ink)]",
+  nit: "bg-[var(--pill-neutral-bg)] text-[var(--pill-neutral-ink)]",
+};
+
+function Chip({
+  on,
+  onClick,
+  children,
+  title,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      title={title}
+      onClick={onClick}
+      className={`h-7 rounded-full px-2.5 text-xs transition-colors ${
+        on
+          ? "bg-primary text-primary-ink"
+          : "border border-control bg-raised text-ink hover:bg-active"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+const toggle = <T,>(set: Set<T>, v: T) => {
+  const next = new Set(set);
+  if (!next.delete(v)) next.add(v);
+  return next;
+};
+
+export function ReviewPanel({
+  projectId,
+  enabled,
+  active,
+  getFiles,
+  flush,
+  onOpenAt,
+}: {
+  projectId: string;
+  enabled: boolean;
+  /** True while this tab is visible: the section list is re-read from the editor then. */
+  active: boolean;
+  getFiles: () => SourceFile[];
+  flush: () => Promise<void>;
+  onOpenAt: (path: string, line: number) => void;
+}) {
+  const { t, lang } = useI18n();
+  const raw = useSyncExternalStore(
+    subscribe,
+    () => read(projectId),
+    () => null,
+  );
+  const saved = useMemo<Saved | null>(() => {
+    try {
+      return raw ? (JSON.parse(raw) as Saved) : null;
+    } catch {
+      return null;
+    }
+  }, [raw]);
+
+  const [mode, setMode] = useState<"all" | "pick">("all");
+  const [picked, setPicked] = useState<Set<string> | null>(null); // null = everything
+  const [aspects, setAspects] = useState<Set<Aspect>>(
+    new Set<Aspect>(["clarity", "structure", "argument", "evidence"]),
+  );
+  const [rigor, setRigor] = useState<Rigor>("reviewer");
+  const [focus, setFocus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sevOff, setSevOff] = useState<Set<Severity>>(new Set());
+  const [aspectOff, setAspectOff] = useState<Set<Aspect>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const [showDismissed, setShowDismissed] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-read when the tab becomes visible
+  const sections = useMemo(() => projectSections(getFiles()), [getFiles, active]);
+  const chosen = picked ?? new Set(sections.map((s) => s.id));
+  const selected = sections.filter((s) => chosen.has(s.id));
+  const sectionLabel = (title: string) => title || t("rv.scope.start");
+
+  const files = useMemo(() => [...new Set(sections.map((s) => s.file))], [sections]);
+
+  async function run() {
+    setError(null);
+    if (aspects.size === 0) return setError(t("rv.need.aspect"));
+    if (mode === "pick" && selected.length === 0) return setError(t("rv.need.section"));
+    setBusy(true);
+    try {
+      await flush();
+      const res = await api<{
+        review: Review;
+        meta: { sections: number; truncated: boolean };
+      }>("POST", `/api/projects/${projectId}/review`, {
+        lang,
+        aspects: ASPECTS.filter((a) => aspects.has(a)),
+        rigor,
+        focus,
+        scope: mode === "all" ? "all" : selected.map((s) => s.id),
+      });
+      write(projectId, {
+        review: res.review,
+        sections: res.meta.sections,
+        truncated: res.meta.truncated,
+      });
+      setDismissed(new Set());
+      setSevOff(new Set());
+      setAspectOff(new Set());
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const review = saved?.review ?? null;
+  const present = review ? ASPECTS.filter((a) => review.comments.some((c) => c.aspect === a)) : [];
+  const visible = review
+    ? review.comments
+        .map((c, i) => ({ c, i }))
+        .filter(
+          ({ c, i }) =>
+            !sevOff.has(c.severity) &&
+            !aspectOff.has(c.aspect) &&
+            (showDismissed || !dismissed.has(i)),
+        )
+    : [];
+
+  async function copyReport() {
+    if (!review) return;
+    await navigator.clipboard.writeText(reviewToMarkdown(review, t("rv.report")));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto p-3 text-sm">
+      <p className="text-xs leading-5 text-muted">{t("rv.note")}</p>
+
+      {!enabled && (
+        <p className="mt-3 rounded-md bg-[var(--pill-warning-bg)] px-3 py-2 text-xs text-[var(--pill-warning-ink)]">
+          {t("rv.off")}{" "}
+          <Link href="/settings" className="font-medium underline">
+            {t("rv.off.link")}
+          </Link>
+        </p>
+      )}
+
+      <fieldset className="mt-4">
+        <legend className="label">{t("rv.scope")}</legend>
+        <div className="flex flex-wrap gap-1.5">
+          <Chip on={mode === "all"} onClick={() => setMode("all")}>
+            {t("rv.scope.all")}
+          </Chip>
+          <Chip on={mode === "pick"} onClick={() => setMode("pick")}>
+            {t("rv.scope.pick")}
+          </Chip>
+        </div>
+        {mode === "pick" && (
+          <div className="mt-2 rounded-lg border border-line bg-surface p-2">
+            <div className="mb-1 flex items-center justify-between text-xs text-muted">
+              <span>{t("rv.sel.count", { n: selected.length })}</span>
+              <span className="flex gap-2">
+                <button
+                  type="button"
+                  className="hover:text-ink"
+                  onClick={() => setPicked(new Set(sections.map((s) => s.id)))}
+                >
+                  {t("rv.sel.all")}
+                </button>
+                <button
+                  type="button"
+                  className="hover:text-ink"
+                  onClick={() => setPicked(new Set())}
+                >
+                  {t("rv.sel.none")}
+                </button>
+              </span>
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+              {files.map((f) => (
+                <div key={f} className="mb-1">
+                  {files.length > 1 && <p className="px-1 py-0.5 text-xs font-medium">{f}</p>}
+                  {sections
+                    .filter((s) => s.file === f)
+                    .map((s) => (
+                      <label
+                        key={s.id}
+                        className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 hover:bg-raised"
+                        style={{ paddingLeft: `${0.25 + Math.max(0, s.level - 1) * 0.9}rem` }}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 accent-[var(--accent)]"
+                          checked={chosen.has(s.id)}
+                          onChange={() => setPicked(toggle(chosen, s.id))}
+                        />
+                        <span className={s.title ? "" : "text-muted"}>{sectionLabel(s.title)}</span>
+                        <span
+                          className="num ml-auto shrink-0 text-xs text-muted"
+                          title={t("rv.lines", { n: s.end - s.start + 1 })}
+                        >
+                          {s.end - s.start + 1}
+                        </span>
+                      </label>
+                    ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </fieldset>
+
+      <fieldset className="mt-4">
+        <legend className="label">{t("rv.aspects")}</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {ASPECTS.map((a) => (
+            <Chip key={a} on={aspects.has(a)} onClick={() => setAspects(toggle(aspects, a))}>
+              {t(`rv.a.${a}` as MsgKey)}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-4">
+        <legend className="label">{t("rv.rigor")}</legend>
+        <div className="grid gap-1.5">
+          {RIGORS.map((r) => (
+            <label
+              key={r}
+              className="flex cursor-pointer gap-2 rounded-lg border border-line p-2 hover:bg-raised has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+            >
+              <input
+                type="radio"
+                name="rigor"
+                className="mt-0.5 accent-[var(--accent)]"
+                checked={rigor === r}
+                onChange={() => setRigor(r)}
+              />
+              <span>
+                <span className="block text-sm font-medium">{t(`rv.rigor.${r}` as MsgKey)}</span>
+                <span className="block text-xs text-muted">{t(`rv.rigor.${r}.d` as MsgKey)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <label htmlFor="rv-focus" className="label mt-4">
+        {t("rv.focus")}
+      </label>
+      <input
+        id="rv-focus"
+        className="input"
+        value={focus}
+        maxLength={300}
+        placeholder={t("rv.focus.ph")}
+        onChange={(e) => setFocus(e.target.value)}
+      />
+
+      {error && (
+        <p
+          role="alert"
+          className="mt-3 rounded-md bg-[var(--pill-negative-bg)] px-3 py-2 text-xs text-[var(--pill-negative-ink)]"
+        >
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        className="btn btn-primary mt-4 w-full"
+        disabled={busy || !enabled}
+        onClick={() => void run()}
+      >
+        <ClipboardCheck aria-hidden className="h-4 w-4" />
+        {busy ? t("rv.run.busy") : review ? t("rv.again") : t("rv.run")}
+      </button>
+
+      {review && saved && (
+        <section className="mt-6" aria-label={t("rv.report")} data-testid="review-result">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">{t("rv.summary")}</h2>
+            <span className="text-xs text-muted">
+              {t("rv.sections.reviewed", { n: saved.sections })}
+            </span>
+          </div>
+          <p className="mt-1 leading-6">{review.summary}</p>
+          {saved.truncated && (
+            <p className="mt-2 text-xs text-[var(--warning)]">{t("rv.truncated")}</p>
+          )}
+
+          {Object.keys(review.scores).length > 0 && (
+            <div className="mt-3">
+              <p className="label">{t("rv.scores")}</p>
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {ASPECTS.filter((a) => review.scores[a] !== undefined).map((a) => (
+                  <li key={a} className="flex items-center justify-between text-xs">
+                    <span>{t(`rv.a.${a}` as MsgKey)}</span>
+                    <span className="num font-medium">{review.scores[a]}/5</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-4 space-y-2">
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-label={t("rv.filter.sev")}
+            >
+              {SEVERITIES.map((s) => (
+                <Chip key={s} on={!sevOff.has(s)} onClick={() => setSevOff(toggle(sevOff, s))}>
+                  {t(`rv.sev.${s}` as MsgKey)} ·{" "}
+                  {review.comments.filter((c) => c.severity === s).length}
+                </Chip>
+              ))}
+            </div>
+            {present.length > 1 && (
+              <div
+                className="flex flex-wrap items-center gap-1.5"
+                role="group"
+                aria-label={t("rv.filter.aspect")}
+              >
+                {present.map((a) => (
+                  <Chip
+                    key={a}
+                    on={!aspectOff.has(a)}
+                    onClick={() => setAspectOff(toggle(aspectOff, a))}
+                  >
+                    {t(`rv.a.${a}` as MsgKey)}
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-xs text-muted">
+            <span>{t("rv.count", { n: visible.length })}</span>
+            <span className="flex items-center gap-3">
+              {dismissed.size > 0 && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-ink"
+                  onClick={() => setShowDismissed((v) => !v)}
+                >
+                  {showDismissed ? (
+                    <EyeOff aria-hidden className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye aria-hidden className="h-3.5 w-3.5" />
+                  )}
+                  {t("rv.dismissed", { n: dismissed.size })}
+                </button>
+              )}
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 hover:text-ink"
+                onClick={() => void copyReport()}
+              >
+                <ClipboardCopy aria-hidden className="h-3.5 w-3.5" />
+                {copied ? t("rv.copied") : t("rv.copy")}
+              </button>
+              <button
+                type="button"
+                className="hover:text-ink"
+                onClick={() => write(projectId, null)}
+              >
+                {t("rv.clear")}
+              </button>
+            </span>
+          </div>
+
+          {visible.length === 0 ? (
+            <p className="mt-4 text-xs text-muted">{t("rv.none")}</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {visible.map(({ c, i }) => (
+                <li
+                  key={i}
+                  data-testid="review-comment"
+                  className={`rounded-lg border border-line bg-surface p-3 ${dismissed.has(i) ? "opacity-50" : ""}`}
+                >
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className={`rounded-full px-2 py-0.5 ${SEV_PILL[c.severity]}`}>
+                      {t(`rv.sev.${c.severity}` as MsgKey)}
+                    </span>
+                    <span className="text-muted">{t(`rv.a.${c.aspect}` as MsgKey)}</span>
+                    {c.file && c.line ? (
+                      <button
+                        type="button"
+                        className="num ml-auto rounded px-1.5 py-0.5 text-accent hover:bg-accent-soft"
+                        title={t("rv.go")}
+                        onClick={() => onOpenAt(c.file!, c.line!)}
+                      >
+                        {c.file}:{c.line}
+                      </button>
+                    ) : (
+                      <span className="ml-auto text-muted">{t("rv.general")}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="rounded p-0.5 text-muted hover:bg-raised hover:text-ink"
+                      aria-label={dismissed.has(i) ? t("rv.restore") : t("rv.dismiss")}
+                      title={dismissed.has(i) ? t("rv.restore") : t("rv.dismiss")}
+                      onClick={() => setDismissed(toggle(dismissed, i))}
+                    >
+                      <X aria-hidden className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {c.quote && (
+                    <p className="mt-2 border-l-2 border-control pl-2 text-xs text-muted italic">
+                      {c.quote}
+                    </p>
+                  )}
+                  <p className="mt-2 leading-6">{c.comment}</p>
+                  {c.suggestion && (
+                    <p className="mt-2 rounded-md bg-accent-soft px-2.5 py-1.5 text-xs leading-5">
+                      <span className="font-medium">{t("rv.suggest")}: </span>
+                      {c.suggestion}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
