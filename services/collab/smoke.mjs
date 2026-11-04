@@ -12,9 +12,10 @@ const PORT = 3099;
 const SECRET = "smoke-secret-0123456789abcdef";
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 
-// Same token format the web app signs (src/lib/collab-token.ts).
+// Same token format the web app signs (src/lib/collab-token.ts); `file` must
+// match the room the clients join below (f1).
 const payload = Buffer.from(
-  JSON.stringify({ pid: "p1", uid: "u1", exp: Date.now() + 60_000 }),
+  JSON.stringify({ pid: "p1", uid: "u1", file: "f1", exp: Date.now() + 60_000 }),
 ).toString("base64url");
 const token = `${payload}.${createHmac("sha256", SECRET).update(payload).digest("base64url")}`;
 
@@ -73,6 +74,12 @@ try {
   await connect(9, { tok: "AAAA.AAAA" }).then(
     () => check("bad token rejected", false),
     (err) => check("bad token rejected", err.code === 4001),
+  );
+
+  // A token signed for another file is refused: room must equal token.file.
+  await connect(9, { file: "f2" }).then(
+    () => check("token of another file rejected", false),
+    (err) => check("token of another file rejected", err.code === 4001),
   );
 
   // First client joins an empty room.

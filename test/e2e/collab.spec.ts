@@ -8,11 +8,13 @@ test.beforeAll(async () => {
 });
 
 test("dos pestañas editando el mismo fichero convergen en vivo", async ({ browser }) => {
-  // Collab is opt-in: skip cleanly when COLLAB_URL is not configured.
+  // Collab is opt-in: skip cleanly when COLLAB_URL is not configured. The
+  // probe asks for a token for the project's main file, exactly as the app
+  // does (the token is file-scoped since the room-binding fix).
   const tokenProbe = await ctx.api
-    .post(`/api/projects/${ctx.projectId}/collab-token`)
+    .post(`/api/projects/${ctx.projectId}/collab-token`, { data: { fileId: ctx.mainId } })
     .catch(() => null);
-  const enabled = tokenProbe ? (await tokenProbe.json()).url : null;
+  const enabled = tokenProbe?.ok() ? (await tokenProbe.json()).url : null;
   test.skip(!enabled, "collab desactivado (COLLAB_URL vacía)");
   const a = await browser.newContext();
   const b = await browser.newContext();
