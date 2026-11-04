@@ -3,6 +3,7 @@
 // known codes through these dictionaries and falls back to the server text.
 
 import { graphDict } from "./graph-dict";
+import { landingDict } from "./landing-dict";
 import { libraryDict } from "./library-dict";
 
 export const LANGS = ["es", "en", "de"] as const;
@@ -384,7 +385,7 @@ const baseEs = {
   "api.badPaperId": "Identificador no válido para esa fuente",
 } as const;
 
-export const es = { ...baseEs, ...graphDict.es, ...libraryDict.es };
+export const es = { ...baseEs, ...graphDict.es, ...libraryDict.es, ...landingDict.es };
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
 
@@ -1111,8 +1112,8 @@ const baseDe = {
   "api.badPaperId": "Ungültige Kennung für diese Quelle",
 };
 
-export const en: Dict = { ...baseEn, ...graphDict.en, ...libraryDict.en };
-export const de: Dict = { ...baseDe, ...graphDict.de, ...libraryDict.de };
+export const en: Dict = { ...baseEn, ...graphDict.en, ...libraryDict.en, ...landingDict.en };
+export const de: Dict = { ...baseDe, ...graphDict.de, ...libraryDict.de, ...landingDict.de };
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };
 
