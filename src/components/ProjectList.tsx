@@ -215,13 +215,24 @@ export function ProjectList({ initial, templateIds }: { initial: Item[]; templat
         <div className="mt-6 rounded-xl border border-dashed border-control px-6 py-14">
           <p className="text-base font-medium">{t("projects.empty.head")}</p>
           <p className="mt-1 max-w-md text-sm text-muted">{t("projects.empty.body")}</p>
-          <button
-            type="button"
-            className="btn btn-primary mt-4"
-            onClick={() => dialog.current?.showModal()}
-          >
-            {t("projects.empty.cta")}
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => dialog.current?.showModal()}
+            >
+              {t("projects.empty.tpl")}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => zipInput.current?.click()}
+              disabled={busy !== null}
+            >
+              {busy === "import" ? t("projects.import.busy") : t("projects.import")}
+            </button>
+          </div>
+          <p className="mt-3 max-w-md text-xs text-muted">{t("projects.empty.migrate")}</p>
         </div>
       ) : (
         <table className="mt-6 w-full border-collapse text-sm">
