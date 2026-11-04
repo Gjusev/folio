@@ -1,12 +1,23 @@
 # Folio
 
-**Escritura científica en LaTeX, en tu propio servidor.** Folio es un editor LaTeX autoalojable (Apache-2.0) con compilación aislada, búsqueda real de artículos académicos, figuras, plantillas de revista y un asistente de IA compatible con cualquier API de tipo OpenAI (vLLM, Ollama, Mistral, DeepSeek, OpenAI, OpenRouter…).
+**Escritura científica en LaTeX, en tu propio servidor.** Folio es un editor LaTeX autoalojable (Apache-2.0) con compilación aislada, exploración real de literatura académica, figuras, plantillas de revista y un asistente de IA compatible con cualquier API de tipo OpenAI (vLLM, Ollama, Mistral, DeepSeek, OpenAI, OpenRouter…).
 
 Tus documentos se guardan en tu Postgres. Cambiar de modelo es cambiar una variable de entorno.
 
-## Por qué Folio (frente a Prism)
+|                                 Editor                                 |                          Explorador de literatura                          |
+| :--------------------------------------------------------------------: | :------------------------------------------------------------------------: |
+| ![Editor con PDF, lint y contador de palabras](screenshots/editor.png) | ![Grafo de similitud con timeline y ficha](screenshots/graph-explorer.png) |
 
-Prism de OpenAI cierra el 1 de enero de 2027 y sus críticas repetidas señalan el mismo fondo: es una herramienta en la nube de un solo proveedor. Folio parte de esas críticas:
+## ¿Vienes de Prism? Migra en dos pasos
+
+Prism cierra el **1 de enero de 2027** y borra los datos. Tu trabajo no tiene por qué irse con él:
+
+1. En Prism: **Settings → Data Controls → Export all** (ZIP con tus fuentes).
+2. En Folio: crea una cuenta, **Importar ZIP** — el importador acepta el export de Prism tal cual (hay un test e2e que lo verifica con un fixture del formato), detecta el archivo principal y descarta los artefactos que no compilan. También sirve para proyectos de Overleaf y fuentes de arXiv.
+
+A partir de ahí: documentos en tu Postgres, exportación ZIP en todo momento y Apache-2.0.
+
+## Por qué Folio (frente a Prism)
 
 | Crítica a Prism                                      | Folio                                                                                                          |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -17,28 +28,32 @@ Prism de OpenAI cierra el 1 de enero de 2027 y sus críticas repetidas señalan 
 | Exportación solo a PDF                               | PDF y ZIP con todas las fuentes                                                                                |
 | Sin API ni control                                   | Es tu servidor: API incluida, red del compilador sin salida a Internet                                         |
 
-**Lo que Folio aún no tiene** (honestidad ante todo): edición colaborativa en tiempo real, historial con snapshots estilo git, exportación a DOCX y autocompletado consciente del contexto completo del documento (por ahora: claves de cita y `\label`). Ver [roadmap](IMPLEMENTATION_PLAN.md).
+**Lo que Folio aún no tiene** (honestidad ante todo): exportación a DOCX, autocompletado consciente del contexto completo del documento (por ahora: claves de cita y `\label`), y la colaboración en tiempo real es experimental y opt-in (`COLLAB_URL`; requiere el relay de `services/collab`). Ver [roadmap](IMPLEMENTATION_PLAN.md).
 
-## Qué hace (v0.3)
+## Qué hace
 
 - **Editor** LaTeX (CodeMirror 6) con autoguardado y control de versiones optimista: si dos pestañas editan el mismo archivo, Folio te pregunta qué versión conservar y nunca sobrescribe en silencio.
 - **Autocompletado** de `\cite{}`, `\ref{}`, `\eqref{}` y `\autoref{}` con las claves reales de tu `.bib` y los `\label{}` del proyecto.
-- **Compilación** con `latexmk` + BibTeX en un servicio aislado. PDF continuo con zoom, y errores que llevan a su línea al pulsarlos.
-- **PDF ↔ código**: haz clic en cualquier frase del PDF y el editor salta a esa línea del fuente.
+- **Compilación** con `latexmk` + BibTeX en un servicio aislado. PDF continuo con zoom, errores que llevan a su línea al pulsarlos, **lint** (`chktex`) y **contador de palabras** (`texcount`) integrados.
+- **PDF ↔ código exacto**: haz clic en cualquier frase del PDF y el editor salta a esa línea del fuente (SyncTeX; y al revés: desde un error, el PDF salta a la página).
 - **Búsqueda de artículos** unificada en tres motores gratuitos y sin clave (OpenAlex, Semantic Scholar, arXiv): una sola caja, la fuente es un filtro, los resultados se mezclan y deduplican por DOI; también por DOI o identificador de arXiv. Ordena por relevancia, citas o fecha, filtra acceso abierto y añade la cita al `.bib` con un clic.
-- **Agente de redacción**: describe una sección («trabajos relacionados sobre atención eficiente»), Folio busca literatura real, la muestra como evidencia y redacta el LaTeX en streaming. Las citas quedan limitadas estructuralmente a claves existentes o a la evidencia recuperada: cualquier clave inventada se elimina en el servidor antes de mostrarte el borrador, y las referencias nuevas solo entran al `.bib` cuando tú aceptas.
-- **Grafo de citas** estilo Connected Papers: referencias, citantes y un segundo anillo desde los trabajos más citados, sobre datos CC0 de OpenAlex; tamaño = citas, color = año, y cita cualquier nodo con un clic.
+- **Explorador de literatura** estilo Connected Papers: el grafo es de **similitud** (acoplamiento bibliográfico + co-citación + citación directa), no una estrella de citas. Clic en un nodo para su ficha completa (abstract, resumen en una frase, temas, enlaces, relación con el origen); doble clic para explorar desde ese paper — con historial para volver. Listas de previos/derivados, **línea temporal** por años e **islas rotuladas** en el grafo de tu bibliografía.
+- **Biblioteca del proyecto**: todas tus entradas `.bib` con citada/sin usar, filtro, y salto a la línea exacta del editor.
+- **Salud de citas y revisión de envío**: claves sin definir, entradas sin usar, mejora de preprint de arXiv a versión publicada (con verificación conservadora), marcadores `\todo` olvidados, figuras rotas, resumen/palabras clave y recuento de palabras — un informe con veredicto.
+- **Agente de redacción**: describe una sección («trabajos relacionados sobre atención eficiente»), Folio busca literatura real, la muestra como evidencia y redacta el LaTeX en streaming. Las citas quedan limitadas estructuralmente a claves existentes o a la evidencia recuperada: cualquier clave inventada se elimina en el servidor antes de mostrarte el borrador, y las referencias nuevas solo entran al `.bib` cuando tú aceptas. También genera un **plan por secciones** que queda guardado en el proyecto.
+- **RAG sobre tus documentos** (opcional): indexa tus `.tex`/`.bib` con el modelo de embeddings de tu proveedor y el asistente responde con los fragmentos relevantes de tu propio proyecto como contexto.
 - **Recomendaciones** de artículos a partir de tu bibliografía (Semantic Scholar, con vecinos de OpenAlex como respaldo; el motor se muestra siempre).
+- **Versiones (snapshots)**: guarda el estado del proyecto con etiqueta, compara con un **diff visual latexdiff** (PDF con añadidos/eliminaciones marcados) y restaura con deshacer automático.
+- **Compartir con roles**: invita por email a coautores como editores o lectores (los lectores compilan y exportan, no escriben).
+- **Colaboración en tiempo real** (experimental, opt-in): edición concurrente con cursores remotos sobre Yjs y Ctrl+Z que solo deshace tus propios cambios.
 - **IA multi-proveedor**: ajustes con presets (OpenRouter con privacidad por defecto, OpenAI, Anthropic nativo, Gemini, Mistral, DeepSeek, xAI, Ollama, vLLM, custom), claves cifradas en reposo (AES-256-GCM) y enrutado por tarea: modelo barato para buscar, fuerte para redactar. Sin perfiles, el `.env` sigue funcionando igual.
 - **Figuras**: sube PNG/JPG/PDF arrastrándolos a la lista de archivos; se comprueba que el contenido coincida con el formato y se incluyen al compilar.
-- **Plantillas**: artículo, IEEE, Elsevier (elsarticle), REVTeX, AMS, tesis con capítulos y presentación beamer.
-- **Importar ZIP**: trae un proyecto de Overleaf, las fuentes de arXiv o el ZIP de exportación de OpenAI Prism tal cual; se detecta el archivo principal y se descarta lo que no compila.
-- **Asistente de IA** (opcional): mejorar o explicar la selección, continuar el texto, corregir errores de compilación y preguntar sobre el documento. Solo cita claves que existen en tu `.bib` y no toca el documento sin tu confirmación.
-- **Exportación** a PDF y ZIP de fuentes.
+- **Plantillas**: artículo, IEEE, Elsevier (elsarticle), REVTeX, AMS, tesis con capítulos, presentación beamer y carta de respuesta a revisores.
+- **Exportación** a PDF y ZIP de fuentes, y **grafo → TikZ** para incluir la figura en el propio paper.
 - **Interfaz en español, inglés y alemán**: se cambia con un selector y la cookie recuerda tu elección, también en los mensajes de error.
 - **Instalable como app** (PWA): «Instalar Folio» en el navegador, sin Electron.
 
-Las decisiones de diseño, el modelo de seguridad y el roadmap están en [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+Las decisiones de diseño, el modelo de seguridad y el roadmap están en [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md); el historial por entregas con su verificación, en [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requisitos
 
@@ -97,8 +112,9 @@ En este modo el compilador está en una red sin salida a Internet y solo la app 
 ```bash
 pnpm lint && pnpm typecheck && pnpm format:check
 pnpm test             # unitarios + integración contra Postgres (requiere pnpm services:up)
+pnpm e2e              # flujos reales en navegador contra el stack (citas, grafo, editor, collab)
 
-# Pruebas de seguridad y de las 7 plantillas contra el contenedor real:
+# Pruebas de seguridad y de las plantillas contra el contenedor real:
 COMPILER_E2E_URL=http://127.0.0.1:3001 COMPILER_TOKEN=<tu token> pnpm vitest run services/latex-compiler
 ```
 
@@ -108,9 +124,10 @@ La CI (`.github/workflows/ci.yml`) ejecuta todo lo anterior, incluidas las prueb
 
 ```
 src/app/            páginas y API (route handlers de Next.js)
-src/lib/            dominio: auth, proyectos, importador ZIP, OpenAlex, BibTeX, compilador, IA
-src/components/     interfaz (workspace del editor en components/workspace)
+src/lib/            dominio: auth, proyectos, importador ZIP, grafo de similitud, IA, RAG
+src/components/     interfaz (workspace, explorador de grafos, pestaña de artículos)
 services/latex-compiler/   servicio de compilación aislado (sin dependencias)
+services/collab/    relay WebSocket de edición colaborativa (opt-in)
 drizzle/            migraciones SQL versionadas
 ```
 

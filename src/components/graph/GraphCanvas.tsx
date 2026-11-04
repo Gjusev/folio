@@ -329,7 +329,7 @@ function Overlays({
     return () => {
       delete window.__folioGraph;
     };
-  }, [sigma]);
+  }, [sigma, nodes]);
 
   const hoverNode = hovered ? nodes.get(hovered) : undefined;
   return (
