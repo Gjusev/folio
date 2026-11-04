@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { bibDois } from "@/lib/bibtex";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
-import { bibliographyGraph } from "@/lib/papers";
+import { bibliographyGraph } from "@/lib/citation-graph";
 import { getViewableProject, listFiles } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };

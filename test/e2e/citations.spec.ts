@@ -17,10 +17,11 @@ test("citar un paper hallado por DOI añade la entrada al .bib y el \\cite al cu
   await page.goto(`/projects/${ctx.projectId}`);
   await page.getByRole("tab", { name: "Artículos" }).click();
 
-  // Search by DOI: deterministic single result (Attention Is All You Need).
-  await page.fill("#paper-q", "10.48550/arXiv.1706.03762");
+  // Search by DOI: deterministic single result (ResNet — the template does not
+  // ship it, so the add-to-bib path is the honest one).
+  await page.fill("#paper-q", "10.1109/CVPR.2016.90");
   await page.press("#paper-q", "Enter");
-  await expect(page.getByText("Attention Is All You Need").first()).toBeVisible({
+  await expect(page.getByText("Deep Residual Learning for Image Recognition").first()).toBeVisible({
     timeout: 30_000,
   });
 
@@ -28,10 +29,13 @@ test("citar un paper hallado por DOI añade la entrada al .bib y el \\cite al cu
   const row = page
     .locator("[role=tabpanel] .sheet, [role=tabpanel] div")
     .filter({
-      has: page.getByText("Attention Is All You Need"),
+      has: page.getByText("Deep Residual Learning for Image Recognition"),
     })
     .first();
-  await row.getByRole("button", { name: "Citar" }).first().click();
+  // First attempt says "Citar"; a retry after a partial failure says
+  // "Insertar" (already in the .bib) — both land the \cite at the cursor.
+  const citeBtn = row.getByRole("button", { name: /^(Citar|Insertar)$/ }).first();
+  await citeBtn.click();
 
   // The .bib now holds the entry…
   await expect
@@ -44,23 +48,21 @@ test("citar un paper hallado por DOI añade la entrada al .bib y el \\cite al cu
       },
       { timeout: 20_000 },
     )
-    .toContain("Attention Is All You Need");
+    .toContain("Deep Residual Learning for Image Recognition");
 
-  // …and the editor inserted \cite{…} where the cursor was.
-  const main = await getFile(ctx, ctx.mainId);
-  expect(main.content, main.content).toMatch(/\\cite\{[^}]*vaswani[^}]*\}/i);
+  // …and the editor inserted \cite{…} at the cursor. The insertion is local
+  // with a ~1 s debounced save: poll the server until it lands.
+  await expect
+    .poll(async () => (await getFile(ctx, ctx.mainId)).content, { timeout: 15_000 })
+    .toMatch(/\\cite\{[^}]*he2016[^}]*\}/i);
 });
 
-test("la salud de citas refleja definidas/citadas sin ghosts tras citar", async ({ page }) => {
+test("la revisión de citas refleja definidas/citadas sin ghosts tras citar", async ({ page }) => {
   await page.goto(`/projects/${ctx.projectId}`);
   await page.getByRole("tab", { name: "Artículos" }).click();
-  await page.getByRole("button", { name: "Salud de citas" }).click();
-  await expect(
-    page
-      .getByText(/definidas/i)
-      .or(page.getByText(/1/))
-      .first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("tab", { name: "Revisar" }).click();
+  await page.getByTestId("check-run").click();
+  await expect(page.getByTestId("check-verdict")).toBeVisible({ timeout: 30_000 });
   const r = await ctx.api.get(`/api/projects/${ctx.projectId}/citations/health`);
   expect(r.status()).toBe(200);
   const h = await r.json();
