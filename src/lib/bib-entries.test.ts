@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { findInBib, normalizeTitle, parseBibEntries } from "./bib-entries";
+import { findInBib, normalizeTitle, parseBibEntries, surname } from "./bib-entries";
 
 const raw = String.raw;
+
+describe("surname", () => {
+  it("takes the part before the comma in 'Family, Given' order (the template's form)", () => {
+    expect(surname("Vaswani, Ashish")).toBe("Vaswani");
+    expect(surname("Gomez, Aidan N.")).toBe("Gomez");
+  });
+
+  it("takes the last word in 'Given Family' order (OpenAlex's form)", () => {
+    expect(surname("Ashish Vaswani")).toBe("Vaswani");
+  });
+
+  it("strips TeX braces and survives particles", () => {
+    expect(surname("Kaiser, {\\L}ukasz")).toBe("Kaiser");
+    expect(surname("{\\L}ukasz Kaiser")).toBe("Kaiser");
+    expect(surname("de la Cruz, Juan")).toBe("de la Cruz");
+  });
+});
 
 describe("parseBibEntries: fields", () => {
   it("reads every field of a plain article", () => {

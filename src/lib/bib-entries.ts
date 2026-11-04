@@ -387,6 +387,17 @@ export function normalizeTitle(s: string): string {
     .trim();
 }
 
+/**
+ * Family name of ONE raw author string, in either BibTeX order: "Family, Given"
+ * (before the first comma) or "Given Family" (last word). Braces are stripped,
+ * so "{\L}ukasz Kaiser" and "Kaiser, {\L}ukasz" both give "Kaiser".
+ */
+export function surname(author: string): string {
+  const a = author.replace(/[{}]/g, "").trim();
+  const comma = a.indexOf(",");
+  return (comma > 0 ? a.slice(0, comma) : (a.split(/\s+/).at(-1) ?? "")).trim();
+}
+
 const MIN_TITLE = 12; // shorter titles ("Overview", "Introduction") collide between unrelated works
 const titles = new WeakMap<BibEntry, string>(); // callers match many results against the same entries
 

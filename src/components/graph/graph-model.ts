@@ -2,6 +2,7 @@
 // weight), list sorting/filtering and neighbourhood lookups. No React, no
 // sigma — everything here is unit-tested.
 
+import { surname } from "@/lib/bib-entries";
 import { componentsOf } from "@/lib/graph-islands";
 import type { GraphEdge, GraphNode, GraphSeed, OutsideWork } from "@/lib/graph-types";
 
@@ -271,13 +272,13 @@ export function needsRecentre(
 
 /** "Vaswani, Shazeer, Parmar et al." — family names of the first three authors. */
 export function authorLine(authors: string[]): string {
-  const family = authors.map((a) => a.trim().split(/\s+/).at(-1) ?? "").filter(Boolean);
+  const family = authors.map((a) => surname(a)).filter(Boolean);
   return family.length > 3 ? `${family.slice(0, 3).join(", ")} et al.` : family.join(", ");
 }
 
 /** Short "FirstAuthor year" tag, the way Connected Papers labels nodes. */
 export function shortLabel(n: { authors: string[]; year?: number }): string {
-  const family = n.authors[0]?.trim().split(/\s+/).at(-1);
+  const family = n.authors[0] ? surname(n.authors[0]) : undefined;
   const tag = [family, n.year].filter(Boolean).join(" ") || "?";
   return tag.length > 20 ? `${tag.slice(0, 19)}…` : tag;
 }
