@@ -241,6 +241,11 @@ describe("authorLine", () => {
   it("copes with single-token names and stray spaces", () => {
     expect(authorLine(["  Plato  ", "Ada  Lovelace"])).toBe("Plato, Lovelace");
   });
+  it("reads BibTeX 'Family, Given' authors (the .bib template's form)", () => {
+    expect(authorLine(["Vaswani, Ashish", "Shazeer, Noam", "Parmar, Niki"])).toBe(
+      "Vaswani, Shazeer, Parmar",
+    );
+  });
 });
 
 describe("yearFilter", () => {

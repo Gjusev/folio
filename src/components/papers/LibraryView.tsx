@@ -6,12 +6,12 @@
 import { useMemo, useState } from "react";
 import { Check, FileCode, Network, Search } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
-import type { BibEntry } from "@/lib/bib-entries";
+import { surname, type BibEntry } from "@/lib/bib-entries";
 
 type Sort = "bib" | "year" | "title" | "unused";
 
 const family = (a: string[]) => {
-  const names = a.map((n) => n.split(/\s+/).at(-1) ?? "").filter(Boolean);
+  const names = a.map(surname).filter(Boolean);
   return names.length > 3 ? `${names.slice(0, 3).join(", ")} et al.` : names.join(", ");
 };
 
