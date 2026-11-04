@@ -33,6 +33,9 @@ test.describe("idioma por navegador", () => {
 });
 
 test("registrarse con el proyecto demo marcado abre un artículo que compila", async ({ page }) => {
+  const probe = await page.request.post("/api/auth/register", { data: {} });
+  test.skip(probe.status() === 403, "registration is closed on this instance");
+
   await page.goto("/register");
   await page.fill("#name", "Ada");
   await page.fill("#email", unique("demo"));
@@ -51,6 +54,9 @@ test("registrarse con el proyecto demo marcado abre un artículo que compila", a
 });
 
 test("registrarse sin demo muestra las tres vías de arranque", async ({ page }) => {
+  const probe = await page.request.post("/api/auth/register", { data: {} });
+  test.skip(probe.status() === 403, "registration is closed on this instance");
+
   await page.goto("/register");
   await page.fill("#name", "Grace");
   await page.fill("#email", unique("welcome"));
