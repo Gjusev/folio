@@ -181,7 +181,7 @@
   min-height: 100svh;
   flex-direction: column;
   gap: clamp(40px, 7vw, 96px);
-  padding: 110px var(--lp-m) clamp(28px, 4vw, 48px);
+  padding: 110px var(--lp-m) max(clamp(28px, 4vw, 48px), env(safe-area-inset-bottom));
 }
 .lp-sentence {
   margin: auto 0;
@@ -245,6 +245,7 @@
     height: auto;
     aspect-ratio: 2 / 1;
     min-width: 0;
+    margin-bottom: 0.16em;
     transform: none;
   }
 }
