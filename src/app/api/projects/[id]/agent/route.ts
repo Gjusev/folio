@@ -1,18 +1,31 @@
 import { z } from "zod";
 import {
+  buildCritiqueMessages,
   buildDraftMessages,
   buildPlanMessages,
+  citationUndefinedKeys,
   enforceCiteKeys,
+  inputsInclude,
+  insertDraftBeforeEnd,
+  parseCritique,
   parsePlan,
   type AgentPlan,
   type EvidenceItem,
 } from "@/lib/ai-prompts";
 import { bibKeys, citeKey } from "@/lib/bibtex";
+import { compileProject } from "@/lib/compiler";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { streamChat } from "@/lib/llm";
 import { resolveEndpoint } from "@/lib/llm-profiles";
 import { searchPapers } from "@/lib/papers";
-import { addAiMessage, getEditableProject, getFile, listFiles, setAiPlan } from "@/lib/projects";
+import {
+  addAiMessage,
+  getEditableProject,
+  getFile,
+  listFiles,
+  listFilesWithData,
+  setAiPlan,
+} from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -21,18 +34,41 @@ const body = z.object({
   instruction: z.string().trim().min(8, "Describe qué redactar").max(2000),
   fileId: z.string(),
   length: z.enum(["short", "normal", "long"]).default("normal"),
+  // Section-driven drafting (from the plan): explicit goal and word budget.
+  section: z
+    .object({
+      title: z.string().trim().min(1).max(200),
+      goal: z.string().trim().max(1000),
+      words: z.number().int().min(50).max(2000),
+    })
+    .optional(),
 });
 
 /** Newline-delimited JSON events the panel renders as the run progresses. */
 type AgentEvent =
-  | { type: "status"; stage: "searching" | "drafting" | "planning" }
+  | { type: "status"; stage: "searching" | "drafting" | "planning" | "critiquing" | "verifying" }
   | { type: "evidence"; items: EvidenceItem[]; bibKeys: string[] }
   | { type: "token"; text: string }
+  | {
+      type: "critique";
+      verdict: "ok" | "revise";
+      issues: { kind: "evidence" | "citation" | "structure" | "latex"; note: string }[];
+    }
+  | {
+      type: "verify";
+      resolved: string[];
+      undefinedKeys: string[];
+      pendingNew: string[];
+      /** Honest reason when verification could not run (compiler down, no \end{document}…). */
+      skipped?: string;
+    }
   | {
       type: "done";
       latex: string;
       usedKeys: string[];
       newPapers: { source: EvidenceItem["source"]; paperId: string; key: string }[];
+      wordCount: number;
+      wordBudget?: number;
     }
   | { type: "plan"; plan: AgentPlan }
   | { type: "error"; message: string };
@@ -130,7 +166,7 @@ export const POST = route(async (req, { params }: Ctx) => {
           await addAiMessage(project.id, "user", "plan", input.instruction).catch(() => {});
           await addAiMessage(project.id, "assistant", "plan", JSON.stringify(plan)).catch(() => {});
           send({ type: "plan", plan });
-          send({ type: "done", latex: "", usedKeys: [], newPapers: [] });
+          send({ type: "done", latex: "", usedKeys: [], newPapers: [], wordCount: 0 });
           return;
         }
 
@@ -196,6 +232,10 @@ export const POST = route(async (req, { params }: Ctx) => {
         const documentExcerpt = body?.replace(/\s+/g, " ").trim().slice(0, 2000);
 
         send({ type: "status", stage: "drafting" });
+        // Section-driven runs carry their own budget; the length enum is the fallback.
+        const budget =
+          input.section?.words ??
+          (input.length === "short" ? 150 : input.length === "long" ? 700 : 400);
         const messages = buildDraftMessages({
           instruction: input.instruction,
           filePath: file.path,
@@ -206,6 +246,7 @@ export const POST = route(async (req, { params }: Ctx) => {
           styleSample: project.aiStyleSample,
           documentExcerpt,
           length: input.length,
+          budget: { words: budget },
         });
         let raw = "";
         for await (const piece of streamChat(messages, req.signal, endpoint)) {
@@ -221,9 +262,113 @@ export const POST = route(async (req, { params }: Ctx) => {
         const newPapers = evidence
           .filter((e) => !e.inBib && used.includes(e.key))
           .map((e) => ({ source: e.source, paperId: e.paperId, key: e.key }));
+        // Honest count of what was written; the draft is never truncated.
+        const wordCount = latex.split(/\s+/).filter(Boolean).length;
+
+        // Critique: best-effort second pass. Any failure means no critique
+        // event, never a lost draft.
+        let critique: ReturnType<typeof parseCritique> = null;
+        try {
+          send({ type: "status", stage: "critiquing" });
+          let rawCritique = "";
+          for await (const piece of streamChat(
+            buildCritiqueMessages({
+              instruction: input.instruction,
+              goal: input.section?.goal,
+              budget,
+              evidence,
+              draft: latex,
+            }),
+            req.signal,
+            endpoint,
+          )) {
+            rawCritique += piece;
+          }
+          critique = parseCritique(rawCritique);
+        } catch {
+          critique = null;
+        }
+        if (critique) send({ type: "critique", ...critique });
+
+        // Verification: a throwaway compile with the draft inserted before the
+        // last \end{document}. The database is never touched; any failure is
+        // reported as skipped, never as a lost draft.
+        try {
+          send({ type: "status", stage: "verifying" });
+          const currentFiles = await listFilesWithData(project.id);
+          const mainContent = currentFiles.find((f) => f.path === file.path)?.content;
+          const skipVerify = (reason: string) =>
+            send({
+              type: "verify",
+              resolved: [],
+              undefinedKeys: [],
+              pendingNew: [],
+              skipped: reason,
+            });
+          // Honest boundary: if the active file is not part of the tree the
+          // compiler builds from the main file, the draft's \cite commands
+          // would never reach BibTeX and "resolved" would be a claim we never
+          // checked.
+          const unreachable =
+            mainContent != null &&
+            file.path !== project.mainFile &&
+            !inputsInclude(
+              currentFiles.map((f) => ({ path: f.path, content: f.content })),
+              project.mainFile,
+              file.path,
+            );
+          const merged =
+            mainContent == null || unreachable ? null : insertDraftBeforeEnd(mainContent, latex);
+          if (mainContent == null) skipVerify(`«${file.path}» ya no está en el proyecto`);
+          else if (unreachable)
+            skipVerify(
+              `«${file.path}» no se incluye (\\input/\\include) desde el archivo principal: verificaría citas sin compilarlas`,
+            );
+          else if (merged == null)
+            skipVerify(
+              `«${file.path}» no tiene \\end{document}: no se puede verificar insertando el borrador`,
+            );
+          else {
+            const out = await compileProject(
+              project.mainFile,
+              currentFiles.map((f) =>
+                f.path === file.path
+                  ? { path: f.path, content: merged }
+                  : f.data
+                    ? {
+                        path: f.path,
+                        content: f.data.toString("base64"),
+                        encoding: "base64" as const,
+                      }
+                    : { path: f.path, content: f.content },
+              ),
+            );
+            const undefinedKeys = citationUndefinedKeys(out.log);
+            const undefinedSet = new Set(undefinedKeys);
+            const newKeySet = new Set(newPapers.map((p) => p.key));
+            send({
+              type: "verify",
+              resolved: used.filter((k) => !undefinedSet.has(k)),
+              undefinedKeys,
+              // Keys not yet in the .bib: they resolve once the user adds the references.
+              pendingNew: undefinedKeys.filter((k) => newKeySet.has(k)),
+            });
+          }
+        } catch (err) {
+          const reason =
+            err instanceof HttpError ? err.message : "la compilación de verificación falló";
+          send({
+            type: "verify",
+            resolved: [],
+            undefinedKeys: [],
+            pendingNew: [],
+            skipped: reason,
+          });
+        }
+
         await addAiMessage(project.id, "user", "draft", input.instruction).catch(() => {});
         await addAiMessage(project.id, "assistant", "draft", latex).catch(() => {});
-        send({ type: "done", latex, usedKeys: used, newPapers });
+        send({ type: "done", latex, usedKeys: used, newPapers, wordCount, wordBudget: budget });
       } catch (err) {
         const message = err instanceof HttpError ? err.message : "La redacción se interrumpió";
         if (!(err instanceof HttpError)) console.error("agent error", err);
