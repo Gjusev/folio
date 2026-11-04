@@ -7,7 +7,7 @@ import { indentWithTab } from "@codemirror/commands";
 import { StreamLanguage } from "@codemirror/language";
 import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
+import { type BlockInfo, EditorView, GutterMarker, gutter, keymap } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import {
   Awareness,
@@ -51,6 +51,12 @@ type Props = {
    * active file syncs with its room and remote peers show named cursors.
    */
   collab?: { url: string; token: string; user?: { name: string } } | null;
+  /** Comment threads anchored in the active file; drawn as gutter markers. */
+  comments?: { id: string; line: number }[];
+  /** A gutter marker was clicked; `line` is 1-based. */
+  onMarkerClick?: (line: number) => void;
+  /** Live selection of the active file; null when the selection is empty. */
+  onSelectionChange?: (sel: { from: number; to: number; text: string } | null) => void;
 };
 
 const theme = EditorView.theme({
@@ -65,7 +71,70 @@ const theme = EditorView.theme({
     backgroundColor: "color-mix(in srgb, var(--accent) 25%, transparent) !important",
   },
   ".cm-panels": { backgroundColor: "var(--paper)", color: "var(--ink)" },
+  ".cm-comments": { width: "16px" },
+  ".cm-comment-marker": {
+    alignItems: "center",
+    backgroundColor: "var(--accent)",
+    borderRadius: "9999px",
+    color: "var(--primary-ink)",
+    cursor: "pointer",
+    display: "inline-flex",
+    fontSize: "9px",
+    height: "13px",
+    justifyContent: "center",
+    lineHeight: "13px",
+    marginTop: "5px",
+    width: "13px",
+  },
 });
+
+/** Gutter marker with the number of threads on its line (a dot when only one). */
+class CommentMarker extends GutterMarker {
+  constructor(private readonly count: number) {
+    super();
+  }
+  toDOM() {
+    const dot = document.createElement("span");
+    dot.className = "cm-comment-marker";
+    dot.setAttribute("aria-hidden", "true");
+    if (this.count > 1) dot.textContent = String(this.count);
+    return dot;
+  }
+}
+
+/**
+ * Gutter of comment-thread counts per line (see the `comments` prop). It reads
+ * a live ref, so every state (file switches, collab rebinding) draws the
+ * current markers; the version counter plus lineMarkerChange redraws without
+ * a state swap when the ref changes.
+ */
+function commentsGutter(
+  data: RefObject<{ v: number; lines: Map<number, number> }>,
+  onLine: RefObject<((line: number) => void) | undefined>,
+): Extension {
+  const count = (view: EditorView, line: BlockInfo) =>
+    data.current.lines.get(view.state.doc.lineAt(line.from).number) ?? 0;
+  let seen = -1;
+  return gutter({
+    class: "cm-comments",
+    lineMarker: (view, line) => {
+      const n = count(view, line);
+      return n > 0 ? new CommentMarker(n) : null;
+    },
+    lineMarkerChange: () => {
+      if (data.current.v === seen) return false;
+      seen = data.current.v;
+      return true;
+    },
+    domEventHandlers: {
+      mousedown: (view, line) => {
+        if (count(view, line) === 0) return false;
+        onLine.current?.(view.state.doc.lineAt(line.from).number);
+        return true;
+      },
+    },
+  });
+}
 
 export function CodeEditor({
   fileId,
@@ -77,6 +146,9 @@ export function CodeEditor({
   label,
   completions,
   collab,
+  comments,
+  onMarkerClick,
+  onSelectionChange,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -85,15 +157,26 @@ export function CodeEditor({
   const pendingReveal = useRef<{ fileId: string; line: number } | null>(null);
   const silent = useRef(false);
   // Latest callbacks without rebuilding the editor.
-  const cb = useRef({ onChange, onSave, onCompile, getDoc });
+  const cb = useRef({ onChange, onSave, onCompile, getDoc, onSelectionChange });
   useEffect(() => {
-    cb.current = { onChange, onSave, onCompile, getDoc };
+    cb.current = { onChange, onSave, onCompile, getDoc, onSelectionChange };
   });
   // Autocomplete reads the latest keys without rebuilding the editor.
   const ac = useRef(completions ?? { citeKeys: [], labels: [] });
   useEffect(() => {
     ac.current = completions ?? { citeKeys: [], labels: [] };
   }, [completions]);
+
+  // Gutter markers read a live ref (see commentsGutter); the version bump plus
+  // an empty transaction redraws them when the `comments` prop changes.
+  const markerData = useRef({ v: 0, lines: new Map<number, number>() });
+  const markersSeen = useRef<Props["comments"]>(undefined);
+  const markerClick = useRef(onMarkerClick);
+  useEffect(() => {
+    markerClick.current = onMarkerClick;
+  });
+  // Last selection reported through onSelectionChange (from/to pair).
+  const lastSel = useRef<{ from: number; to: number } | null>(null);
 
   const extensions = useRef<Extension[] | null>(null);
 
@@ -124,6 +207,7 @@ export function CodeEditor({
       StreamLanguage.define(stex),
       EditorView.lineWrapping,
       theme,
+      commentsGutter(markerData, markerClick),
       EditorView.contentAttributes.of({ "aria-label": label }),
       autocompletion({ override: [latexCompletions] }),
       Prec.highest(
@@ -136,6 +220,16 @@ export function CodeEditor({
       EditorView.updateListener.of((u) => {
         if (u.docChanged && !silent.current)
           cb.current.onChange(current.current, u.state.doc.toString());
+        if (u.selectionSet) {
+          const { from, to } = u.state.selection.main;
+          const prev = lastSel.current;
+          if (!prev || prev.from !== from || prev.to !== to) {
+            lastSel.current = { from, to };
+            cb.current.onSelectionChange?.(
+              from === to ? null : { from, to, text: u.state.sliceDoc(from, to) },
+            );
+          }
+        }
       }),
     ];
     return extensions.current;
@@ -188,6 +282,17 @@ export function CodeEditor({
     applyReveal();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- react to file switches only
   }, [fileId]);
+
+  // Comment gutter markers: recollected when the prop changes; the empty
+  // transaction makes the gutter re-consult lineMarkerChange (see commentsGutter).
+  useEffect(() => {
+    if (comments === markersSeen.current) return;
+    markersSeen.current = comments;
+    const lines = new Map<number, number>();
+    for (const c of comments ?? []) lines.set(c.line, (lines.get(c.line) ?? 0) + 1);
+    markerData.current = { v: markerData.current.v + 1, lines };
+    view.current?.dispatch({});
+  }, [comments]);
 
   // Live collaboration, opt-in via the `collab` prop. One room per file: the
   // connection is torn down and reopened on file switches. The binding is

@@ -25,6 +25,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Inline comments: select text in the editor and comment on it. Threads span
+  all project files in a drawer (replies, resolve/reopen, delete by author or
+  owner), comments mark the gutter line they point at, and the stored anchor
+  relocates to follow the quoted text when the file is edited around it.
+  Viewers may comment; resolving is limited to editors.
 - Review mode (AI critique): a "Review" tab in the editor. The author picks the
   scope (the whole document, or individual sections across files), the aspects
   (clarity, structure, argument, evidence, citations, language, math, format),

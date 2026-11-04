@@ -3,6 +3,7 @@
 // known codes through these dictionaries and falls back to the server text.
 
 import { arxivDict } from "./arxiv-dict";
+import { commentsDict } from "./comments-dict";
 import { graphDict } from "./graph-dict";
 import { landingDict } from "./landing-dict";
 import { libraryDict } from "./library-dict";
@@ -411,6 +412,7 @@ export const es = {
   ...landingDict.es,
   ...reviewDict.es,
   ...arxivDict.es,
+  ...commentsDict.es,
 };
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
@@ -1172,6 +1174,7 @@ export const en: Dict = {
   ...landingDict.en,
   ...reviewDict.en,
   ...arxivDict.en,
+  ...commentsDict.en,
 };
 export const de: Dict = {
   ...baseDe,
@@ -1180,6 +1183,7 @@ export const de: Dict = {
   ...landingDict.de,
   ...reviewDict.de,
   ...arxivDict.de,
+  ...commentsDict.de,
 };
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };

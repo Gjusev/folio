@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
@@ -224,4 +225,35 @@ export const integrations = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("integrations_user_kind_uq").on(t.userId, t.kind)],
+);
+
+/** Threaded review comments, optionally anchored to a span of a file. Replies
+ *  reference a root comment (parentId null); deleting a root cascades. */
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    fileId: uuid("file_id")
+      .notNull()
+      .references(() => files.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references((): AnyPgColumn => comments.id, {
+      onDelete: "cascade",
+    }),
+    // UTF-16 code-unit offsets into the file content at comment time; the quote
+    // lets the anchor be relocated when the file is edited.
+    anchorStart: integer("anchor_start"),
+    anchorEnd: integer("anchor_end"),
+    anchorQuote: text("anchor_quote"),
+    body: text().notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: uuid("resolved_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("comments_project_idx").on(t.projectId, t.createdAt)],
 );
