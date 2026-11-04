@@ -6,6 +6,9 @@
 //
 // Wire protocol (JSON text frames, base64 payloads):
 //   client -> ws://host/?token=<t>&file=<fileId>&client=<yjsClientId>
+//             (`file` must be the fileId signed inside the token: the room a
+//              client may join is bound to the token, so a token issued for
+//              one project cannot open another project's room)
 //   relay  -> {type:"state", data:"u1,u2,...", first:boolean}   on join
 //   either -> {type:"update", data:"<base64>"}    broadcast minus sender
 //   either -> {type:"awareness", data:"<base64>"} broadcast minus sender
@@ -25,7 +28,7 @@ const MAX_PAYLOAD = 1_000_000; // 1 MB per message
 const HEARTBEAT_MS = 30_000;
 const FILE_ID = /^[A-Za-z0-9_-]{1,100}$/;
 
-export type TokenClaims = { pid: string; uid: string; exp: number };
+export type TokenClaims = { pid: string; uid: string; file: string; exp: number };
 
 /**
  * Token format: `<b64url(json claims)>.<b64url(hmac-sha256(claims segment))>`.
@@ -52,8 +55,11 @@ export function verifyToken(token: unknown, secret: string, now = Date.now()): T
   }
   const c = claims as Partial<TokenClaims>;
   if (typeof c.pid !== "string" || !c.pid || typeof c.uid !== "string" || !c.uid) return null;
+  // Tokens from before `file` was signed are dead: without it the room could
+  // not be bound to the project the token was issued for.
+  if (typeof c.file !== "string" || !c.file) return null;
   if (typeof c.exp !== "number" || !Number.isFinite(c.exp) || c.exp <= now) return null;
-  return { pid: c.pid, uid: c.uid, exp: c.exp };
+  return { pid: c.pid, uid: c.uid, file: c.file, exp: c.exp };
 }
 
 type Conn = { ws: WebSocket; room: Room; client: number; alive: boolean };
@@ -88,6 +94,9 @@ wss.on("connection", (ws, req) => {
   const file = url.searchParams.get("file") ?? "";
   const client = Number(url.searchParams.get("client"));
   if (!claims) return ws.close(4001, "invalid token");
+  // The signed token binds the holder to one file of the project it was issued
+  // for; a room id that is not the signed file is a cross-project probe.
+  if (file !== claims.file) return ws.close(4001, "room not signed in token");
   if (!FILE_ID.test(file) || !Number.isInteger(client) || client < 0)
     return ws.close(4002, "invalid room");
 

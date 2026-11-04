@@ -115,8 +115,9 @@ export function connectCollab(
 /**
  * Asks the web app for relay credentials. null = collaboration disabled
  * (COLLAB_URL unset, not shared, or offline): callers must behave exactly as
- * they do today. `fileId` is validated client-side for now; the token is
- * project-scoped and the room id travels in the socket URL.
+ * they do today. The token is file-scoped: the server validates that the file
+ * belongs to the project and signs it, and the relay only admits the signed
+ * room.
  */
 export async function requestCollab(
   projectId: string,
@@ -126,6 +127,8 @@ export async function requestCollab(
   try {
     const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/collab-token`, {
       method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fileId }),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { url?: string; token?: string };
