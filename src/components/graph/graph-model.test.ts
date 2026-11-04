@@ -5,6 +5,7 @@ import {
   buildAdjacency,
   edgeStyle,
   filterNodes,
+  islandLabels,
   makeNodeSize,
   needsRecentre,
   neighborsOf,
@@ -12,6 +13,7 @@ import {
   shortLabel,
   sortNodes,
   sortOutside,
+  yearFilter,
   yearColor,
   yearRange,
 } from "./graph-model";
@@ -238,5 +240,78 @@ describe("authorLine", () => {
   });
   it("copes with single-token names and stray spaces", () => {
     expect(authorLine(["  Plato  ", "Ada  Lovelace"])).toBe("Plato, Lovelace");
+  });
+});
+
+describe("yearFilter", () => {
+  const ns = (id: string, year?: number) => node(id, { year });
+  const list = [ns("a", 2010), ns("b", 2015), ns("c", 2020), ns("d")];
+  const edges = [
+    { from: "a", to: "b", w: 0.5 },
+    { from: "b", to: "c", w: 0.5 },
+    { from: "a", to: "c", w: 0.5 },
+  ];
+
+  it("with no range active everything is visible", () => {
+    expect(yearFilter(list, edges, null).hidden.size).toBe(0);
+  });
+
+  it("hides nodes outside the range; unknown years stay visible", () => {
+    // CP behaviour: the timeline filters by publication year; papers without
+    // one cannot be placed on it and remain on screen.
+    const f = yearFilter(list, edges, { min: 2014, max: 2016 });
+    expect([...f.hidden]).toEqual(["a", "c"]);
+    expect(f.visibleEdges).toEqual([]); // a-b and b-c lose an endpoint
+  });
+
+  it("keeps edges whose endpoints both survive", () => {
+    const f = yearFilter(list, edges, { min: 2009, max: 2021 });
+    expect(f.hidden).toEqual(new Set());
+    expect(f.visibleEdges).toHaveLength(3);
+    // one node out: only the edge between the two survivors remains
+    const g = yearFilter(list, edges, { min: 2011, max: 2021 });
+    expect([...g.hidden]).toEqual(["a"]);
+    expect(g.visibleEdges).toEqual([{ from: "b", to: "c", w: 0.5 }]);
+  });
+
+  it("is a pure function of the inputs", () => {
+    const a = yearFilter(list, edges, { min: 2015, max: 2020 });
+    const b = yearFilter([...list].reverse(), [...edges].reverse(), { min: 2015, max: 2020 });
+    expect([...b.hidden].sort()).toEqual([...a.hidden].sort());
+  });
+});
+
+describe("islandLabels", () => {
+  const edges = [
+    { from: "mineA", to: "mineB", w: 0.5 },
+    { from: "x", to: "y", w: 0.5 },
+  ];
+  const nodes = [
+    node("mineA", { role: "mine", title: "Longformer: The Long-Document Transformer" }),
+    node("mineB", { role: "mine", title: "Sparse attention" }),
+    node("x", { role: "prior", title: "Some prior work" }),
+    node("y", { role: "prior", title: "Another prior" }),
+    node("solo", { role: "prior", title: "Alone" }),
+  ];
+  const pos = new Map([
+    ["mineA", { x: 0, y: 0 }],
+    ["mineB", { x: 10, y: 0 }],
+    ["x", { x: 500, y: 500 }],
+    ["y", { x: 520, y: 500 }],
+    ["solo", { x: -300, y: 300 }],
+  ]);
+
+  it("labels each island at its centroid, preferring the user's own papers", () => {
+    const labels = islandLabels(nodes, edges, pos);
+    expect(labels).toHaveLength(2); // solo islands of one node get no label
+    const bib = labels.find((l) => l.label.includes("Longformer"));
+    expect(bib).toMatchObject({ x: 5, y: 0 });
+    const other = labels.find((l) => l.label === "Some prior work");
+    expect(other).toMatchObject({ x: 510, y: 500 });
+  });
+
+  it("skips isolated nodes and unknown positions", () => {
+    const labels = islandLabels(nodes, edges, new Map([["mineA", { x: 0, y: 0 }]]));
+    expect(labels).toEqual([]);
   });
 });

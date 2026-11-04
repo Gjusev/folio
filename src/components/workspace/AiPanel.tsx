@@ -68,7 +68,7 @@ export function AiPanel({
   initialSteering,
   initialPlan,
 }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
   const [hint, setHint] = useState<string | null>(null);
@@ -124,6 +124,34 @@ export function AiPanel({
   const [length, setLength] = useState<"short" | "normal" | "long">("normal");
   const [steerSaved, setSteerSaved] = useState(false);
   const [plan, setPlan] = useState<AgentPlan | null>(initialPlan ?? null);
+  // RAG index of the project's own files: status line + re-index button.
+  const [rag, setRag] = useState<{ files: number; chunks: number; updatedAt: string } | null>(null);
+  const [indexing, setIndexing] = useState(false);
+  useEffect(() => {
+    api<{ status: { files: number; chunks: number; updatedAt: string } | null }>(
+      "GET",
+      `/api/projects/${projectId}/rag`,
+    )
+      .then((r) => setRag(r.status))
+      .catch(() => {});
+  }, [projectId]);
+
+  async function runIndex() {
+    if (indexing) return;
+    setIndexing(true);
+    try {
+      const r = await api<{ files: number; chunks: number; updatedAt: string }>(
+        "POST",
+        `/api/projects/${projectId}/rag`,
+        {},
+      );
+      setRag(r);
+    } catch (err) {
+      setHint((err as Error).message);
+    } finally {
+      setIndexing(false);
+    }
+  }
 
   async function saveSteering(next: { instructions?: string; sample?: string }) {
     setSteerSaved(false);
@@ -523,7 +551,30 @@ export function AiPanel({
           onKeyDown={onKey}
           maxLength={4000}
         />
-        <div className="mt-2 flex justify-end gap-2">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-muted">
+            {indexing
+              ? t("rag.indexing")
+              : rag
+                ? t("rag.status", {
+                    n: rag.chunks,
+                    m: rag.files,
+                    date: new Intl.DateTimeFormat(lang, {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }).format(new Date(rag.updatedAt)),
+                  })
+                : t("rag.none")}
+            {!indexing && (
+              <button
+                type="button"
+                className="ml-1 underline hover:text-ink"
+                onClick={() => void runIndex()}
+              >
+                {t("rag.index")}
+              </button>
+            )}
+          </p>
           {busy ? (
             <button type="button" className="btn" onClick={() => abort.current?.abort()}>
               {t("ai.stop")}

@@ -2,6 +2,7 @@
 // weight), list sorting/filtering and neighbourhood lookups. No React, no
 // sigma — everything here is unit-tested.
 
+import { componentsOf } from "@/lib/graph-islands";
 import type { GraphEdge, GraphNode, GraphSeed, OutsideWork } from "@/lib/graph-types";
 
 /* ---------------- colour: publication year ---------------- */
@@ -151,6 +152,77 @@ export function filterNodes<
     const hay = fold([n.title, ...n.authors, n.venue ?? "", n.year ?? ""].join(" "));
     return words.every((w) => hay.includes(w));
   });
+}
+
+/* ---------------- year timeline ---------------- */
+
+export type YearRange = { min: number; max: number };
+
+export type YearFilter = {
+  /** Nodes outside the range (unknown years are never hidden). */
+  hidden: Set<string>;
+  /** Edges whose endpoints both survive the range. */
+  visibleEdges: GraphEdge[];
+};
+
+/**
+ * Connected-Papers timeline: hide everything published outside [min, max].
+ * Papers without a publication year cannot sit on the timeline, so they stay
+ * on screen whatever the range.
+ */
+export function yearFilter(
+  nodes: { id: string; year?: number }[],
+  edges: GraphEdge[],
+  range: YearRange | null,
+): YearFilter {
+  if (!range) return { hidden: new Set(), visibleEdges: edges };
+  const hidden = new Set(
+    nodes
+      .filter((n) => n.year !== undefined && (n.year < range.min || n.year > range.max))
+      .map((n) => n.id),
+  );
+  return {
+    hidden,
+    visibleEdges: edges.filter((e) => !hidden.has(e.from) && !hidden.has(e.to)),
+  };
+}
+
+/* ---------------- island labels (bibliography mode) ---------------- */
+
+export type IslandLabel = { x: number; y: number; label: string };
+
+/**
+ * One label per multi-node island, placed at its centroid: the user's own
+ * paper when the island has one (bibliography mode), else its most-cited
+ * work. Single-node islands get no label — they are their own label.
+ */
+export function islandLabels(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  positions: Map<string, { x: number; y: number }>,
+): IslandLabel[] {
+  const labels: IslandLabel[] = [];
+  for (const comp of componentsOf(
+    nodes.map((n) => n.id),
+    edges,
+  )) {
+    const placed = comp.filter((id) => positions.has(id));
+    if (placed.length < 2) continue;
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const named =
+      placed.find((id) => byId.get(id)?.role === "mine") ??
+      [...placed].sort((a, b) => (byId.get(b)?.citedBy ?? 0) - (byId.get(a)?.citedBy ?? 0))[0];
+    const title = byId.get(named!)?.title;
+    if (!title) continue;
+    const xs = placed.map((id) => positions.get(id)!.x);
+    const ys = placed.map((id) => positions.get(id)!.y);
+    labels.push({
+      x: xs.reduce((a, b) => a + b, 0) / placed.length,
+      y: ys.reduce((a, b) => a + b, 0) / placed.length,
+      label: title.length > 34 ? `${title.slice(0, 33)}…` : title,
+    });
+  }
+  return labels;
 }
 
 /* ---------------- neighbourhood ---------------- */

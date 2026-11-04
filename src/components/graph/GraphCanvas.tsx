@@ -21,7 +21,13 @@ import { Maximize, Minus, Plus } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import type { GraphNode } from "@/lib/graph-types";
 import { ACCENT } from "./graph-build";
-import { needsRecentre, neighborsOf, type Adjacency, type CanvasTheme } from "./graph-model";
+import {
+  needsRecentre,
+  neighborsOf,
+  type Adjacency,
+  type CanvasTheme,
+  type IslandLabel,
+} from "./graph-model";
 
 /** A WebGL failure must degrade to a message, never unmount the workspace. */
 class CanvasBoundary extends Component<{ children: ReactNode }, { err: string | null }> {
@@ -101,8 +107,16 @@ function Events({
   return null;
 }
 
-/** What the reducers read at paint time: the focused paper and its neighbours. */
-type FocusState = { id: string; near: Set<string> | null; theme: CanvasTheme };
+/**
+ * What the reducers read at paint time: the focused paper with its
+ * neighbourhood, plus the timeline's hidden set (years filtered out).
+ */
+type FocusState = {
+  id: string;
+  near: Set<string> | null;
+  theme: CanvasTheme;
+  hidden: Set<string>;
+};
 
 /**
  * Pushes the focus (hover wins over selection) into the ref the reducers read
@@ -113,18 +127,25 @@ function Highlight({
   focus,
   adjacency,
   theme,
+  hidden,
   focusRef,
 }: {
   focus: string;
   adjacency: Adjacency;
   theme: CanvasTheme;
+  hidden: Set<string>;
   focusRef: { current: FocusState };
 }) {
   const sigma = useSigma();
   useEffect(() => {
-    focusRef.current = { id: focus, near: focus ? neighborsOf(adjacency, focus) : null, theme };
+    focusRef.current = {
+      id: focus,
+      near: focus ? neighborsOf(adjacency, focus) : null,
+      theme,
+      hidden,
+    };
     sigma.refresh({ skipIndexation: true });
-  }, [focus, adjacency, theme, focusRef, sigma]);
+  }, [focus, adjacency, theme, hidden, focusRef, sigma]);
   return null;
 }
 
@@ -218,17 +239,20 @@ function Overlays({
   originId,
   hovered,
   nodes,
+  labels,
 }: {
   selected: string;
   originId: string;
   hovered: string | null;
   nodes: Map<string, GraphNode>;
+  labels: IslandLabel[];
 }) {
   const sigma = useSigma();
   const { t, lang } = useI18n();
   const selRef = useRef<HTMLDivElement>(null);
   const orgRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
+  const tagRefs = useRef(new Map<string, HTMLParagraphElement>());
   const nf = useMemo(() => new Intl.NumberFormat(lang), [lang]);
 
   const place = useCallback(() => {
@@ -267,7 +291,16 @@ function Overlays({
         tip.style.transform = below ? "translate(-50%, 0)" : "translate(-50%, -100%)";
       } else tip.style.display = "none";
     }
-  }, [sigma, selected, originId, hovered]);
+
+    // Island names ride the same render pulse: graph-space anchors projected
+    // to screen on every camera move, exactly like the halos.
+    for (const l of labels) {
+      const el = tagRefs.current.get(l.label);
+      if (!el) continue;
+      const p = sigma.graphToViewport({ x: l.x, y: l.y });
+      el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`;
+    }
+  }, [sigma, selected, originId, hovered, labels]);
 
   useEffect(() => {
     place();
@@ -301,6 +334,21 @@ function Overlays({
   const hoverNode = hovered ? nodes.get(hovered) : undefined;
   return (
     <>
+      {labels.length > 1 &&
+        labels.map((l) => (
+          <p
+            key={l.label}
+            ref={(el) => {
+              if (el) tagRefs.current.set(l.label, el);
+              else tagRefs.current.delete(l.label);
+            }}
+            aria-hidden
+            data-testid="island-label"
+            className="pointer-events-none absolute top-0 left-0 z-0 max-w-44 truncate text-center text-[11px] font-medium tracking-wide text-muted/70 uppercase"
+          >
+            {l.label}
+          </p>
+        ))}
       <div
         ref={orgRef}
         aria-hidden
@@ -351,14 +399,29 @@ export type GraphCanvasProps = {
   focusRequest: { id: string; n: number };
   fitSignal: number;
   ariaLabel: string;
+  /** Papers hidden by the year timeline (never rendered). */
+  hidden: Set<string>;
+  /** Bibliography-island names anchored to the layout. */
+  labels: IslandLabel[];
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   onMakeOrigin: (id: string) => void;
 };
 
 export function GraphCanvas(props: GraphCanvasProps) {
-  const { graph, nodes, adjacency, originId, selected, hovered, theme, focusRequest, fitSignal } =
-    props;
+  const {
+    graph,
+    nodes,
+    adjacency,
+    originId,
+    selected,
+    hovered,
+    theme,
+    focusRequest,
+    fitSignal,
+    hidden,
+    labels,
+  } = props;
   const wrap = useRef<HTMLDivElement>(null);
   // Mount sigma only once the wrapper has a real size: an unmeasured container
   // logs "Container has no height/width" and renders nothing.
@@ -379,7 +442,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
     };
   }, []);
 
-  const focusRef = useRef<FocusState>({ id: "", near: null, theme });
+  const focusRef = useRef<FocusState>({ id: "", near: null, theme, hidden: new Set() });
 
   // Sigma v4 styles are declarative; the reducers below only layer the focus
   // dimming on top, reading the ref so they never have to be replaced.
@@ -403,6 +466,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
       nodeReducer: (key, data, attrs) => {
         const f = focusRef.current;
         const forced = attrs.force ? ({ labelVisibility: "visible" } as const) : {};
+        if (f.hidden.has(key)) return { ...data, visibility: "hidden" };
         if (!f.near) return { ...data, ...forced };
         if (key === f.id) return { ...data, labelVisibility: "visible" };
         if (f.near.has(key)) return { ...data, labelVisibility: "visible" };
@@ -446,10 +510,17 @@ export function GraphCanvas(props: GraphCanvasProps) {
               focus={hovered ?? selected}
               adjacency={adjacency}
               theme={theme}
+              hidden={hidden}
               focusRef={focusRef}
             />
             <CameraController focusRequest={focusRequest} fitSignal={fitSignal} />
-            <Overlays selected={selected} originId={originId} hovered={hovered} nodes={nodes} />
+            <Overlays
+              selected={selected}
+              originId={originId}
+              hovered={hovered}
+              nodes={nodes}
+              labels={labels}
+            />
             <ZoomControls />
             <Resizer />
           </SigmaContainer>
