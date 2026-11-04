@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
-import { citationGraph } from "@/lib/papers";
+import { citationGraph } from "@/lib/citation-graph";
 
 const query = z.object({
-  source: z.enum(["openalex", "s2", "arxiv"]),
+  source: z.enum(["openalex", "s2", "arxiv", "doi"]),
   paperId: z.string().trim().min(2).max(200),
 });
 
