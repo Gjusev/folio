@@ -25,7 +25,9 @@ function hashPassword(password: string): Promise<string> {
       KEYLEN,
       { N, r: R, p: P, maxmem: 512 * 1024 * 1024 },
       (err, key) =>
-        err ? reject(err) : resolve(["scrypt", N, R, P, salt.toString("base64"), key.toString("base64")].join("$")),
+        err
+          ? reject(err)
+          : resolve(["scrypt", N, R, P, salt.toString("base64"), key.toString("base64")].join("$")),
     );
   });
 }
@@ -69,7 +71,9 @@ try {
     process.exit(1);
   }
   console.log(`Contraseña actualizada para ${r.rows[0].email}`);
-  console.log("(Las sesiones activas no se revocan; reinicia el contenedor web si quieres cerrarlas)");
+  console.log(
+    "(Las sesiones activas no se revocan; reinicia el contenedor web si quieres cerrarlas)",
+  );
 } finally {
   await pool.end();
 }
