@@ -1,0 +1,124 @@
+# Self-hosting from published images - no clone and no build required:
+#   1. curl -fLO https://raw.githubusercontent.com/Gjusev/folio/master/docker-compose.release.yml
+#      (while the repository is private, download this file from the release
+#       assets or clone once instead; the URL works once it is public)
+#   2. printf 'POSTGRES_PASSWORD=...\nCOMPILER_TOKEN=...\nCOLLAB_SECRET=...\nLLM_CREDENTIALS_KEY=...\n' > .env
+#   3. docker compose -f docker-compose.release.yml up -d
+# FOLIO_VERSION in .env pins a release tag (e.g. FOLIO_VERSION=v0.1.0) for the
+# web, compiler and collab images; unset it to track :latest.
+# Required env: POSTGRES_PASSWORD, COMPILER_TOKEN, COLLAB_SECRET,
+# LLM_CREDENTIALS_KEY. Optional: APP_URL, COLLAB_URL, ALLOW_REGISTRATION,
+# WEB_PORT, COLLAB_PORT, FOLIO_VERSION.
+name: folio
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: folio
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    restart: unless-stopped
+    networks: [default]
+
+  compiler:
+    image: ghcr.io/gjusev/folio-compiler:${FOLIO_VERSION:-latest}
+    environment:
+      COMPILER_TOKEN: ${COMPILER_TOKEN:?set COMPILER_TOKEN}
+      MAX_CONCURRENT_JOBS: "2"
+      JOB_TIMEOUT_MS: "45000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 256
+    restart: unless-stopped
+    # Internal network only: the compiler is reachable from web, not the host.
+    networks: [compile]
+
+  collab:
+    image: ghcr.io/gjusev/folio-collab:${FOLIO_VERSION:-latest}
+    environment:
+      COLLAB_SECRET: ${COLLAB_SECRET:-}
+      COMPILER_TOKEN: ${COMPILER_TOKEN}
+    ports:
+      # Loopback only: terminate wss at your TLS proxy (route it to this port)
+      # and set COLLAB_URL=wss://<your-collab-domain> accordingly.
+      - "127.0.0.1:${COLLAB_PORT:-3002}:3001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    restart: unless-stopped
+    networks: [default]
+
+  web:
+    image: ghcr.io/gjusev/folio:${FOLIO_VERSION:-latest}
+    environment:
+      DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD}@db:5432/folio
+      COMPILER_URL: http://compiler:3001
+      COMPILER_TOKEN: ${COMPILER_TOKEN}
+      APP_URL: ${APP_URL:-}
+      COLLAB_URL: ${COLLAB_URL:-}
+      COLLAB_SECRET: ${COLLAB_SECRET:-}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-1}
+      LLM_ENV_SHARED: ${LLM_ENV_SHARED:-false}
+      LLM_CREDENTIALS_KEY: ${LLM_CREDENTIALS_KEY:-}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+      OPENALEX_MAILTO: ${OPENALEX_MAILTO:-}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+    ports:
+      # Loopback only: put your TLS reverse proxy (Caddy, nginx, Traefik) in
+      # front of this port; session cookies are marked Secure in production.
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      db: { condition: service_healthy }
+      compiler: { condition: service_started }
+      collab: { condition: service_started }
+    mem_limit: 1g
+    cpus: 2.0
+    pids_limit: 256
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks: [default, compile]
+
+networks:
+  # Explicit subnets: busy Docker hosts run out of default address pools
+  # ("all predefined address pools have been fully subnetted"). Distinct from
+  # the dokploy file's 10.213.x so both can coexist on the same host.
+  default:
+    ipam:
+      config:
+        - subnet: 10.215.0.0/24
+  # No route to the Internet: only the web app can reach the compiler.
+  compile:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.215.1.0/24
+
+volumes:
+  pgdata: {}
