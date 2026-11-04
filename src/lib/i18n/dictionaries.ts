@@ -2,12 +2,15 @@
 // registering it below. API error messages carry a `code`; the client maps
 // known codes through these dictionaries and falls back to the server text.
 
+import { graphDict } from "./graph-dict";
+import { libraryDict } from "./library-dict";
+
 export const LANGS = ["es", "en", "de"] as const;
 export type Lang = (typeof LANGS)[number];
 export const DEFAULT_LANG: Lang = "es";
 export const LANG_COOKIE = "folio_lang";
 
-export const es = {
+const baseEs = {
   // brand / meta
   "meta.description":
     "Editor LaTeX científico de código abierto, con búsqueda de artículos y compilación aislada.",
@@ -381,10 +384,11 @@ export const es = {
   "api.badPaperId": "Identificador no válido para esa fuente",
 } as const;
 
+export const es = { ...baseEs, ...graphDict.es, ...libraryDict.es };
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
 
-export const en: Dict = {
+const baseEn = {
   "meta.description":
     "Open-source scientific LaTeX editor with paper search and sandboxed compilation.",
   "auth.tagline": "A LaTeX editor for scientific papers, on your own server.",
@@ -743,7 +747,7 @@ export const en: Dict = {
   "api.badPaperId": "Invalid identifier for that source",
 };
 
-export const de: Dict = {
+const baseDe = {
   "meta.description":
     "Open-Source-LaTeX-Editor für wissenschaftliche Texte, mit Literatursuche und isoliertem Kompilieren.",
   "auth.tagline": "Ein LaTeX-Editor für wissenschaftliche Arbeiten, auf deinem eigenen Server.",
@@ -1106,6 +1110,9 @@ export const de: Dict = {
   "papers.from": "Ab Jahr",
   "api.badPaperId": "Ungültige Kennung für diese Quelle",
 };
+
+export const en: Dict = { ...baseEn, ...graphDict.en, ...libraryDict.en };
+export const de: Dict = { ...baseDe, ...graphDict.de, ...libraryDict.de };
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };
 
