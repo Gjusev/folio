@@ -25,6 +25,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Section executor for the drafting agent: each plan row drafts against an
+  explicit word budget (reported honestly, never truncated), a second critique
+  pass flags unsupported claims, citation misuse and structure issues (shown
+  as chips — the AI never auto-edits), and citations are verified against a
+  throwaway sandbox compile of the document with the draft inserted, separating
+  keys that resolve, keys pending until the new references are added, and keys
+  that are genuinely broken. When the active file is not reachable from the
+  main file through `\input`/`\include`, verification says so instead of
+  reporting unchecked keys as resolved.
 - `pnpm reset-password <email>`: admin-side password reset for self-hosted
   instances (no email server is assumed).
 

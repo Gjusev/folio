@@ -11,6 +11,22 @@ type DraftResult = {
   newPapers: { source: "openalex" | "s2" | "arxiv"; paperId: string; key: string }[];
 };
 
+type CritiqueIssue = {
+  kind: "evidence" | "citation" | "structure" | "latex";
+  note: string;
+};
+
+type Critique = { verdict: "ok" | "revise"; issues: CritiqueIssue[] };
+
+type VerifyResult = {
+  resolved: string[];
+  undefinedKeys: string[];
+  /** Undefined keys that the "add references" button will resolve. */
+  pendingNew: string[];
+  /** Honest skip reason (compiler down, no \end{document}…). */
+  skipped?: string;
+};
+
 type Turn = {
   id: number;
   action: AiAction | "draft" | "plan";
@@ -21,12 +37,19 @@ type Turn = {
   /** Selection captured when the request was made, for "Replace". */
   range?: { fileId: string; from: number; to: number; text: string };
   /** Drafting agent extras. */
-  stage?: "searching" | "drafting" | "planning";
+  stage?: "searching" | "drafting" | "planning" | "critiquing" | "verifying";
   evidence?: EvidenceItem[];
   draft?: DraftResult;
   refsAdded?: boolean;
   plan?: AgentPlan;
+  critique?: Critique;
+  verify?: VerifyResult;
+  wordCount?: number;
+  wordBudget?: number;
 };
+
+/** Word budget per length selector value (mirrors the API contract). */
+const LENGTH_WORDS = { short: 150, normal: 400, long: 700 } as const;
 
 type Props = {
   projectId: string;
@@ -52,6 +75,14 @@ const LABEL_KEY: Record<AiAction | "draft", MsgKey> = {
   fix: "ai.action.fix",
   ask: "ai.action.ask",
   draft: "ai.action.draft",
+};
+
+/** Drafting stages -> status line ("planning" belongs to plan turns). */
+const STAGE_KEY: Partial<Record<NonNullable<Turn["stage"]>, MsgKey>> = {
+  searching: "ai.draft.searching",
+  drafting: "ai.draft.drafting",
+  critiquing: "ai.draft.critiquing",
+  verifying: "ai.draft.verifying",
 };
 
 const firstCodeBlock = (s: string) =>
@@ -256,7 +287,10 @@ export function AiPanel({
   }
 
   /** Drafting agent: search literature + stream a section draft (NDJSON). */
-  async function draft(instruction: string) {
+  async function draft(
+    instruction: string,
+    section?: { title: string; goal: string; words: number },
+  ) {
     const ed = editor.current;
     if (!ed || !activeFile || busy || !isTex) return;
     setHint(null);
@@ -273,7 +307,12 @@ export function AiPanel({
         method: "POST",
         headers: { "content-type": "application/json" },
         signal: ctrl.signal,
-        body: JSON.stringify({ instruction, fileId: activeFile.id, length }),
+        body: JSON.stringify({
+          instruction,
+          fileId: activeFile.id,
+          length,
+          ...(section ? { section } : {}),
+        }),
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
@@ -338,7 +377,7 @@ export function AiPanel({
 
   function handleAgentLine(id: number, event: Record<string, unknown>) {
     if (event.type === "status") {
-      patch(id, { stage: event.stage as "searching" | "drafting" | "planning" });
+      patch(id, { stage: event.stage as Turn["stage"] });
     } else if (event.type === "evidence") {
       patch(id, { evidence: event.items as EvidenceItem[] });
     } else if (event.type === "token") {
@@ -348,6 +387,22 @@ export function AiPanel({
     } else if (event.type === "plan") {
       setPlan(event.plan as AgentPlan);
       patch(id, { plan: event.plan as AgentPlan, answer: "" });
+    } else if (event.type === "critique") {
+      patch(id, {
+        critique: {
+          verdict: event.verdict as Critique["verdict"],
+          issues: event.issues as CritiqueIssue[],
+        },
+      });
+    } else if (event.type === "verify") {
+      patch(id, {
+        verify: {
+          resolved: (event.resolved as string[]) ?? [],
+          undefinedKeys: (event.undefinedKeys as string[]) ?? [],
+          pendingNew: (event.pendingNew as string[]) ?? [],
+          skipped: event.skipped as string | undefined,
+        },
+      });
     } else if (event.type === "done") {
       patch(id, {
         answer: event.latex as string,
@@ -356,6 +411,8 @@ export function AiPanel({
           usedKeys: event.usedKeys as string[],
           newPapers: event.newPapers as DraftResult["newPapers"],
         },
+        wordCount: event.wordCount as number | undefined,
+        wordBudget: event.wordBudget as number | undefined,
       });
     } else if (event.type === "error") {
       patch(id, { streaming: false, error: event.message as string });
@@ -385,6 +442,7 @@ export function AiPanel({
         points: s.points.join("; "),
         cites: s.cite.join(", "),
       }),
+      { title: s.title, goal: s.goal, words: LENGTH_WORDS[length] },
     );
   }
 
@@ -455,7 +513,7 @@ export function AiPanel({
             )}
             {turn.action === "draft" && turn.streaming && (
               <p className="text-xs text-muted">
-                {turn.stage === "searching" ? t("ai.draft.searching") : t("ai.draft.drafting")}
+                {t(STAGE_KEY[turn.stage ?? "searching"] ?? "ai.draft.drafting")}
               </p>
             )}
             {turn.action === "draft" && turn.evidence && turn.evidence.length > 0 && (
@@ -479,6 +537,7 @@ export function AiPanel({
                 <span className="text-muted">{t("ai.thinking")}</span>
               ) : null}
               {turn.error && <p className="mt-1 text-sm text-danger">{turn.error}</p>}
+              {turn.action === "draft" && <DraftMeta turn={turn} />}
             </div>
             {!turn.streaming && turn.answer && (
               <TurnActions
@@ -633,6 +692,54 @@ export function AiPanel({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const KIND_KEY: Record<CritiqueIssue["kind"], MsgKey> = {
+  evidence: "ai.critique.kind.evidence",
+  citation: "ai.critique.kind.citation",
+  structure: "ai.critique.kind.structure",
+  latex: "ai.critique.kind.latex",
+};
+
+/** Critique chips, citation verification and word counter under a draft. */
+function DraftMeta({ turn }: { turn: Turn }) {
+  const { t } = useI18n();
+  const v = turn.verify;
+  return (
+    <div className="mt-2 space-y-1.5 text-xs">
+      {turn.critique && (
+        <div className="flex flex-wrap gap-1.5">
+          <span
+            className={`font-medium ${turn.critique.verdict === "ok" ? "text-ok" : "text-warn"}`}
+          >
+            {turn.critique.verdict === "ok" ? t("ai.critique.ok") : t("ai.critique.revise")}
+          </span>
+          {turn.critique.issues.map((issue, i) => (
+            <span key={i} className="text-muted">
+              {t(KIND_KEY[issue.kind])}: {issue.note}
+            </span>
+          ))}
+        </div>
+      )}
+      {v &&
+        (v.skipped ? (
+          <p className="text-muted">{t("ai.verify.skipped", { reason: v.skipped })}</p>
+        ) : (
+          <p className="text-muted">
+            {t("ai.verify.line", {
+              resolved: v.resolved.length,
+              pending: v.pendingNew.length,
+              unresolved: v.undefinedKeys.length - v.pendingNew.length,
+            })}
+          </p>
+        ))}
+      {typeof turn.wordCount === "number" && turn.wordBudget ? (
+        <p className={turn.wordCount > turn.wordBudget ? "text-warn" : "text-muted"}>
+          {t("ai.words", { n: turn.wordCount, budget: turn.wordBudget })}
+        </p>
+      ) : null}
     </div>
   );
 }
