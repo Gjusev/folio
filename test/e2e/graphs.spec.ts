@@ -105,6 +105,32 @@ test("grafo: la lista lateral selecciona y filtra sin romperse", async ({ page }
   await expect(page.getByText(/ningún paper coincide/i)).toBeVisible({ timeout: 5_000 });
 });
 
+test("línea temporal: filtrar por años oculta papers del grafo y se restaura", async ({ page }) => {
+  await openAttentionExplorer(page);
+
+  const timeline = page.getByTestId("graph-timeline");
+  await expect(timeline).toBeVisible({ timeout: 30_000 });
+
+  // Total shown before filtering.
+  const counters = timeline.locator("span.num").last();
+  const total = Number((await counters.textContent())?.split("/")[1]);
+  expect(total).toBeGreaterThan(10);
+
+  // Drag the "from" handle to a recent year: fewer papers on screen.
+  const from = timeline.locator('input[type="range"]').first();
+  const max = Number(await from.getAttribute("max"));
+  await from.fill(String(Number(max) - 2));
+  await expect
+    .poll(async () => Number((await counters.textContent())?.split("/")[0]), { timeout: 5_000 })
+    .toBeLessThan(total);
+
+  // Reset puts everyone back.
+  await timeline.getByRole("button").click();
+  await expect
+    .poll(async () => Number((await counters.textContent())?.split("/")[0]), { timeout: 5_000 })
+    .toBe(total);
+});
+
 test("export TikZ crea la figura en el proyecto y avisa", async ({ page }) => {
   await openAttentionExplorer(page);
   await page.getByRole("button", { name: "TikZ", exact: true }).click();

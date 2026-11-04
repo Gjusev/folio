@@ -4,7 +4,7 @@
 // "derivative" works that fall outside it), sortable and filterable. It is also
 // the keyboard / screen-reader way through the graph.
 
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Search } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import type { GraphNode, OutsideWork } from "@/lib/graph-types";
@@ -138,6 +138,15 @@ export function GraphList({
   const { t } = useI18n();
   const [sort, setSort] = useState<SortKey>("sim");
   const [query, setQuery] = useState("");
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Canvas → list sync: whatever the graph selects stays in view here.
+  useEffect(() => {
+    if (!selected) return;
+    listRef.current
+      ?.querySelector(`[data-id="${CSS.escape(selected)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selected, tab]);
 
   const rows = useMemo<RowData[]>(() => {
     const color = (y?: number) => yearColor(y, years?.min ?? 0, years?.max ?? 0);
@@ -235,7 +244,11 @@ export function GraphList({
         </label>
       </div>
 
-      <ul className="min-h-0 flex-1 divide-y divide-rule overflow-y-auto" data-testid="graph-list">
+      <ul
+        ref={listRef}
+        className="min-h-0 flex-1 divide-y divide-rule overflow-y-auto"
+        data-testid="graph-list"
+      >
         {rows.map((d) => (
           <Row key={d.id} d={d} active={d.id === selected} onSelect={onSelect} onHover={onHover} />
         ))}

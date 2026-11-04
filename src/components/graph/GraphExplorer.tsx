@@ -21,7 +21,16 @@ import type {
 import { buildSigmaGraph } from "./graph-build";
 import { GraphCanvas } from "./GraphCanvas";
 import { GraphList, type ListTab } from "./GraphList";
-import { buildAdjacency, canvasTheme, seedKey, yearColor, yearRange } from "./graph-model";
+import {
+  buildAdjacency,
+  canvasTheme,
+  islandLabels,
+  seedKey,
+  yearColor,
+  yearFilter,
+  yearRange,
+  type YearRange,
+} from "./graph-model";
 import { PaperDetail, type DetailItem } from "./PaperDetail";
 
 type View = { seed: GraphSeed | null; key: string; graph: CitationGraph };
@@ -68,6 +77,7 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
   const [tab, setTab] = useState<ListTab>("graph");
   const [mobile, setMobile] = useState<"list" | "graph" | "detail">("graph");
   const [focusReq, setFocusReq] = useState({ id: "", n: 0 });
+  const [range, setRange] = useState<YearRange | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const [citingId, setCitingId] = useState<string | null>(null);
   const [details, setDetails] = useState<
@@ -97,6 +107,7 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
     setHovered(null);
     setTab("graph");
     setFocusReq({ id: "", n: 0 });
+    setRange(null); // another origin, another years
   }, []);
 
   // Initial load: one per mount (the parent keys the explorer by seed).
@@ -196,6 +207,19 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
     () => (view ? buildSigmaGraph(view.graph, theme, view.key) : null),
     [view, theme],
   );
+  const filtered = useMemo(
+    () => (graph ? yearFilter(graph.nodes, graph.edges, range) : null),
+    [graph, range],
+  );
+  const hidden = filtered?.hidden ?? new Set<string>();
+  // Island names only make sense when the graph really has islands: the
+  // bibliography view. One Connected-Papers-style origin graph is connected.
+  const labels = useMemo(() => {
+    if (!sigmaGraph || !graph || !bibMode) return [];
+    const pos = new Map<string, { x: number; y: number }>();
+    sigmaGraph.forEachNode((id, a) => pos.set(id, { x: a.x, y: a.y }));
+    return islandLabels(graph.nodes, graph.edges, pos);
+  }, [sigmaGraph, graph, bibMode]);
 
   // Details of the card on screen (the origin when nothing is selected).
   const cardId = selected || graph?.seed || "";
@@ -473,6 +497,8 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
               focusRequest={focusReq}
               fitSignal={0}
               ariaLabel={t("graph.canvas", { title })}
+              hidden={hidden}
+              labels={labels}
               onSelect={selectFromCanvas}
               onHover={hover}
               onMakeOrigin={makeOrigin}
@@ -540,6 +566,13 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
 
           {graph && !empty && (
             <>
+              <Timeline
+                years={years}
+                range={range}
+                shown={graph.nodes.length - hidden.size}
+                total={graph.nodes.length}
+                onChange={setRange}
+              />
               <div className="pointer-events-none absolute bottom-3 left-3 z-10 space-y-1 rounded-lg bg-surface/85 px-3 py-2 text-[11px] text-muted backdrop-blur-sm">
                 {years && (
                   <p className="flex items-center gap-2">
@@ -597,6 +630,78 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
       </nav>
     </div>,
     document.body,
+  );
+}
+
+/** The Connected-Papers year timeline: two handles over the graph's own range. */
+function Timeline({
+  years,
+  range,
+  shown,
+  total,
+  onChange,
+}: {
+  years: { min: number; max: number } | null;
+  range: YearRange | null;
+  shown: number;
+  total: number;
+  onChange: (r: YearRange | null) => void;
+}) {
+  const { t } = useI18n();
+  if (!years || years.max - years.min < 2) return null; // nothing to slide
+  const lo = range?.min ?? years.min;
+  const hi = range?.max ?? years.max;
+  const active = range !== null;
+  return (
+    <div
+      className="pointer-events-none absolute top-3 left-1/2 z-10 flex w-[min(420px,70%)] -translate-x-1/2 items-center gap-2.5 rounded-lg border border-line bg-surface/90 px-3 py-1.5 text-[11px] text-muted shadow-[0_2px_8px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+      data-testid="graph-timeline"
+    >
+      <span className="shrink-0">{t("graph.timeline")}</span>
+      <label className="flex min-w-0 flex-1 items-center gap-1">
+        <span className="sr-only">{t("graph.timeline.from")}</span>
+        <input
+          type="range"
+          min={years.min}
+          max={years.max}
+          value={lo}
+          onChange={(e) => onChange({ min: Math.min(Number(e.target.value), hi), max: hi })}
+          className="h-1 w-full accent-[var(--accent)]"
+        />
+        <span className="num w-9 shrink-0 text-right" aria-hidden>
+          {lo}
+        </span>
+      </label>
+      <label className="flex min-w-0 flex-1 items-center gap-1">
+        <span className="sr-only">{t("graph.timeline.to")}</span>
+        <input
+          type="range"
+          min={years.min}
+          max={years.max}
+          value={hi}
+          onChange={(e) => onChange({ min: lo, max: Math.max(Number(e.target.value), lo) })}
+          className="h-1 w-full accent-[var(--accent)]"
+        />
+        <span className="num w-9 shrink-0 text-right" aria-hidden>
+          {hi}
+        </span>
+      </label>
+      <span
+        className="num shrink-0"
+        title={t("graph.timeline.count", { shown: String(shown), total: String(total) })}
+      >
+        {shown}/{total}
+      </span>
+      {active && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm pointer-events-auto shrink-0 !h-6 !px-1.5 !text-[11px]"
+          onClick={() => onChange(null)}
+        >
+          {t("graph.timeline.reset")}
+        </button>
+      )}
+    </div>
   );
 }
 

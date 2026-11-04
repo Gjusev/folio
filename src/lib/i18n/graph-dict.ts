@@ -101,6 +101,17 @@ const es = {
   "ps.suggest.body":
     "Trabajos parecidos a los de tu bibliografía, para no dejarte nada importante.",
   "ps.suggest.button": "Ver sugerencias",
+  // timeline
+  "graph.timeline": "Línea temporal",
+  "graph.timeline.from": "Desde",
+  "graph.timeline.to": "Hasta",
+  "graph.timeline.count": "{shown} de {total} papers",
+  "graph.timeline.reset": "Todos los años",
+  // RAG index of the project's own files (assistant panel)
+  "rag.none": "Sin índice del proyecto",
+  "rag.status": "{n} fragmentos de {m} archivos · {date}",
+  "rag.index": "Indexar",
+  "rag.indexing": "Indexando…",
 };
 
 const en: Record<keyof typeof es, string> = {
@@ -191,6 +202,15 @@ const en: Record<keyof typeof es, string> = {
   "ps.suggest.title": "Suggestions for your project",
   "ps.suggest.body": "Works similar to those in your bibliography, so nothing important slips by.",
   "ps.suggest.button": "Show suggestions",
+  "graph.timeline": "Timeline",
+  "graph.timeline.from": "From",
+  "graph.timeline.to": "To",
+  "graph.timeline.count": "{shown} of {total} papers",
+  "graph.timeline.reset": "All years",
+  "rag.none": "No project index",
+  "rag.status": "{n} fragments from {m} files · {date}",
+  "rag.index": "Index",
+  "rag.indexing": "Indexing…",
 };
 
 const de: Record<keyof typeof es, string> = {
@@ -285,6 +305,15 @@ const de: Record<keyof typeof es, string> = {
   "ps.suggest.body":
     "Arbeiten, die denen deiner Bibliografie ähneln, damit nichts Wichtiges fehlt.",
   "ps.suggest.button": "Vorschläge anzeigen",
+  "graph.timeline": "Zeitleiste",
+  "graph.timeline.from": "Von",
+  "graph.timeline.to": "Bis",
+  "graph.timeline.count": "{shown} von {total} Arbeiten",
+  "graph.timeline.reset": "Alle Jahre",
+  "rag.none": "Kein Projekt-Index",
+  "rag.status": "{n} Fragmente aus {m} Dateien · {date}",
+  "rag.index": "Indizieren",
+  "rag.indexing": "Indiziere …",
 };
 
 export const graphDict = { es, en, de };
