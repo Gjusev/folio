@@ -4,6 +4,8 @@
 
 **Goal:** make the production instance safe to keep running: health endpoint and monitoring, off-host database backups with a rehearsed restore, no test accounts in production, a deliberate registration policy, and proof that the AI features work against a real model.
 
+> **Progress (2026-11-04):** Tasks 1–4 DONE (commits 63d1004, d112ae3, e7be444; deployed, `/api/health` green in production). Task 9 Step 1–2 done (`scripts/ai-smoke.mts`, commit 3f1bc69); Steps 3–6 wait for an owner AI key. Task 7 code done (commit be0c897 + the /register gate in the Phase 1 workflow); Step 1 (owner account) and Step 8 (production `ALLOW_REGISTRATION` decision) wait for the owner. Tasks 5, 6 and 8 wait for owner inputs (S3 bucket, notification channel, purge confirmation).
+
 **Architecture:** two small code additions (`/api/health` backed by a pure `checkHealth()` with injectable probes; a self-contained `scripts/purge-accounts.mts`), one HTTP smoke script for real-model AI, a landing tweak for closed registration, and operations done through the Dokploy MCP tools (backups, schedules, notifications, uptime monitor).
 
 **Tech Stack:** Next.js 16 route handlers, Drizzle/`pg`, Vitest (real Postgres test DB), Playwright, Dokploy MCP.
