@@ -105,6 +105,8 @@ docker compose --profile app up -d --build
 
 Para guardar claves de proveedores desde la página de Ajustes, define también `LLM_CREDENTIALS_KEY` (cifra las claves en la base de datos; si lo rotas, hay que reintroducirlas). Las suscripciones de consumidor (ChatGPT Plus, Claude Pro, Gemini AI Pro) no pueden usarse por API desde una app: solo claves API.
 
+¿Perdiste la contraseña de tu instancia? No hay enlace de recuperación (Folio no asume servidor de correo): el administrador la restablece en el servidor con `pnpm reset-password usuario@ejemplo.org`.
+
 En este modo el compilador está en una red sin salida a Internet y solo la app web puede alcanzarlo. Pon un proxy inverso con TLS (Caddy, nginx, Traefik) delante del puerto 3000. Las cookies de sesión se marcan `Secure` en producción.
 
 ## Calidad
