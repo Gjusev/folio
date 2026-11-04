@@ -68,6 +68,8 @@ services:
   web:
     profiles: [app]
     build: .
+    # Tags the built image locally so it can be retagged/pushed for releases.
+    image: folio:0.1.0
     environment:
       DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@db:5432/folio
       COMPILER_URL: http://compiler:3001

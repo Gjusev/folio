@@ -1,0 +1,117 @@
+# Changelog
+
+All notable changes to this project are documented in this file. The format is
+based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
+project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2026-11-04
+
+First release. Self-hosted, multi-user LaTeX editor with isolated compilation,
+literature search and citation-graph exploration, and an optional
+provider-agnostic AI assistant. Apache-2.0.
+
+### Added
+
+**Accounts, projects and files**
+
+- Local accounts with AES-256-GCM-sealed session cookies; login rate limiting
+  per IP and per email; CSRF protection via Origin validation.
+- Multi-user projects and text files with optimistic concurrency: writes carry
+  a base version and conflicting writes get `409`, never a silent overwrite.
+- Project sharing by email with owner/editor/reader roles, enforced on every
+  project route; project duplication; searchable and sortable project list.
+- Project templates and ZIP import/export, including a tested migration path
+  for Prism and Overleaf export archives.
+
+**Compilation and editor**
+
+- LaTeX compilation in a hardened, network-less container (latexmk + BibTeX)
+  with bearer-token authentication, per-job timeouts and resource limits.
+- Snapshots with `latexdiff` markup: manual versions, restore, and an automatic
+  pre-restore snapshot to undo a bad restore.
+- `chktex` linting, `texcount` word counts, and forward/inverse SyncTeX between
+  the PDF and the source.
+- CodeMirror 6 workspace: file tree, autosave with conflict handling, and a
+  PDF panel where a click on the PDF jumps to the source line (and back).
+
+**Literature and references**
+
+- Multi-engine search across OpenAlex, Semantic Scholar and arXiv,
+  deduplicated across sources (Crossref content arrives via OpenAlex).
+- Connected-Papers-style similarity graph (bibliographic coupling + co-citation
+  - direct-citation weighting) for any paper and for your own `.bib`, with
+    prior/derivative panels, shortest-path highlighting, year timeline, labeled
+    islands, and TikZ export.
+- Full-screen literature explorer: list · graph · detail card; double-click any
+  node to re-center the graph on it.
+- Citation health panel: cited/defined counts, undefined keys, unused entries;
+  conservative arXiv→published upgrade requiring title, author-family and year
+  agreement before suggesting a replacement.
+- BibTeX reader with per-entry source-line tracking and duplicate detection by
+  DOI/title; Zotero library sync into the project `.bib`.
+- Honest submission checklist and response-letter template.
+
+**AI assistant (optional, provider-agnostic)**
+
+- Works with any OpenAI-compatible API (Ollama, vLLM, Mistral, DeepSeek,
+  OpenAI, OpenRouter, …); nothing AI-related is required to run Folio.
+- Chat over the open document with streaming, persisted conversations, and LLM
+  profiles encrypted at rest (AES-256-GCM).
+- Writing agent with a citation contract: it only cites keys present in the
+  project `.bib`, invented keys are filtered server-side, and it never edits
+  the document without explicit confirmation.
+- Section planner producing a sanitized JSON plan (persisted per project) with
+  per-section drafts.
+- Retrieval-augmented answers over your own documents: `.tex`/`.bib` chunking,
+  pgvector storage (1536-dim provider embeddings), top-8 cosine retrieval
+  injected into the chat context.
+
+**Collaboration (opt-in, experimental)**
+
+- Real-time co-editing via Yjs when `COLLAB_URL` is configured (feature is off
+  by default), with room tokens signed per file/user and relay-side room
+  verification.
+- Collaborative undo (`Y.UndoManager`): Ctrl+Z reverts only your own edits,
+  never remote participants' text.
+
+**Platform**
+
+- UI in Spanish, English and German; light/dark design tokens.
+- Self-hosted stack via `docker-compose.yml`: pgvector Postgres, hardened
+  compiler, optional collab relay and optional local Ollama.
+- CI on GitHub Actions: format check, lint, typecheck, full test suite
+  (unit + Postgres integration), build, and end-to-end tests against the real
+  compiler container.
+
+### Security
+
+- Untrusted LaTeX never runs in the web process: a dedicated container with no
+  network route to the Internet, read-only root filesystem, dropped
+  capabilities, `no-new-privileges`, and memory/CPU/PID limits.
+- Compiler hardening covered by e2e tests: bearer token required, `\write18`
+  disabled, `\input` of system files rejected, path traversal and writes
+  outside the job directory blocked, runaway jobs killed by timeout.
+- Production Content-Security-Policy and security headers; `ALLOW_REGISTRATION=0`
+  closes self-registration.
+- Collab relay accepts only rooms whose name is signed in the presented token.
+- HTTP rate limiting (global and login); LLM base URLs resolved and validated
+  against private networks to block SSRF; LLM API keys sealed at rest.
+
+### Fixed
+
+No release precedes this one; the fixes below were caught and corrected during
+development, before 0.1.0:
+
+- `texEscape` now preserves `\`, `{` and `}` and balances braces instead of
+  deleting them when generating `.bib` entries.
+- Multi-word arXiv queries interpolate with AND instead of OR.
+- The citation filter now covers the whole `cite` command family
+  (`textcite`, `parencite`, …), not only plain `\cite`.
+- The compiler reserves its concurrency slot before reading the request body
+  (race that could exceed `MAX_CONCURRENT_JOBS` under bursts).
+- Citing from the papers tab no longer discards unsaved `.bib` edits.
+- Login rate limiting extended from per-IP to per-email as well.
+- Collab client no longer sends a bodyless `POST` (415) that silently disabled
+  collaboration.
+- Collab tokens now sign the room/file, so a token for one file cannot open
+  another room.
