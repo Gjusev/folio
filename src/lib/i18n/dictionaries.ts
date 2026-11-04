@@ -33,7 +33,7 @@ const baseEs = {
   // projects
   "projects.title": "Proyectos",
   "projects.empty.head": "Todavía no hay documentos",
-  "projects.count": "{n} documentos",
+  "projects.count": "{n:documento|documentos}",
   "projects.count.one": "1 documento",
   "projects.empty.body":
     "Cada proyecto es un documento LaTeX con sus capítulos, figuras y bibliografía. Puedes traer uno existente con «Importar ZIP».",
@@ -116,13 +116,13 @@ const baseEs = {
   "pdf.empty.body":
     "Compila con el botón de arriba o con {kbd}. Haz clic en el texto del PDF para ir a esa frase en el código.",
   "pdf.empty.cta": "Compilar ahora",
-  "pdf.words": "{n} palabras",
+  "pdf.words": "{n:palabra|palabras}",
   "pdf.lint": "Lint",
   "pdf.lint.none": "chktex no encontró avisos.",
   "pdf.opening": "Abriendo el PDF…",
   "pdf.loading": "Cargando el visor…",
   "pdf.error": "No se pudo mostrar el PDF.",
-  "pdf.warnings": "{n} avisos",
+  "pdf.warnings": "{n:aviso|avisos}",
   "pdf.warnings.one": "1 aviso",
   "pdf.log": "Log completo",
   "pdf.seconds": "· {s} s",
@@ -352,7 +352,7 @@ const baseEs = {
   "papers.submission.words": "Palabras (cuerpo)",
   "papers.health.button": "Salud de citas",
   "papers.health.title": "Salud de citas",
-  "papers.health.undefined": "{n} citadas y no definidas",
+  "papers.health.undefined": "{n:citada y no definida|citadas y no definidas}",
   "papers.health.unused": "{n} en la bibliografía sin citar",
   "papers.health.preprint": "preprint de arXiv con versión publicada",
   "papers.health.upgrade": "Actualizar",
@@ -408,7 +408,7 @@ const baseEn = {
   "auth.toRegister.action": "Create an account",
   "projects.title": "Projects",
   "projects.empty.head": "No documents yet",
-  "projects.count": "{n} documents",
+  "projects.count": "{n:document|documents}",
   "projects.count.one": "1 document",
   "projects.empty.body":
     "Each project is a LaTeX document with its chapters, figures and bibliography. Bring an existing one over with “Import ZIP”.",
@@ -485,13 +485,13 @@ const baseEn = {
   "pdf.empty.body":
     "Compile with the button above or {kbd}. Click text in the PDF to jump to that sentence in the source.",
   "pdf.empty.cta": "Compile now",
-  "pdf.words": "{n} words",
+  "pdf.words": "{n:word|words}",
   "pdf.lint": "Lint",
   "pdf.lint.none": "chktex found no warnings.",
   "pdf.opening": "Opening the PDF…",
   "pdf.loading": "Loading the viewer…",
   "pdf.error": "Could not display the PDF.",
-  "pdf.warnings": "{n} warnings",
+  "pdf.warnings": "{n:warning|warnings}",
   "pdf.warnings.one": "1 warning",
   "pdf.log": "Full log",
   "pdf.seconds": "· {s} s",
@@ -714,7 +714,7 @@ const baseEn = {
   "papers.submission.words": "Words (body)",
   "papers.health.button": "Citation health",
   "papers.health.title": "Citation health",
-  "papers.health.undefined": "{n} cited but undefined",
+  "papers.health.undefined": "{n:cited but undefined|cited but undefined}",
   "papers.health.unused": "{n} in the bibliography, never cited",
   "papers.health.preprint": "arXiv preprint with a published version",
   "papers.health.upgrade": "Upgrade",
@@ -767,7 +767,7 @@ const baseDe = {
   "auth.toRegister.action": "Erstelle ein Konto",
   "projects.title": "Projekte",
   "projects.empty.head": "Noch keine Dokumente",
-  "projects.count": "{n} Dokumente",
+  "projects.count": "{n:Dokument|Dokumente}",
   "projects.count.one": "1 Dokument",
   "projects.empty.body":
     "Jedes Projekt ist ein LaTeX-Dokument mit Kapiteln, Abbildungen und Literaturverzeichnis. Bestehende kannst du per „ZIP importieren“ übernehmen.",
@@ -847,13 +847,13 @@ const baseDe = {
   "pdf.empty.body":
     "Kompiliere mit der Schaltfläche oben oder mit {kbd}. Klicke auf Text im PDF, um zu der Stelle im Quelltext zu springen.",
   "pdf.empty.cta": "Jetzt kompilieren",
-  "pdf.words": "{n} Wörter",
+  "pdf.words": "{n:Wort|Wörter}",
   "pdf.lint": "Lint",
   "pdf.lint.none": "chktex fand keine Warnungen.",
   "pdf.opening": "PDF wird geöffnet…",
   "pdf.loading": "Viewer wird geladen…",
   "pdf.error": "PDF konnte nicht angezeigt werden.",
-  "pdf.warnings": "{n} Warnungen",
+  "pdf.warnings": "{n:Warnung|Warnungen}",
   "pdf.warnings.one": "1 Warnung",
   "pdf.log": "Vollständiges Protokoll",
   "pdf.seconds": "· {s} s",
@@ -999,7 +999,7 @@ const baseDe = {
   "share.title": "Teilen",
   "share.invite": "Einladen",
   "share.invited": "Einladung gesendet",
-  "share.email.ph": "E-Mail des Koautors",
+  "share.email.ph": "Koautor-E-Mail",
   "share.role": "Rolle",
   "share.role.owner": "Eigentümer",
   "share.role.editor": "Editor",
@@ -1078,7 +1078,7 @@ const baseDe = {
   "papers.submission.words": "Wörter (Text)",
   "papers.health.button": "Zitat-Gesundheit",
   "papers.health.title": "Zitat-Gesundheit",
-  "papers.health.undefined": "{n} zitiert, aber nicht definiert",
+  "papers.health.undefined": "{n:zitiert, aber nicht definiert|zitiert, aber nicht definiert}",
   "papers.health.unused": "{n} in der Bibliografie, nie zitiert",
   "papers.health.preprint": "arXiv-Preprint mit veröffentlichter Version",
   "papers.health.upgrade": "Aktualisieren",
@@ -1121,8 +1121,19 @@ export function isLang(v: string | undefined): v is Lang {
   return !!v && (LANGS as readonly string[]).includes(v);
 }
 
-/** "projects.count" + {n: 3} -> "3 documentos" */
+/**
+ * "projects.count" + {n: 3} -> "3 documentos".
+ * A var may carry singular|plural alternatives picked by the number:
+ * "{n:documento|documentos}" with n=1 renders "1 documento".
+ */
 export function format(dict: Dict, key: MsgKey, vars?: Record<string, string | number>) {
   const s = dict[key];
-  return vars ? s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`)) : s;
+  if (!vars) return s;
+  return s
+    .replace(/\{(\w+):([^}|]+)\|([^}]+)\}/g, (m, k, one: string, many: string) => {
+      const v = vars[k];
+      if (v === undefined) return m; // unknown var: leave the placeholder visible
+      return `${v} ${v === 1 || v === "1" ? one : many}`;
+    })
+    .replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`));
 }

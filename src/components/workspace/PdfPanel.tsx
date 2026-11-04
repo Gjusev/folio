@@ -1,12 +1,18 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { DICTS } from "@/lib/i18n/dictionaries";
 import { useI18n } from "@/lib/i18n/client";
 import { useOutsideClose } from "./useOutsideClose";
 import type { LogIssue } from "@/lib/latex-log";
 
 const PdfViewer = dynamic(() => import("./PdfViewer"), {
   ssr: false,
-  loading: () => <p className="p-6 text-sm text-muted">Cargando el visor…</p>,
+  // Outside I18nProvider (module scope): pick the string from <html lang>.
+  loading: () => {
+    const lang = document.documentElement.lang;
+    const dict = DICTS[lang as keyof typeof DICTS] ?? DICTS.es;
+    return <p className="p-6 text-sm text-muted">{dict["pdf.loading"]}</p>;
+  },
 });
 
 export type CompileState = {
@@ -100,7 +106,7 @@ export function PdfPanel({
                 onClick={() => setScale(null)}
                 title={t("pdf.fit.title")}
               >
-                {scale === null ? "Ajustar" : `${Math.round(scale * 100)} %`}
+                {scale === null ? t("pdf.fit") : `${Math.round(scale * 100)} %`}
               </button>
               <button
                 type="button"
