@@ -14,7 +14,7 @@ import type { LogIssue } from "@/lib/latex-log";
 import { AiPanel } from "./AiPanel";
 import { CodeEditor, type EditorHandle } from "./CodeEditor";
 import { FileTree } from "./FileTree";
-import { PaperSearch } from "./PaperSearch";
+import { PapersPanel } from "@/components/papers/PapersPanel";
 import { PdfPanel, type CompileState } from "./PdfPanel";
 import { useDocuments, type FileDoc, type SaveStatus } from "./useDocuments";
 import { useOutsideClose } from "./useOutsideClose";
@@ -366,25 +366,27 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
     />
   );
 
+  const syncServerFiles = (files: FileDoc | FileDoc[]) => {
+    for (const file of [files].flat()) {
+      if (!docs.files.some((f) => f.id === file.id)) docs.store.add(file);
+      else docs.store.replaceFromServer(file.id, file.content, file.version);
+      // The store keeps unsaved local edits; sync the editor to its copy.
+      editor.current?.setDoc(file.id, docs.store.getDoc(file.id));
+    }
+  };
+
   const papers = (
-    <PaperSearch
+    <PapersPanel
       projectId={project.id}
-      keys={keys}
+      getSources={() => docs.files.map((f) => ({ path: f.path, content: docs.store.getDoc(f.id) }))}
       canCite={canCite}
-      flush={docs.store.flush}
       onCite={(k) => editor.current?.insertAtCursor(`~\\cite{${k}}`)}
-      onBibUpdated={(file) => {
-        if (!docs.files.some((f) => f.id === file.id)) docs.store.add(file);
-        else docs.store.replaceFromServer(file.id, file.content, file.version);
-        // The store keeps unsaved local edits; sync the editor to its copy.
-        editor.current?.setDoc(file.id, docs.store.getDoc(file.id));
-      }}
-      onFilesUpdated={(files) => {
-        for (const file of files) {
-          if (!docs.files.some((f) => f.id === file.id)) docs.store.add(file);
-          else docs.store.replaceFromServer(file.id, file.content, file.version);
-          editor.current?.setDoc(file.id, docs.store.getDoc(file.id));
-        }
+      onBibUpdated={syncServerFiles}
+      onFilesUpdated={syncServerFiles}
+      flush={docs.store.flush}
+      onOpenAt={(path, line) => {
+        const target = docs.files.find((f) => f.path === path);
+        if (target) open(target.id, line);
       }}
     />
   );
