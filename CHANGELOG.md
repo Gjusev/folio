@@ -28,13 +28,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Reviewed rewrites.** Select a passage and rewrite it — improve, shorten,
   academic tone, simplify, fix grammar, or translate (English, Spanish, German).
   Every proposal is shown as a word-level diff (deletions struck, insertions
-  highlighted) and lands only when the author applies it; an *Apply* that finds
+  highlighted) and lands only when the author applies it; an _Apply_ that finds
   the text changed says so instead of writing somewhere else. The diff engine
   is a token-level Myers diff with a reconstruction property test.
 - **Compile errors as patches.** "Fix" now locates the first error with a file
   and line, asks the model for a minimal patch inside a numbered window of the
   source, validates the line range, and shows the patch as a diff with one
-  *Apply and recompile* action. When the log has nothing locatable, it falls
+  _Apply and recompile_ action. When the log has nothing locatable, it falls
   back to today's streamed explanation.
 - **Image → LaTeX.** Drop, paste or pick a photo — a whiteboard, a handwritten
   equation, a table, a sketch — and get LaTeX back through any vision model on

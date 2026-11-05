@@ -11,7 +11,7 @@
 | Name       | **Folio** (always capital F, never "FOLIO" or "folio" in running text) |
 | Promise    | Write scientific papers with AI you can audit, on your own server.     |
 | Short line | Your paper on your server.                                             |
-| Descriptor | The open workspace for writing scientific papers with AI.             |
+| Descriptor | The open workspace for writing scientific papers with AI.              |
 | Colours    | Ink `#141413` · Paper `#f6f5f1` · Teal `#1b6c80`                       |
 | Typefaces  | Switzer (brand) · IBM Plex Sans (interface) · IBM Plex Mono (code)     |
 | Voice      | Precise, plain, honest about limits                                    |
