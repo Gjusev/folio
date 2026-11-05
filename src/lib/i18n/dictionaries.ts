@@ -2,6 +2,7 @@
 // registering it below. API error messages carry a `code`; the client maps
 // known codes through these dictionaries and falls back to the server text.
 
+import { aiDict } from "./ai-dict";
 import { arxivDict } from "./arxiv-dict";
 import { commentsDict } from "./comments-dict";
 import { graphDict } from "./graph-dict";
@@ -20,9 +21,9 @@ export const LANG_COOKIE = "folio_lang";
 const baseEs = {
   // brand / meta
   "meta.description":
-    "Editor LaTeX científico de código abierto, con búsqueda de artículos y compilación aislada.",
+    "Espacio abierto para escribir artículos científicos con IA: cualquier modelo, citas verificables y LaTeX compilado en un sandbox, en tu propio servidor.",
   // auth
-  "auth.tagline": "Editor LaTeX para artículos científicos, en tu propio servidor.",
+  "auth.tagline": "Escribe artículos científicos con IA, en tu propio servidor.",
   "auth.create": "Crear cuenta",
   "auth.login": "Iniciar sesión",
   "auth.name": "Nombre",
@@ -279,6 +280,28 @@ const baseEs = {
   "zotero.collections": "Colecciones",
   "zotero.collections.limit": "Se muestran las primeras 50 colecciones.",
   "zotero.collections.empty": "Tu biblioteca de Zotero no tiene colecciones.",
+  "settings.tokens.title": "Tokens de API",
+  "settings.tokens.desc":
+    "Claves de agente para que Claude Code, Codex o tus scripts usen la API de Folio en tu nombre. El token completo solo se muestra al crearlo.",
+  "settings.tokens.name.ph": "p. ej. Claude Code en el portátil",
+  "settings.tokens.scopes": "Permisos",
+  "settings.tokens.scope.read": "lectura",
+  "settings.tokens.scope.read.hint": "Ver proyectos y archivos",
+  "settings.tokens.scope.write": "escritura",
+  "settings.tokens.scope.write.hint": "Crear y editar proyectos",
+  "settings.tokens.scope.compile": "compilar",
+  "settings.tokens.scope.compile.hint": "Compilar a PDF",
+  "settings.tokens.scope.literature": "literatura",
+  "settings.tokens.scope.literature.hint": "Buscar papers y gestionar la biblioteca",
+  "settings.tokens.create": "Crear token",
+  "settings.tokens.created": "Token creado",
+  "settings.tokens.copyNote": "Cópialo ahora: no se volverá a mostrar.",
+  "settings.tokens.empty": "Aún no hay tokens.",
+  "settings.tokens.delete": "Eliminar",
+  "settings.tokens.confirm": "¿Seguro?",
+  "settings.tokens.lastUse": "Último uso",
+  "settings.tokens.never": "nunca",
+  "settings.tokens.copied": "Copiado",
   "common.saved": "Guardado",
   // generic
   "projects.search.ph": "Buscar proyecto…",
@@ -413,14 +436,15 @@ export const es = {
   ...reviewDict.es,
   ...arxivDict.es,
   ...commentsDict.es,
+  ...aiDict.es,
 };
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
 
 const baseEn = {
   "meta.description":
-    "Open-source scientific LaTeX editor with paper search and sandboxed compilation.",
-  "auth.tagline": "A LaTeX editor for scientific papers, on your own server.",
+    "Open workspace for writing scientific papers with AI: any model, verifiable citations and LaTeX compiled in a sandbox, on your own server.",
+  "auth.tagline": "Write scientific papers with AI, on your own server.",
   "auth.create": "Create account",
   "auth.login": "Sign in",
   "auth.name": "Name",
@@ -666,6 +690,28 @@ const baseEn = {
   "zotero.collections": "Collections",
   "zotero.collections.limit": "The first 50 collections are shown.",
   "zotero.collections.empty": "Your Zotero library has no collections.",
+  "settings.tokens.title": "API tokens",
+  "settings.tokens.desc":
+    "Agent keys that let Claude Code, Codex or your scripts use Folio's API as you. The full token is shown only once, when created.",
+  "settings.tokens.name.ph": "e.g. Claude Code on the laptop",
+  "settings.tokens.scopes": "Permissions",
+  "settings.tokens.scope.read": "read",
+  "settings.tokens.scope.read.hint": "View projects and files",
+  "settings.tokens.scope.write": "write",
+  "settings.tokens.scope.write.hint": "Create and edit projects",
+  "settings.tokens.scope.compile": "compile",
+  "settings.tokens.scope.compile.hint": "Compile to PDF",
+  "settings.tokens.scope.literature": "literature",
+  "settings.tokens.scope.literature.hint": "Search papers and manage the library",
+  "settings.tokens.create": "Create token",
+  "settings.tokens.created": "Token created",
+  "settings.tokens.copyNote": "Copy it now — it won't be shown again.",
+  "settings.tokens.empty": "No tokens yet.",
+  "settings.tokens.delete": "Delete",
+  "settings.tokens.confirm": "Sure?",
+  "settings.tokens.lastUse": "Last used",
+  "settings.tokens.never": "never",
+  "settings.tokens.copied": "Copied",
   "common.saved": "Saved",
   "projects.search.ph": "Search project…",
   "projects.sort": "Sort",
@@ -791,8 +837,8 @@ const baseEn = {
 
 const baseDe = {
   "meta.description":
-    "Open-Source-LaTeX-Editor für wissenschaftliche Texte, mit Literatursuche und isoliertem Kompilieren.",
-  "auth.tagline": "Ein LaTeX-Editor für wissenschaftliche Arbeiten, auf deinem eigenen Server.",
+    "Offener Arbeitsplatz für wissenschaftliches Schreiben mit KI: jedes Modell, überprüfbare Zitate und LaTeX, kompiliert in einer Sandbox, auf deinem eigenen Server.",
+  "auth.tagline": "Wissenschaftliche Arbeiten mit KI schreiben, auf deinem eigenen Server.",
   "auth.create": "Konto erstellen",
   "auth.login": "Anmelden",
   "auth.name": "Name",
@@ -1043,6 +1089,28 @@ const baseDe = {
   "zotero.collections": "Sammlungen",
   "zotero.collections.limit": "Es werden die ersten 50 Sammlungen angezeigt.",
   "zotero.collections.empty": "Deine Zotero-Bibliothek hat keine Sammlungen.",
+  "settings.tokens.title": "API-Tokens",
+  "settings.tokens.desc":
+    "Agent-Schlüssel, mit denen Claude Code, Codex oder deine Skripte die Folio-API in deinem Namen nutzen. Der vollständige Token wird nur einmal angezeigt — bei der Erstellung.",
+  "settings.tokens.name.ph": "z. B. Claude Code auf dem Laptop",
+  "settings.tokens.scopes": "Berechtigungen",
+  "settings.tokens.scope.read": "Lesen",
+  "settings.tokens.scope.read.hint": "Projekte und Dateien ansehen",
+  "settings.tokens.scope.write": "Schreiben",
+  "settings.tokens.scope.write.hint": "Projekte erstellen und bearbeiten",
+  "settings.tokens.scope.compile": "Kompilieren",
+  "settings.tokens.scope.compile.hint": "Zu PDF kompilieren",
+  "settings.tokens.scope.literature": "Literatur",
+  "settings.tokens.scope.literature.hint": "Paper suchen und Bibliothek verwalten",
+  "settings.tokens.create": "Token erstellen",
+  "settings.tokens.created": "Token erstellt",
+  "settings.tokens.copyNote": "Kopiere ihn jetzt — er wird nicht wieder angezeigt.",
+  "settings.tokens.empty": "Noch keine Tokens.",
+  "settings.tokens.delete": "Löschen",
+  "settings.tokens.confirm": "Sicher?",
+  "settings.tokens.lastUse": "Zuletzt genutzt",
+  "settings.tokens.never": "nie",
+  "settings.tokens.copied": "Kopiert",
   "common.saved": "Gespeichert",
   "projects.search.ph": "Projekt suchen…",
   "projects.sort": "Sortieren",
@@ -1175,6 +1243,7 @@ export const en: Dict = {
   ...reviewDict.en,
   ...arxivDict.en,
   ...commentsDict.en,
+  ...aiDict.en,
 };
 export const de: Dict = {
   ...baseDe,
@@ -1184,6 +1253,7 @@ export const de: Dict = {
   ...reviewDict.de,
   ...arxivDict.de,
   ...commentsDict.de,
+  ...aiDict.de,
 };
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };

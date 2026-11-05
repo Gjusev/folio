@@ -25,6 +25,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         aiInstructions: project.aiInstructions,
         aiStyleSample: project.aiStyleSample,
         aiPlan: project.aiPlan,
+        aiPolicy: project.aiPolicy,
         role,
       }}
       initialFiles={files.map((f) => ({

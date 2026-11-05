@@ -32,6 +32,8 @@ type Props = {
     aiInstructions: string | null;
     aiStyleSample: string | null;
     aiPlan?: unknown;
+    /** Owner's decision on AI for this manuscript: any | local | off. */
+    aiPolicy?: string | null;
     /** Access level of the current user; the owner sees the share menu. */
     role?: "owner" | "editor" | "viewer";
   };
@@ -332,6 +334,44 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
     if (line) requestAnimationFrame(() => editor.current?.reveal(id, line));
   }
 
+  /**
+   * Applies a reviewed line-based AI patch (a compile-error fix) as a normal,
+   * undoable editor edit. Returns false — changing nothing — when the target
+   * lines no longer hold the text the proposal was computed against.
+   */
+  function applyPatch(p: {
+    fileId: string;
+    startLine: number;
+    endLine: number;
+    original: string;
+    replacement: string;
+  }): boolean {
+    const content = docs.store.getDoc(p.fileId);
+    const lines = content.split("\n");
+    const start = p.startLine - 1;
+    const end = p.endLine;
+    if (start < 0 || end > lines.length) return false;
+    const actual = lines.slice(start, end).join("\n");
+    const norm = (s: string) => s.replace(/\r\n?/g, "\n");
+    if (norm(actual) !== norm(p.original)) return false; // stale proposal
+    // CRLF files keep CRLF in the replacement (the server computed \n).
+    const replacement = actual.includes("\r")
+      ? p.replacement.replace(/\n/g, "\r\n")
+      : p.replacement;
+    const from = lines.slice(0, start).reduce((n, l) => n + l.length + 1, 0);
+    const dispatch = () =>
+      editor.current?.replaceIfUnchanged(from, from + actual.length, actual, replacement) === true;
+    if (activeId === p.fileId) {
+      const ok = dispatch();
+      if (ok) editor.current?.reveal(p.fileId, p.startLine);
+      return ok;
+    }
+    // Not the visible file: switch first, apply once the editor holds the doc.
+    open(p.fileId, p.startLine);
+    requestAnimationFrame(() => void dispatch());
+    return true; // the content guard above already passed on the live doc
+  }
+
   function reveal(issue: LogIssue) {
     if (!issue.line) return;
     const target = issue.file ? docs.files.find((f) => f.path === issue.file) : active;
@@ -513,6 +553,12 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       }}
       initialPlan={(project.aiPlan as AgentPlan | null) ?? null}
       initialInstruction={fixInstruction}
+      initialPolicy={
+        project.aiPolicy === "local" || project.aiPolicy === "off" ? project.aiPolicy : "any"
+      }
+      isOwner={project.role === "owner"}
+      applyPatch={applyPatch}
+      onRecompile={() => void runCompile()}
     />
   );
 

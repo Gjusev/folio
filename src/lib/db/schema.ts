@@ -67,6 +67,10 @@ export const projects = pgTable(
     aiStyleSample: text("ai_style_sample"),
     // Editable section plan produced by the agent (AgentPlan JSON), if any.
     aiPlan: jsonb("ai_plan"),
+    // Who may process this manuscript with AI, decided by the owner and
+    // enforced server-side for every collaborator's own key:
+    // any (any provider) | local (only endpoints on this host's network) | off.
+    aiPolicy: text("ai_policy").notNull().default("any"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -191,6 +195,27 @@ export const aiMessages = pgTable(
   (t) => [index("ai_messages_project_idx").on(t.projectId, t.createdAt)],
 );
 
+/**
+ * Append-only ledger of AI use per project: what kind of help, which model,
+ * when — never content. Unlike ai_messages (a trimmed chat history) it is not
+ * pruned, so the AI-use disclosure can cover the whole life of the manuscript.
+ */
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // ask | improve | explain | continue | fix | draft | plan | review | image | embed
+    action: text().notNull(),
+    // Model id as configured by the user (e.g. "mistral-large-latest").
+    model: text().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_usage_project_idx").on(t.projectId, t.createdAt)],
+);
+
 /** RAG index: chunks of a project's text files with their embeddings, so the
  *  assistant can answer questions about the user's own .tex/.bib. Rebuilt in
  *  full on every indexing run (no incremental updates by design). */
@@ -251,6 +276,35 @@ export const reviews = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("reviews_project_idx").on(t.projectId, t.createdAt)],
+);
+
+/**
+ * Personal access tokens ("agent keys"): let the user's own tools (Claude
+ * Code, Codex, scripts) talk to Folio's API as them, with a narrower set of
+ * permissions than the browser session. Only the SHA-256 hash is stored; the
+ * full token is shown exactly once at creation.
+ */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    // sha256 hex of the full "folio_…" token.
+    tokenHash: text("token_hash").notNull(),
+    // First characters, for recognising the row ("folio_ab12…").
+    prefix: text().notNull(),
+    // Comma-separated subset of TOKEN_SCOPES ("read,write,compile,literature").
+    scopes: text().notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("api_tokens_hash_uq").on(t.tokenHash),
+    index("api_tokens_user_idx").on(t.userId),
+  ],
 );
 
 /** Threaded review comments, optionally anchored to a span of a file. Replies

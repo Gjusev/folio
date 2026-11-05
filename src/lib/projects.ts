@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
+import type { AiPolicy } from "@/lib/ai-policy";
 import { db, schema } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import {
@@ -51,6 +52,7 @@ export async function listProjects(userId: string) {
     .select({
       id: schema.projects.id,
       name: schema.projects.name,
+      mainFile: schema.projects.mainFile,
       updatedAt: schema.projects.updatedAt,
       // "owner" | "editor" | "viewer"; null means the owner row (not a member).
       role: sql<
@@ -309,6 +311,11 @@ export async function setAiSteering(
   steering: { aiInstructions?: string | null; aiStyleSample?: string | null },
 ) {
   await db().update(schema.projects).set(steering).where(eq(schema.projects.id, projectId));
+}
+
+/** Owner-only (checked by the caller): who may send this manuscript to AI providers. */
+export async function setAiPolicy(projectId: string, aiPolicy: AiPolicy) {
+  await db().update(schema.projects).set({ aiPolicy }).where(eq(schema.projects.id, projectId));
 }
 
 /** Persists the agent's section plan (editable outline for section drafting). */

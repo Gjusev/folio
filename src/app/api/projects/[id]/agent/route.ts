@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveProjectEndpoint } from "@/lib/ai-policy";
 import {
   buildCritiqueMessages,
   buildDraftMessages,
@@ -12,11 +13,11 @@ import {
   type AgentPlan,
   type EvidenceItem,
 } from "@/lib/ai-prompts";
+import { recordAiUsage } from "@/lib/ai-usage";
 import { bibKeys, citeKey } from "@/lib/bibtex";
 import { compileProject } from "@/lib/compiler";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { streamChat } from "@/lib/llm";
-import { resolveEndpoint } from "@/lib/llm-profiles";
 import { searchPapers } from "@/lib/papers";
 import {
   addAiMessage,
@@ -123,7 +124,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   const input = await parseJson(req, body);
   enforceRateLimit(`ai:${user.id}`, 30, 10 * 60_000);
   enforceRateLimit(`agent:${user.id}`, 6, 10 * 60_000);
-  const endpoint = await resolveEndpoint(user.id, "draft");
+  const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
   if (!endpoint)
     throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
 
@@ -167,6 +168,7 @@ export const POST = route(async (req, { params }: Ctx) => {
           await addAiMessage(project.id, "assistant", "plan", JSON.stringify(plan)).catch(() => {});
           send({ type: "plan", plan });
           send({ type: "done", latex: "", usedKeys: [], newPapers: [], wordCount: 0 });
+          await recordAiUsage(project.id, "plan", endpoint.model).catch(() => {});
           return;
         }
 
@@ -369,6 +371,7 @@ export const POST = route(async (req, { params }: Ctx) => {
         await addAiMessage(project.id, "user", "draft", input.instruction).catch(() => {});
         await addAiMessage(project.id, "assistant", "draft", latex).catch(() => {});
         send({ type: "done", latex, usedKeys: used, newPapers, wordCount, wordBudget: budget });
+        await recordAiUsage(project.id, "draft", endpoint.model).catch(() => {});
       } catch (err) {
         const message = err instanceof HttpError ? err.message : "La redacción se interrumpió";
         if (!(err instanceof HttpError)) console.error("agent error", err);

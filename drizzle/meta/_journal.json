@@ -64,6 +64,20 @@
       "when": 1793836334341,
       "tag": "0008_dark_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793870173665,
+      "tag": "0009_polished_scholar",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793878687866,
+      "tag": "0010_square_sabra",
+      "breakpoints": true
     }
   ]
 }

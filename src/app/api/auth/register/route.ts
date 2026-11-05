@@ -9,8 +9,11 @@ import { registerBody } from "@/lib/validation";
 export const POST = route(async (req) => {
   if (!env().ALLOW_REGISTRATION)
     throw new HttpError(403, "El registro está desactivado en esta instancia");
-  enforceRateLimit(`register:${clientIp(req)}`, 10, 60 * 60 * 1000);
+  // Validate BEFORE counting against the rate limit: malformed probes (the
+  // e2e suite's registration-closed check, scanners) must not consume an
+  // hour of a would-be user's budget. Well-formed registrations stay limited.
   const { email, name, password } = await parseJson(req, registerBody);
+  enforceRateLimit(`register:${clientIp(req)}`, 10, 60 * 60 * 1000);
   const [user] = await db()
     .insert(schema.users)
     .values({ email, name, passwordHash: await hashPassword(password) })

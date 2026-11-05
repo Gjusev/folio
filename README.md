@@ -1,15 +1,34 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/brand/banner-dark.png">
-  <img alt="Folio — the open-source LaTeX editor for scientific papers" src="docs/brand/banner-light.png">
+  <img alt="Folio — the open workspace for writing scientific papers with AI" src="docs/brand/banner-light.png">
 </picture>
 
-**Scientific writing in LaTeX, on your own server.** Folio is a self-hosted LaTeX
-editor (Apache-2.0) with sandboxed compilation, real literature search, a
-Connected-Papers-style citation graph, versions with visual diffs, and an
-optional AI assistant and reviewer that work with any provider — and never edit
-your document without your confirmation.
+**Write scientific papers with AI you can audit, on your own server.** Folio is
+the open alternative to OpenAI's Prism: an assistant that knows your whole
+paper, a drafting agent that brings real literature as evidence, a reviewer
+that quotes your own text, compile errors fixed as patches, whiteboard photos
+turned into LaTeX — with co-authors in the same project. LaTeX is the format;
+the product is the writing loop, from the first literature search to the arXiv
+package.
 
-Your documents live in your own Postgres. Switching models is changing a setting.
+What a closed, free-for-now service cannot promise:
+
+- **Your model.** Any OpenAI-compatible API or Anthropic's, each user with
+  their own key — or local models (Ollama, vLLM), so nothing leaves the server.
+  The project owner decides whether a manuscript may be sent to AI at all, and
+  that rule binds every collaborator.
+- **AI you can check.** Every change arrives as a diff you apply. Cite keys come
+  only from your `.bib` or from literature actually retrieved; drafts are
+  verified by a real compile; reviews keep a location only if the quote is
+  really there. AI use is recorded, so Folio can write the declaration journals
+  ask for.
+- **Your data, with no end date.** Apache-2.0, your own Postgres, ZIP export at
+  any time.
+
+How Folio compares with Prism and Overleaf, and what comes next:
+[Folio, the open alternative to Prism](docs/prism-alternative.md). Let your own
+agent (Claude Code, Codex) work on a project through [Folio's MCP server](docs/mcp.md)
+with a scoped personal token.
 
 |                           Editor + compiled PDF                           |                                  Literature explorer                                   |
 | :-----------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |
