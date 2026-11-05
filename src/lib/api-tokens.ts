@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { HttpError } from "@/lib/http";
+import { HttpError, requireUser } from "@/lib/http";
 import { SESSION_COOKIE, getSessionUser, type SessionUser } from "@/lib/auth/session";
 
 /**
@@ -93,6 +93,16 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiIdent
 export function requireScope(identity: ApiIdentity, scope: TokenScope): void {
   if (!identity.scopes.has(scope))
     throw new HttpError(403, `Este token no tiene el permiso «${scope}»`);
+}
+
+/** Tokens cannot manage tokens: Bearer callers get 403, only the session may act. */
+export async function requireSessionUser(req: NextRequest) {
+  if (req.headers.get("authorization")?.startsWith("Bearer ")) {
+    const identity = await authenticateApiRequest(req);
+    if (identity?.via === "token")
+      throw new HttpError(403, "Los tokens no pueden gestionar tokens");
+  }
+  return requireUser(req);
 }
 
 export async function createApiToken(userId: string, name: string, scopes: TokenScope[]) {

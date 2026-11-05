@@ -30,14 +30,12 @@ export const POST = route(async (req, { params }: Ctx) => {
   enforceRateLimit(`ai:${user.id}`, 30, 10 * 60_000);
 
   const error = parseLatexLog(input.log).errors.find((e) => e.file && e.line);
-  if (!error)
-    throw new HttpError(
-      422,
-      "El último log no tiene un error con archivo y línea que se pueda localizar",
+  const file =
+    error &&
+    (await listFiles(project.id)).find(
+      (f) => !f.binary && f.path === error.file!.replace(/^\.\//, ""),
     );
-  const wanted = error.file!.replace(/^\.\//, "");
-  const file = (await listFiles(project.id)).find((f) => !f.binary && f.path === wanted);
-  if (!file)
+  if (!error || !file)
     throw new HttpError(
       422,
       "El último log no tiene un error con archivo y línea que se pueda localizar",
