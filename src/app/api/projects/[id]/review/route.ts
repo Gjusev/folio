@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { resolveProjectEndpoint } from "@/lib/ai-policy";
+import { recordAiUsage } from "@/lib/ai-usage";
 import { bibKeys } from "@/lib/bibtex";
 import { LANGS } from "@/lib/i18n/dictionaries";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { streamChat } from "@/lib/llm";
-import { resolveEndpoint } from "@/lib/llm-profiles";
 import { getViewableProject, listFiles } from "@/lib/projects";
 import { ASPECTS, RIGORS, buildExcerpt, buildReviewMessages, parseReview } from "@/lib/review";
 
@@ -27,7 +28,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
   const project = await getViewableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
-  const endpoint = await resolveEndpoint(user.id, "draft");
+  const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
   if (!endpoint)
     throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
   enforceRateLimit(`review:${user.id}`, 6, 10 * 60_000);
@@ -55,6 +56,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   const review = parseReview(raw, excerpt.ranges, aspects, files);
   if (!review)
     throw new HttpError(502, "La IA no devolvió una revisión válida. Inténtalo de nuevo");
+  await recordAiUsage(project.id, "review", endpoint.model).catch(() => {});
 
   return NextResponse.json({
     review,

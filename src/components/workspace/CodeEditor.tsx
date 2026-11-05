@@ -27,6 +27,12 @@ export type EditorHandle = {
   beforeCursor(max: number): string;
   /** Replaces [from, to) when it still holds `expected`; otherwise inserts at the cursor. */
   replaceRange(from: number, to: number, expected: string, text: string): void;
+  /**
+   * Replaces [from, to) only when it still holds `expected` (an AI proposal
+   * reviewed as a diff must land exactly where it was computed). Undoable like
+   * any edit. Returns false, changing nothing, when the text moved on.
+   */
+  replaceIfUnchanged(from: number, to: number, expected: string, text: string): boolean;
   insertAtCursor(text: string): void;
   /** Replaces a file's content from outside (server reload). Does not count as a user edit. */
   setDoc(fileId: string, content: string): void;
@@ -466,6 +472,17 @@ export function CodeEditor({
           this.insertAtCursor(text);
         }
         v.focus();
+      },
+      replaceIfUnchanged(from, to, expected, text) {
+        const v = view.current;
+        if (!v || to > v.state.doc.length || v.state.sliceDoc(from, to) !== expected) return false;
+        v.dispatch({
+          changes: { from, to, insert: text },
+          selection: { anchor: from, head: from + text.length },
+          scrollIntoView: true,
+        });
+        v.focus();
+        return true;
       },
       insertAtCursor(text) {
         const v = view.current!;

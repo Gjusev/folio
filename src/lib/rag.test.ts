@@ -279,7 +279,7 @@ describe("rag index + retrieve (folio_test)", () => {
 
     vi.stubGlobal("fetch", embedFetchMock(["alpha", "beta", "gamma"]));
     const { indexProject, indexStatus, retrieve, deleteRagIndex } = await import("@/lib/rag");
-    const result = await indexProject(user.id, project.id);
+    const result = await indexProject(user.id, project);
     expect(result.files).toBe(2);
     expect(result.chunks).toBeGreaterThan(10);
 
@@ -289,7 +289,7 @@ describe("rag index + retrieve (folio_test)", () => {
     expect(status!.updatedAt).toBeInstanceOf(Date);
 
     // The query names a tag; the mock embeds it as that tag's one-hot vector.
-    const hits = await retrieve(user.id, project.id, "¿dónde se explica alpha?");
+    const hits = await retrieve(user.id, project, "¿dónde se explica alpha?");
     expect(hits.length).toBeLessThanOrEqual(8);
     expect(hits[0].content).toContain("alpha");
 
