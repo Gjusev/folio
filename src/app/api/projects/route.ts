@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { HttpError, parseJson, requireUser, route } from "@/lib/http";
+import { fail, parseJson, requireUser, route } from "@/lib/http";
 import { createProject, listProjects } from "@/lib/projects";
 import { findTemplate } from "@/lib/templates";
 import { projectName } from "@/lib/validation";
@@ -17,7 +17,7 @@ export const POST = route(async (req) => {
     z.object({ name: projectName, template: z.string().max(40).optional() }),
   );
   const tpl = findTemplate(template);
-  if (!tpl) throw new HttpError(400, "Plantilla desconocida");
+  if (!tpl) throw fail(400, "api.projects.unknownTemplate");
   const project = await createProject(user.id, name, tpl.files);
   return NextResponse.json({ project: { id: project.id, name: project.name } }, { status: 201 });
 });

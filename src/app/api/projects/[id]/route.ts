@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AI_POLICIES } from "@/lib/ai-policy";
-import { HttpError, parseJson, requireUser, route } from "@/lib/http";
+import { fail, parseJson, requireUser, route } from "@/lib/http";
 import {
   deleteProject,
   getEditableProject,
@@ -49,7 +49,7 @@ export const PATCH = route(async (req, { params }: Ctx) => {
   // The policy binds every collaborator's own key: the owner's call alone.
   // Checked before any write so a mixed request from an editor changes nothing.
   if (aiPolicy !== undefined && project.ownerId !== user.id)
-    throw new HttpError(403, "Solo el propietario puede cambiar la política de IA");
+    throw fail(403, "api.projects.aiPolicyOwnerOnly");
   if (aiPolicy !== undefined) await setAiPolicy(project.id, aiPolicy);
   if (name !== undefined) await renameProject(project.id, name);
   if (mainFile !== undefined) await setMainFile(project.id, mainFile);

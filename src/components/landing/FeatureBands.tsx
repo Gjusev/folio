@@ -29,13 +29,23 @@ export function FeatureBands() {
             data-tone={b.tone}
             data-on={on[i]}
             data-reveal
-            style={{ "--i": 0 } as React.CSSProperties}
+            style={{ "--i": i % 3 } as React.CSSProperties}
           >
             <div>
-              <h3 id={sId} className="lp-band-s">
+              <h3
+                id={sId}
+                className="lp-band-s"
+                data-reveal
+                style={{ "--i": 1 } as React.CSSProperties}
+              >
                 {t(`landing.band.${b.n}.s` as MsgKey)}
               </h3>
-              <p className="lp-band-d" aria-hidden={!on[i]}>
+              <p
+                className="lp-band-d"
+                aria-hidden={!on[i]}
+                data-reveal
+                style={{ "--i": 2 } as React.CSSProperties}
+              >
                 <span>{t(`landing.band.${b.n}.d` as MsgKey)}</span>
               </p>
             </div>

@@ -3,8 +3,17 @@ import { asPolicy, resolveProjectEndpoint } from "@/lib/ai-policy";
 import { AI_ACTIONS, buildMessages } from "@/lib/ai-prompts";
 import { recordAiUsage } from "@/lib/ai-usage";
 import { bibKeys } from "@/lib/bibtex";
-import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
-import { streamChat } from "@/lib/llm";
+import {
+  enforceRateLimit,
+  fail,
+  HttpError,
+  parseJson,
+  reqDict,
+  requireUser,
+  route,
+} from "@/lib/http";
+import { format } from "@/lib/i18n/dictionaries";
+import { streamChat, type StreamChunk } from "@/lib/llm";
 import { indexStatus, retrieve } from "@/lib/rag";
 import {
   addAiMessage,
@@ -34,12 +43,10 @@ export const POST = route(async (req, { params }: Ctx) => {
   const project = await getViewableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
   const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
-  if (!endpoint)
-    throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
-  if (input.action === "ask" && !input.instruction)
-    throw new HttpError(400, "Escribe una petición");
+  if (!endpoint) throw fail(503, "api.ai.notConfigured");
+  if (input.action === "ask" && !input.instruction) throw fail(400, "api.ai.needInstruction");
   if ((input.action === "improve" || input.action === "explain") && !input.selection.trim()) {
-    throw new HttpError(400, "Selecciona un fragmento del documento");
+    throw fail(400, "api.ai.needSelection");
   }
   enforceRateLimit(`ai:${user.id}`, 30, 10 * 60_000);
 
@@ -78,18 +85,28 @@ export const POST = route(async (req, { params }: Ctx) => {
   // Pull the first chunk before answering so provider errors map to a real status code.
   const first = await tokens.next();
   const encoder = new TextEncoder();
-  let full = first.done ? "" : first.value;
+  const dict = reqDict(req);
+  // One JSON frame per line: {"t":"think"|"text","s":"…"}. Thinking is
+  // ephemeral by design: only the text answer is ever persisted.
+  const frame = (c: StreamChunk) =>
+    encoder.encode(
+      `${JSON.stringify({ t: c.kind === "thinking" ? "think" : "text", s: c.text })}\n`,
+    );
+  let full = "";
+  const take = (c: StreamChunk) => {
+    if (c.kind === "text") full += c.text;
+    return frame(c);
+  };
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        if (!first.done) controller.enqueue(encoder.encode(first.value));
-        for await (const piece of tokens) {
-          full += piece;
-          controller.enqueue(encoder.encode(piece));
-        }
+        if (!first.done) controller.enqueue(take(first.value));
+        for await (const piece of tokens) controller.enqueue(take(piece));
       } catch (err) {
-        const msg = err instanceof HttpError ? err.message : "La respuesta de la IA se interrumpió";
-        controller.enqueue(encoder.encode(`\n\n[${msg}]`));
+        const msg =
+          err instanceof HttpError ? err.message : format(dict, "api.ai.responseInterrupted");
+        // Mid-stream failures ride the same frame shape so the reader stays one loop.
+        controller.enqueue(frame({ kind: "text", text: `\n\n[${msg}]` }));
       } finally {
         controller.close();
         // Persist the turn so the conversation survives reloads.
@@ -107,7 +124,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   });
   return new Response(stream, {
     headers: {
-      "content-type": "text/plain; charset=utf-8",
+      "content-type": "application/x-ndjson; charset=utf-8",
       "cache-control": "no-store",
       "x-accel-buffering": "no",
     },

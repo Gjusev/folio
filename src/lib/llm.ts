@@ -145,10 +145,22 @@ export function anthropicBody(
   };
 }
 
-/** Pulls the text delta out of one SSE payload, whatever the wire format. */
-export function deltaText(kind: Endpoint["kind"], data: string): string | null {
+/** One streamed piece: the answer, or the model's reasoning ("thinking"). */
+export type StreamChunk = { kind: "text" | "thinking"; text: string };
+
+/**
+ * Pulls one delta out of an SSE payload, whatever the wire format. Reasoning
+ * fields supported: `delta.reasoning_content` (DeepSeek-R1 style) and
+ * `delta.reasoning` (gateways) on the OpenAI-compatible protocol;
+ * `thinking_delta` on Anthropic's.
+ */
+export function deltaText(kind: Endpoint["kind"], data: string): StreamChunk | null {
   if (kind === "anthropic") {
-    let ev: { type?: string; delta?: { text?: string }; error?: { message?: string } };
+    let ev: {
+      type?: string;
+      delta?: { type?: string; text?: string; thinking?: string };
+      error?: { message?: string };
+    };
     try {
       ev = JSON.parse(data);
     } catch {
@@ -156,10 +168,23 @@ export function deltaText(kind: Endpoint["kind"], data: string): string | null {
     }
     if (ev.error)
       throw new HttpError(502, `Error del proveedor de IA: ${ev.error.message ?? "desconocido"}`);
-    if (ev.type === "content_block_delta" && ev.delta?.text) return ev.delta.text;
+    if (ev.type === "content_block_delta") {
+      if (ev.delta?.type === "thinking_delta" && ev.delta.thinking)
+        return { kind: "thinking", text: ev.delta.thinking };
+      if (ev.delta?.text) return { kind: "text", text: ev.delta.text };
+    }
     return null;
   }
-  let json: { choices?: { delta?: { content?: string | null } }[]; error?: { message?: string } };
+  let json: {
+    choices?: {
+      delta?: {
+        content?: string | null;
+        reasoning?: string | null;
+        reasoning_content?: string | null;
+      };
+    }[];
+    error?: { message?: string };
+  };
   try {
     json = JSON.parse(data);
   } catch {
@@ -167,8 +192,11 @@ export function deltaText(kind: Endpoint["kind"], data: string): string | null {
   }
   if (json.error)
     throw new HttpError(502, `Error del proveedor de IA: ${json.error.message ?? "desconocido"}`);
-  const piece = json.choices?.[0]?.delta?.content;
-  return piece ?? null;
+  const d = json.choices?.[0]?.delta;
+  if (!d) return null;
+  const reasoning = d.reasoning_content ?? d.reasoning;
+  if (reasoning) return { kind: "thinking", text: reasoning };
+  return d.content ? { kind: "text", text: d.content } : null;
 }
 
 /* ---------- streaming ---------- */
@@ -176,13 +204,14 @@ export function deltaText(kind: Endpoint["kind"], data: string): string | null {
 /**
  * Streams a chat completion from a resolved endpoint: any OpenAI-compatible
  * provider or Anthropic's native Messages API. The rest of the app never
- * knows which provider is behind it.
+ * knows which provider is behind it. Reasoning deltas arrive as
+ * `kind: "thinking"` chunks; inline `<think>` tags are stripped from text.
  */
 export async function* streamChat(
   messages: ChatMessage[],
   signal?: AbortSignal,
   endpoint?: Endpoint | null,
-): AsyncGenerator<string> {
+): AsyncGenerator<StreamChunk> {
   const e = endpoint ?? envEndpoint();
   if (!e || !e.model)
     throw new HttpError(
@@ -217,10 +246,24 @@ export async function* streamChat(
   for await (const data of sseData(res.body)) {
     if (data === "[DONE]") break;
     const piece = deltaText(e.kind, data);
-    if (piece) {
-      const out = filter(piece);
-      if (out) yield out;
+    if (!piece) continue;
+    if (piece.kind === "thinking") {
+      yield piece;
+      continue;
     }
+    const out = filter(piece.text);
+    if (out) yield { kind: "text", text: out };
+  }
+}
+
+/** Text-only view of streamChat for callers that ignore reasoning deltas. */
+export async function* streamText(
+  messages: ChatMessage[],
+  signal?: AbortSignal,
+  endpoint?: Endpoint | null,
+): AsyncGenerator<string> {
+  for await (const chunk of streamChat(messages, signal, endpoint)) {
+    if (chunk.kind === "text") yield chunk.text;
   }
 }
 

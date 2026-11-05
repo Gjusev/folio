@@ -7,6 +7,7 @@ import "@fontsource/ibm-plex-serif/500.css";
 import { I18nProvider } from "@/lib/i18n/client";
 import { DICTS, DEFAULT_LANG } from "@/lib/i18n/dictionaries";
 import { getLang } from "@/lib/i18n/server";
+import { PreferencesProvider } from "@/components/PreferencesProvider";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,7 +38,19 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang={lang} className="h-full antialiased">
       <body className="h-full">
-        <I18nProvider lang={lang}>{children}</I18nProvider>
+        {/* Applies the saved appearance before first paint; key must match
+            PreferencesProvider.APPEARANCE_STORAGE_KEY. An inline script at the
+            top of <body> runs while the HTML streams, so the theme/font never
+            flashes. Defaults mirror DEFAULT_APPEARANCE in PreferencesProvider. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'var d=document.documentElement,t="light";try{t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){}try{var p=JSON.parse(localStorage.getItem("folio-appearance")||"{}");if(p.theme==="light"||p.theme==="dark")t=p.theme;d.dataset.uiFont=p.uiFont||"plex";d.dataset.fontScale=p.fontScale||"m";d.dataset.editorFont=p.editorFont||"plex-mono"}catch(e){}d.dataset.theme=t;',
+          }}
+        />
+        <I18nProvider lang={lang}>
+          <PreferencesProvider>{children}</PreferencesProvider>
+        </I18nProvider>
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { Check, ClipboardCheck, ClipboardCopy, Eye, EyeOff, Wand2, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 import { compareReviews, type CompareResult } from "@/lib/review-compare";
 import type { CommentState, ReviewStates, SavedReview, SavedReviewMeta } from "@/lib/reviews-store";
@@ -219,6 +220,7 @@ export function ReviewPanel({
         truncated: res.meta.truncated,
         savedId: res.savedId,
       });
+      tourEvent("review");
       setLoaded(null);
       setStates({});
       setSevOff(new Set());

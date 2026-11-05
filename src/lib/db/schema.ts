@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -307,6 +308,17 @@ export const apiTokens = pgTable(
   ],
 );
 
+/** Per-user preferences: appearance (theme, fonts, scale) and onboarding
+ *  progress. jsonb so new fields need no migration; shapes live in preferences.ts. */
+export const userPreferences = pgTable("user_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  appearance: jsonb().notNull().default({}),
+  onboarding: jsonb().notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Threaded review comments, optionally anchored to a span of a file. Replies
  *  reference a root comment (parentId null); deleting a root cascades. */
 export const comments = pgTable(
@@ -336,4 +348,42 @@ export const comments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("comments_project_idx").on(t.projectId, t.createdAt)],
+);
+
+/** A paper the user uploaded to their personal library (PDF). `data` is the
+ *  original file; `fullText` the extracted text (null while extraction failed)
+ *  — both never selected in listings. */
+export const libraryPapers = pgTable(
+  "library_papers",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    filename: text().notNull(),
+    size: integer().notNull(),
+    pages: integer(),
+    data: bytea("data").notNull(),
+    fullText: text("full_text"),
+    doi: text(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("library_papers_user_idx").on(t.userId, t.createdAt)],
+);
+
+/** Which library paper is attached to which project. The PK makes re-attaching
+ *  a no-op; rows cascade away with either side. */
+export const libraryProjectLinks = pgTable(
+  "library_project_links",
+  {
+    paperId: uuid("paper_id")
+      .notNull()
+      .references(() => libraryPapers.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.paperId, t.projectId] })],
 );

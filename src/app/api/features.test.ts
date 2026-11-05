@@ -167,7 +167,15 @@ describe("ai", () => {
       ctx({ id }),
     );
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe("Improved text.");
+    // The stream is NDJSON frames now; text rejoined must match the old shape.
+    const text = (await res.text())
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l) as { t: string; s: string })
+      .filter((e) => e.t === "text")
+      .map((e) => e.s)
+      .join("");
+    expect(text).toBe("Improved text.");
     const sent = llmRequests[0].body;
     expect(sent.model).toBe("test-model");
     expect(sent.messages.at(-1)!.content).toContain("vaswani2017attention"); // bib keys in context

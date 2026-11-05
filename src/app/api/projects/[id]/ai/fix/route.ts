@@ -3,9 +3,9 @@ import { z } from "zod";
 import { resolveProjectEndpoint } from "@/lib/ai-policy";
 import { recordAiUsage } from "@/lib/ai-usage";
 import { buildFixMessages, numberedWindow, parseFixPatch } from "@/lib/ai-fix";
-import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
+import { enforceRateLimit, fail, parseJson, requireUser, route } from "@/lib/http";
 import { parseLatexLog } from "@/lib/latex-log";
-import { streamChat } from "@/lib/llm";
+import { streamText } from "@/lib/llm";
 import { addAiMessage, getEditableProject, listFiles } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -25,8 +25,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   const project = await getEditableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
   const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
-  if (!endpoint)
-    throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
+  if (!endpoint) throw fail(503, "api.ai.notConfigured");
   enforceRateLimit(`ai:${user.id}`, 30, 10 * 60_000);
 
   const error = parseLatexLog(input.log).errors.find((e) => e.file && e.line);
@@ -35,11 +34,7 @@ export const POST = route(async (req, { params }: Ctx) => {
     (await listFiles(project.id)).find(
       (f) => !f.binary && f.path === error.file!.replace(/^\.\//, ""),
     );
-  if (!error || !file)
-    throw new HttpError(
-      422,
-      "El último log no tiene un error con archivo y línea que se pueda localizar",
-    );
+  if (!error || !file) throw fail(422, "api.ai.fix.noLocatableError");
 
   const window = numberedWindow(file.content, error.line!);
   const messages = buildFixMessages(
@@ -53,18 +48,17 @@ export const POST = route(async (req, { params }: Ctx) => {
   );
 
   let raw = "";
-  for await (const piece of streamChat(messages, req.signal, endpoint)) {
+  for await (const piece of streamText(messages, req.signal, endpoint)) {
     raw += piece;
     if (raw.length > 40_000) break; // a patch is a few KB; runaway guard
   }
   const patch = parseFixPatch(raw, window);
-  if (!patch) throw new HttpError(502, "La IA no devolvió un parche válido; prueba de nuevo");
+  if (!patch) throw fail(502, "api.ai.fix.badPatch");
 
   const lines = file.content.replace(/\r\n/g, "\n").split("\n");
   const original = lines.slice(patch.startLine - 1, patch.endLine).join("\n");
   // A no-op is not a fix — re-asking beats showing a diff that changes nothing.
-  if (patch.replacement.replace(/\r\n/g, "\n") === original)
-    throw new HttpError(502, "La IA no devolvió un parche válido; prueba de nuevo");
+  if (patch.replacement.replace(/\r\n/g, "\n") === original) throw fail(502, "api.ai.fix.badPatch");
 
   await addAiMessage(project.id, "user", "fix", `[fix] ${error.message}`).catch(() => {});
   await addAiMessage(

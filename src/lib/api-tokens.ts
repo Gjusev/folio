@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { HttpError, requireUser } from "@/lib/http";
+import { fail, requireUser } from "@/lib/http";
 import { SESSION_COOKIE, getSessionUser, type SessionUser } from "@/lib/auth/session";
 
 /**
@@ -91,23 +91,21 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiIdent
 
 /** 403 (not 404): the caller should know the scope is the problem. */
 export function requireScope(identity: ApiIdentity, scope: TokenScope): void {
-  if (!identity.scopes.has(scope))
-    throw new HttpError(403, `Este token no tiene el permiso «${scope}»`);
+  if (!identity.scopes.has(scope)) throw fail(403, "api.tokens.missingScope", { scope });
 }
 
 /** Tokens cannot manage tokens: Bearer callers get 403, only the session may act. */
 export async function requireSessionUser(req: NextRequest) {
   if (req.headers.get("authorization")?.startsWith("Bearer ")) {
     const identity = await authenticateApiRequest(req);
-    if (identity?.via === "token")
-      throw new HttpError(403, "Los tokens no pueden gestionar tokens");
+    if (identity?.via === "token") throw fail(403, "api.tokens.cannotManage");
   }
   return requireUser(req);
 }
 
 export async function createApiToken(userId: string, name: string, scopes: TokenScope[]) {
   const clean = [...new Set(scopes)].filter(isTokenScope).sort();
-  if (clean.length === 0) throw new HttpError(400, "Elige al menos un permiso");
+  if (clean.length === 0) throw fail(400, "api.tokens.needScope");
   const { token, hash, prefix } = generateToken();
   const [row] = await db()
     .insert(schema.apiTokens)
@@ -142,5 +140,5 @@ export async function deleteApiToken(userId: string, id: string): Promise<void> 
     .delete(schema.apiTokens)
     .where(and(eq(schema.apiTokens.id, id), eq(schema.apiTokens.userId, userId)))
     .returning({ id: schema.apiTokens.id });
-  if (!rows.length) throw new HttpError(404, "Token no encontrado");
+  if (!rows.length) throw fail(404, "api.tokens.notFound");
 }

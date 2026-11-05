@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Clock, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import { useOutsideClose } from "./useOutsideClose";
 import type { CompileState } from "./PdfPanel";
 
@@ -14,10 +15,12 @@ type Props = {
   /** Hands a compiled diff PDF (same shape as a compile) to the PDF panel. */
   onDiff: (state: Partial<CompileState> & Pick<CompileState, "errors" | "warnings">) => void;
   onRestored: () => void;
+  /** Opens the menu when the counter grows (the tour's «Show me»); 0 = never. */
+  openRequest?: number;
 };
 
 /** Saved versions of the project: create, visual latexdiff, restore, delete. */
-export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
+export function SnapshotsMenu({ projectId, onDiff, onRestored, openRequest }: Props) {
   const { t, lang } = useI18n();
   const [snapshots, setSnapshots] = useState<Snapshot[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -26,6 +29,13 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const detailsRef = useOutsideClose();
+
+  // The tour's «Show me» opens this menu: prop change → state, during render.
+  const [lastRequest, setLastRequest] = useState(openRequest);
+  if (openRequest !== lastRequest) {
+    setLastRequest(openRequest);
+    if (openRequest) setOpen(true);
+  }
 
   useEffect(() => {
     if (!open || snapshots) return;
@@ -45,6 +55,7 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored }: Props) {
       });
       setSnapshots((s) => [r.snapshot, ...(s ?? [])]);
       setLabel("");
+      tourEvent("snapshot");
     } catch (err) {
       setError((err as Error).message);
     } finally {

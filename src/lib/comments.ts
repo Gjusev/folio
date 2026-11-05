@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { HttpError } from "@/lib/http";
+import { fail } from "@/lib/http";
 import {
   getAccessibleProject,
   getEditableProject,
@@ -106,12 +106,12 @@ export async function createComment(
   if (input.anchor) {
     const { start, end } = input.anchor;
     if (start < 0 || start > end || end > file.content.length) {
-      throw new HttpError(400, "El ancla queda fuera del archivo");
+      throw fail(400, "api.comments.anchorOutOfRange");
     }
   }
   if (input.parentId) {
     const parent = await findComment(project.id, input.parentId);
-    if (parent.parentId) throw new HttpError(400, "No se puede responder a una respuesta");
+    if (parent.parentId) throw fail(400, "api.comments.noReplyToReply");
   }
   const [created] = await db()
     .insert(schema.comments)
@@ -139,8 +139,7 @@ export async function updateCommentBody(
 ): Promise<CommentDto> {
   const project = await getViewableProject(userId, projectId);
   const comment = await findComment(project.id, commentId);
-  if (comment.authorId !== userId)
-    throw new HttpError(403, "Solo el autor puede editar el comentario");
+  if (comment.authorId !== userId) throw fail(403, "api.comments.editForbidden");
   await db().update(schema.comments).set({ body }).where(eq(schema.comments.id, comment.id));
   const [row] = await selectComment(comment.id);
   return toDto(row);
@@ -172,19 +171,19 @@ export async function deleteComment(userId: string, projectId: string, commentId
   const { project } = await getAccessibleProject(userId, projectId);
   const comment = await findComment(project.id, commentId);
   if (comment.authorId !== userId && project.ownerId !== userId)
-    throw new HttpError(403, "Solo el autor o el dueño del proyecto pueden borrar el comentario");
+    throw fail(403, "api.comments.deleteForbidden");
   await db().delete(schema.comments).where(eq(schema.comments.id, comment.id));
 }
 
 /** Comment of this project or a uniform 404 (no probing other projects). */
 async function findComment(projectId: string, commentId: string) {
-  if (!isUuid(commentId)) throw new HttpError(404, "Comentario no encontrado");
+  if (!isUuid(commentId)) throw fail(404, "api.comments.notFound");
   const [comment] = await db()
     .select()
     .from(schema.comments)
     .where(and(eq(schema.comments.id, commentId), eq(schema.comments.projectId, projectId)))
     .limit(1);
-  if (!comment) throw new HttpError(404, "Comentario no encontrado");
+  if (!comment) throw fail(404, "api.comments.notFound");
   return comment;
 }
 

@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { graphToTikz } from "@/lib/graph-tikz";
 import { useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import type {
   CitationGraph,
   GraphNode,
@@ -52,17 +53,19 @@ const graphUrl = (projectId: string, seed: GraphSeed | null) =>
     ? `/api/papers/graph?${new URLSearchParams({ source: seed.source, paperId: seed.paperId })}`
     : `/api/projects/${projectId}/graph`;
 
+// The canvas follows the applied theme (data-theme, resolved from "system"),
+// so a user-chosen theme also recolors the graph.
 const subscribeDark = (cb: () => void) => {
-  const m = window.matchMedia("(prefers-color-scheme: dark)");
-  m.addEventListener("change", cb);
-  return () => m.removeEventListener("change", cb);
+  const obs = new MutationObserver(cb);
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => obs.disconnect();
 };
 
 export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: GraphExplorerProps) {
   const { t, lang } = useI18n();
   const dark = useSyncExternalStore(
     subscribeDark,
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+    () => document.documentElement.dataset.theme === "dark",
     () => false,
   );
   const theme = useMemo(() => canvasTheme(dark), [dark]);
@@ -90,6 +93,9 @@ export function GraphExplorer({ projectId, seed, bibKeyOf, onClose, onCite }: Gr
   const closeRef = useRef<HTMLButtonElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const nf = useMemo(() => new Intl.NumberFormat(lang), [lang]);
+
+  // Mounted = opened: the tour counts one look at any graph (bibliography or paper).
+  useEffect(() => tourEvent("graph"), []);
 
   const flash = useCallback((next: Toast) => {
     clearTimeout(toastTimer.current);

@@ -26,13 +26,15 @@ export function Stages() {
 
   return (
     <div className="lp-stages" data-reveal>
-      <div className="lp-stage-text">
+      <div className="lp-stage-text" data-reveal>
         <h2 id="stages-title" className="lp-stage-clause" aria-live="polite">
           {t(`landing.stage.${stage.n}.c` as MsgKey)}
         </h2>
-        <p className="lp-stage-sub">{t(`landing.stage.${stage.n}.d` as MsgKey)}</p>
+        <p className="lp-stage-sub" data-reveal style={{ "--i": 1 } as React.CSSProperties}>
+          {t(`landing.stage.${stage.n}.d` as MsgKey)}
+        </p>
       </div>
-      <div className="lp-stage-view">
+      <div className="lp-stage-view" data-reveal style={{ "--i": 2 } as React.CSSProperties}>
         <div className="lp-stage-frame" key={stage.n} data-ui>
           {stage.src ? (
             <Image

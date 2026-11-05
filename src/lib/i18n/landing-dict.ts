@@ -10,6 +10,7 @@ const es = {
   "landing.hero.a": "Tu",
   "landing.hero.word": "artículo",
   "landing.hero.b": "en tu servidor.",
+  "landing.hero.cat": "El editor LaTeX autoalojado con IA.",
   "landing.hero.sub":
     "Folio es el espacio abierto para escribir artículos científicos con IA: tu modelo, tu servidor, citas que no se pueden inventar y cada cambio a la vista antes de aplicarlo.",
   "landing.cta.main": "Probar el proyecto demo",
@@ -35,7 +36,7 @@ const es = {
   "landing.band.3.s": "Ve cada paper que conecta tu .bib.",
   "landing.band.3.d":
     "Un grafo de citas al estilo Connected Papers, construido desde tu bibliografía con datos abiertos de OpenAlex.",
-  "landing.band.4.s": "Compila sin instalar TeX y pulsa el PDF para ir a su línea.",
+  "landing.band.4.s": "Compila sin instalar TeX.",
   "landing.band.4.d":
     "latexmk en un contenedor sin Internet, SyncTeX en ambos sentidos y versiones con las marcas de latexdiff.",
   "landing.band.5.s": "Tu modelo, tu clave, tu servidor.",
@@ -123,6 +124,7 @@ const en: Record<keyof typeof es, string> = {
   "landing.hero.a": "Your",
   "landing.hero.word": "paper",
   "landing.hero.b": "on your server.",
+  "landing.hero.cat": "The self-hosted LaTeX editor with AI.",
   "landing.hero.sub":
     "Folio is the open workspace for writing scientific papers with AI: your model, your server, citations that cannot be invented, and every change in view before it lands.",
   "landing.cta.main": "Try the demo project",
@@ -146,7 +148,7 @@ const en: Record<keyof typeof es, string> = {
   "landing.band.3.s": "See every paper your .bib connects to.",
   "landing.band.3.d":
     "A citation graph in the style of Connected Papers, built from your bibliography with open OpenAlex data.",
-  "landing.band.4.s": "Compile without installing TeX; click the PDF to reach its line.",
+  "landing.band.4.s": "Compile without installing TeX.",
   "landing.band.4.d":
     "latexmk in a container with no Internet, SyncTeX both ways, and versions with latexdiff markup.",
   "landing.band.5.s": "Your model, your key, your server.",
@@ -227,6 +229,7 @@ const de: Record<keyof typeof es, string> = {
   "landing.hero.a": "Dein",
   "landing.hero.word": "Paper",
   "landing.hero.b": "auf deinem Server.",
+  "landing.hero.cat": "Der selbst gehostete LaTeX-Editor mit KI.",
   "landing.hero.sub":
     "Folio ist der offene Arbeitsplatz für wissenschaftliches Schreiben mit KI: dein Modell, dein Server, Zitate, die sich nicht erfinden lassen, und jede Änderung sichtbar, bevor sie übernommen wird.",
   "landing.cta.main": "Demo-Projekt ausprobieren",
@@ -250,7 +253,7 @@ const de: Record<keyof typeof es, string> = {
   "landing.band.3.s": "Sieh jede Arbeit, die dein .bib verbindet.",
   "landing.band.3.d":
     "Ein Zitiergraph im Stil von Connected Papers, aus deiner Bibliografie mit offenen OpenAlex-Daten gebaut.",
-  "landing.band.4.s": "Kompiliere ohne TeX-Installation; klick ins PDF, um zur Zeile zu springen.",
+  "landing.band.4.s": "Kompilieren ohne TeX-Installation.",
   "landing.band.4.d":
     "latexmk in einem Container ohne Internet, SyncTeX in beide Richtungen und Versionen mit latexdiff-Markierungen.",
   "landing.band.5.s": "Dein Modell, dein Schlüssel, dein Server.",

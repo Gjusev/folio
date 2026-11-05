@@ -6,6 +6,7 @@ import { useRef, useState, type SubmitEvent } from "react";
 import { Compass, FilePlus2, FolderInput } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { ago, useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 
 type Item = { id: string; name: string; files: number; updatedAt: string; role?: string | null };
@@ -42,6 +43,7 @@ export function ProjectList({
         name,
         template: String(form.get("template") ?? "article"),
       });
+      tourEvent("create-project");
       router.push(`/projects/${project.id}`);
     } catch (err) {
       setError((err as Error).message);
@@ -56,6 +58,7 @@ export function ProjectList({
       const { project } = await api<{ project: { id: string } }>("POST", "/api/projects/demo", {
         lang,
       });
+      tourEvent("create-project");
       router.push(`/projects/${project.id}`);
     } catch (err) {
       setError((err as Error).message);
@@ -82,6 +85,7 @@ export function ProjectList({
               : `Importado. Se omitieron ${skipped} archivos no admitidos.`;
         sessionStorage.setItem(`folio:import:${data.project.id}`, msg);
       }
+      tourEvent("create-project");
       router.push(`/projects/${data.project.id}`);
     } catch (err) {
       setError(err instanceof TypeError ? t("offline") : (err as Error).message);

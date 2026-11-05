@@ -6,6 +6,43 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — the interface wave
+
+- **API errors in your language.** 89 server-side error sites (auth, projects,
+  files, snapshots, AI, reviews, comments, tokens) now carry a message key;
+  the response is rendered in the interface language (es/en/de). Spanish
+  users see byte-identical messages; Zod validation issues unchanged.
+- **Appearance preferences** (Settings): light/dark/system theme (applied
+  before first paint, no flash), interface font (IBM Plex Sans, Switzer,
+  system), text size S/M/L app-wide, and editor font — persisted per user,
+  with the graph canvas following the chosen theme.
+- **Guided tour**: a ten-task checklist in the Files sidebar covering every
+  feature (compile, PDF↔source, cite, library, graph, snapshots, checks,
+  review, sharing), progress ring fed by real workspace events and
+  server-side truths, «show me» buttons that take you to the exact place,
+  dismiss with a way back in. No confetti, no badges — progress you can
+  trust because it counts what actually happened.
+- **Thinking and streaming** in the assistant: reasoning deltas (DeepSeek's
+  `reasoning_content`, gateways' `reasoning`, Anthropic's
+  `thinking_delta`) stream into a collapsible «Thinking» trace with live
+  seconds that collapses when the answer starts; answers render as safe
+  markdown (LaTeX untouched, http(s)-only links) with a live caret; the
+  last answer can be regenerated. Thinking is never persisted.
+- **Personal PDF library** (`/library`): upload your downloaded papers
+  (≤25 MB, PDF magic checked), read them in the browser, and use them —
+  a detected DOI cites the paper into a project's `.bib`, and «attach»
+  indexes the paper's extracted text into that project's RAG so the
+  assistant answers from your own PDFs. Detach removes exactly those
+  chunks.
+- **Landing, judged**: category line under the rebus headline with the
+  action tied to it; the hero artifact redrawn as a real page (margin
+  frame, justified greeked lines, folio number); one heading step instead
+  of three near-identical sizes; bands with the switch beside the
+  statement; entrances for every section part. Measured: 3 FAIL + 3 WARN
+  before → **0 FAIL, 0 WARN** after, at 1440/768/390.
+- **Export fix**: the sources ZIP always downloads with a proper
+  `name.zip` filename (the link only relied on Content-Disposition).
+
 ### Added — bring your own agent
 
 - **Personal access tokens** (Settings → Agent access): scoped keys

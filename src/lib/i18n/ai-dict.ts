@@ -62,6 +62,10 @@ const es = {
   "ai.suggest.1": "Resume el abstracto",
   "ai.suggest.2": "¿Cómo mejoro la introducción?",
   "ai.suggest.3": "Redacta trabajos relacionados",
+  // reasoning trace + regeneration
+  "ai.think.title": "Pensando",
+  "ai.think.for": "{s} s",
+  "ai.regenerate": "Regenerar",
 
   "ai.csv.title": "Tabla booktabs desde datos pegados",
   "ai.csv.ph": "Pega un CSV o un rango de hoja de cálculo (coma, punto y coma o tabulador)",
@@ -145,6 +149,9 @@ const en: Record<keyof typeof es, string> = {
   "ai.suggest.1": "Summarise the abstract",
   "ai.suggest.2": "How can I improve the introduction?",
   "ai.suggest.3": "Draft the related work",
+  "ai.think.title": "Thinking",
+  "ai.think.for": "{s}s",
+  "ai.regenerate": "Regenerate",
 
   "ai.csv.title": "Booktabs table from pasted data",
   "ai.csv.ph": "Paste CSV or a spreadsheet range (comma, semicolon or tab separated)",
@@ -226,6 +233,9 @@ const de: Record<keyof typeof es, string> = {
   "ai.suggest.1": "Fasse das Abstract zusammen",
   "ai.suggest.2": "Wie verbessere ich die Einleitung?",
   "ai.suggest.3": "Verwandte Arbeiten verfassen",
+  "ai.think.title": "Denken",
+  "ai.think.for": "{s} s",
+  "ai.regenerate": "Neu generieren",
 
   "ai.csv.title": "Booktabs-Tabelle aus eingefügten Daten",
   "ai.csv.ph":
