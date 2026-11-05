@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ChevronDown, Plus, Send, Settings, Square, X } from "lucide-react";
 import type { AiAction, AgentPlan, EvidenceItem } from "@/lib/ai-prompts";
 import { ApiError, api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
@@ -199,6 +200,22 @@ export function AiPanel({
   const [blocked, setBlocked] = useState<"off" | "local" | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  // What the editor has selected right now: the contextual strip (rewrite /
+  // explain on the selection) appears only when there is one — Prism-style,
+  // actions surface when they apply instead of living in a permanent toolbar.
+  const [selText, setSelText] = useState("");
+  // The selection chip stays dismissed until the user selects something else.
+  const [dismissedSel, setDismissedSel] = useState("");
+  const plusRef = useOutsideClose();
+  const modeRef = useOutsideClose();
+  useEffect(() => {
+    const id = setInterval(() => {
+      const s = editor.current?.selection().text ?? "";
+      const next = s.trim() && s.length <= 400 ? s.trim() : "";
+      setSelText((prev) => (prev === next ? prev : next));
+    }, 700);
+    return () => clearInterval(id);
+  }, [editor]);
   const abort = useRef<AbortController | null>(null);
   // Leaving the workspace mid-stream must stop the generation: nobody is
   // reading it and it keeps burning the user's ai rate-limit budget.
@@ -248,7 +265,7 @@ export function AiPanel({
   }, [projectId, seeded]);
   const nextId = useRef(1);
   const busy = turns.some((t) => t.streaming);
-  const [steerOpen, setSteerOpen] = useState(false);
+  const [steerOpen, setSteerOpen] = useState(false); // settings popover (steering/policy/record/RAG)
   const [instructions, setInstructions] = useState(initialSteering.instructions);
   const [sample, setSample] = useState(initialSteering.sample);
   const [length, setLength] = useState<"short" | "normal" | "long">("normal");
@@ -614,6 +631,22 @@ export function AiPanel({
     }
   }
 
+  /** Send in a non-chat mode (draft a section / plan the paper). */
+  function sendMode(kind: "draft" | "plan") {
+    if (!isTex) {
+      setHint(t("ai.draft.needsTex"));
+      return;
+    }
+    const q = question.trim();
+    if (q.length < 8) {
+      setHint(t(kind === "draft" ? "ai.draft.hint" : "ai.plan.hint"));
+      return;
+    }
+    setQuestion("");
+    if (kind === "draft") void draft(q);
+    else void planRun(q);
+  }
+
   function send() {
     const q = question.trim();
     if (!q) return;
@@ -625,87 +658,141 @@ export function AiPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-line p-3">
-        {blocked && (
-          <p
-            role="status"
-            data-testid="ai-blocked"
-            className="mb-2 rounded-md bg-[var(--pill-warning-bg)] px-2.5 py-1.5 text-xs text-[var(--pill-warning-ink)]"
-          >
-            {t(blocked === "off" ? "ai.policy.blocked.off" : "ai.policy.blocked.local")}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-1.5">
-          <RewriteMenu
-            disabled={busy || !isTex || !!blocked}
-            onPick={(r) => void run("improve", r.instruction, r.key)}
-          />
+      {/* Header: one title, one settings popover. Every control that used to
+          live in a six-button toolbar moved to where it applies: rewrite and
+          explain to the selection strip, fix to the compile-error strip, the
+          rest into the composer's + menu. */}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
+        <p className="text-sm font-semibold">{t("ai.title")}</p>
+        <div className="flex items-center gap-2">
+          {!blocked && policy !== "any" && (
+            <span className="pill" title={t("ai.policy.desc")}>
+              {t(policy === "off" ? "ai.policy.off" : "ai.policy.local")}
+            </span>
+          )}
           <button
             type="button"
-            className="btn"
-            onClick={() => run("explain")}
-            disabled={busy || !!blocked}
+            className="btn btn-ghost btn-sm"
+            aria-expanded={steerOpen}
+            aria-label={t("ai.settings")}
+            title={t("ai.settings")}
+            onClick={() => setSteerOpen(!steerOpen)}
+            data-testid="ai-settings"
           >
-            {t("ai.explain")}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => run("continue")}
-            disabled={busy || !isTex || !!blocked}
-          >
-            {t("ai.continue")}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => void fixRun()}
-            disabled={busy || !lastLog || !!blocked}
-            title={lastLog ? undefined : t("ai.fix.disabled")}
-          >
-            {t("ai.fix")}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            aria-expanded={imageOpen}
-            onClick={() => setImageOpen((o) => !o)}
-            disabled={busy || !isTex || !!blocked}
-          >
-            {t("ai.image.button")}
-          </button>
-          <button
-            type="button"
-            className="btn"
-            aria-expanded={csvOpen}
-            onClick={() => setCsvOpen((o) => !o)}
-            disabled={busy || !isTex || !!blocked}
-          >
-            {t("ai.csv.button")}
+            <Settings size={14} aria-hidden />
           </button>
         </div>
-        {imageOpen && (
-          <ImageToLatex
-            projectId={projectId}
-            onResult={addImageTurn}
-            onClose={() => setImageOpen(false)}
-          />
-        )}
-        {csvOpen && (
-          <CsvTable
-            onInsert={(latex) => editor.current?.insertAtCursor(latex)}
-            onClose={() => setCsvOpen(false)}
-          />
-        )}
-        <p className="mt-2 text-xs text-muted" aria-live="polite">
-          {hint ?? t("ai.hint")}
-        </p>
       </div>
+      {blocked && (
+        <p
+          role="status"
+          data-testid="ai-blocked"
+          className="shrink-0 border-b border-line bg-[var(--pill-warning-bg)] px-3 py-1.5 text-xs text-[var(--pill-warning-ink)]"
+        >
+          {t(blocked === "off" ? "ai.policy.blocked.off" : "ai.policy.blocked.local")}
+        </p>
+      )}
+      {steerOpen && (
+        <div className="max-h-[55%] shrink-0 space-y-3 overflow-y-auto border-b border-line p-3">
+          <p className="label">
+            {t("ai.steer.title")} {steerSaved ? `· ${t("ai.steer.saved")}` : ""}
+          </p>
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="label">{t("ai.steer.instructions")}</span>
+            <textarea
+              className="input min-h-[52px] resize-none text-xs"
+              value={instructions}
+              maxLength={4000}
+              placeholder={t("ai.steer.instructions.ph")}
+              onChange={(e) => setInstructions(e.target.value)}
+              onBlur={() => void saveSteering({ instructions })}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="label">{t("ai.steer.sample")}</span>
+            <textarea
+              className="input min-h-[52px] resize-none text-xs"
+              value={sample}
+              maxLength={4000}
+              placeholder={t("ai.steer.sample.ph")}
+              onChange={(e) => setSample(e.target.value)}
+              onBlur={() => void saveSteering({ sample })}
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <span className="label">{t("ai.steer.length")}</span>
+            <select
+              className="select h-7 text-xs"
+              value={length}
+              onChange={(e) => setLength(e.target.value as typeof length)}
+            >
+              <option value="short">{t("ai.steer.length.short")}</option>
+              <option value="normal">{t("ai.steer.length.normal")}</option>
+              <option value="long">{t("ai.steer.length.long")}</option>
+            </select>
+          </label>
+          <div className="border-t border-line pt-2">
+            <AiPolicyControl
+              projectId={projectId}
+              policy={policy}
+              isOwner={isOwner}
+              onChange={(p) => {
+                setPolicy(p);
+                // React immediately: "off" blocks everyone; the other two
+                // depend on the user's endpoint and are recomputed on load.
+                setBlocked(p === "off" ? "off" : null);
+              }}
+            />
+          </div>
+          <DisclosureCard
+            projectId={projectId}
+            onInsert={(latex) => editor.current?.insertAtCursor(latex)}
+          />
+          <p className="text-xs text-muted">
+            {indexing
+              ? t("rag.indexing")
+              : rag
+                ? t("rag.status", {
+                    n: rag.chunks,
+                    m: rag.files,
+                    date: new Intl.DateTimeFormat(lang, {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }).format(new Date(rag.updatedAt)),
+                  })
+                : t("rag.none")}
+            {!indexing && (
+              <button
+                type="button"
+                className="ml-1 underline hover:text-ink"
+                onClick={() => void runIndex()}
+              >
+                {t("rag.index")}
+              </button>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3" aria-live="polite">
         {plan && <PlanView plan={plan} busy={busy} onDraft={draftSection} />}
         {turns.length === 0 && !plan && (
-          <p className="px-2 py-8 text-center text-sm text-muted">{t("ai.empty")}</p>
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-2 text-center">
+            <p className="max-w-[26ch] text-sm text-muted">{t("ai.empty")}</p>
+            <p className="max-w-[30ch] text-xs font-medium text-ink">{t("ai.trust")}</p>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {(["ai.suggest.1", "ai.suggest.2", "ai.suggest.3"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setQuestion(t(k))}
+                >
+                  {t(k)}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {turns.map((turn) => (
           <article key={turn.id} className="space-y-2">
@@ -768,163 +855,194 @@ export function AiPanel({
         ))}
       </div>
 
-      <div className="shrink-0 border-t border-line p-3">
-        <button
-          type="button"
-          className="mb-2 text-xs text-muted hover:text-ink"
-          aria-expanded={steerOpen}
-          onClick={() => setSteerOpen(!steerOpen)}
-        >
-          {t("ai.steer.title")} {steerSaved ? `· ${t("ai.steer.saved")}` : ""}
-        </button>
-        {steerOpen && (
-          <div className="mb-2 space-y-2">
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="label">{t("ai.steer.instructions")}</span>
-              <textarea
-                className="input min-h-[52px] resize-none text-xs"
-                value={instructions}
-                maxLength={4000}
-                placeholder={t("ai.steer.instructions.ph")}
-                onChange={(e) => setInstructions(e.target.value)}
-                onBlur={() => void saveSteering({ instructions })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="label">{t("ai.steer.sample")}</span>
-              <textarea
-                className="input min-h-[52px] resize-none text-xs"
-                value={sample}
-                maxLength={4000}
-                placeholder={t("ai.steer.sample.ph")}
-                onChange={(e) => setSample(e.target.value)}
-                onBlur={() => void saveSteering({ sample })}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-xs">
-              <span className="label">{t("ai.steer.length")}</span>
-              <select
-                className="select h-7 text-xs"
-                value={length}
-                onChange={(e) => setLength(e.target.value as typeof length)}
+      {/* Context zone, attached to the composer: ONE block whose rows appear
+          only when they apply. The selection rides as a chip with a dismiss,
+          the compile failure as a warning row — never two competing bands. */}
+      {(selText || lastLog) && !busy && !blocked && (
+        <div className="shrink-0 space-y-1.5 border-t border-line bg-raised px-3 py-2">
+          {selText && selText !== dismissedSel && (
+            <div className="flex items-center gap-1.5" data-testid="selection-strip">
+              <span
+                className="max-w-[60%] shrink-0 truncate font-mono text-[11px] text-muted"
+                title={selText}
               >
-                <option value="short">{t("ai.steer.length.short")}</option>
-                <option value="normal">{t("ai.steer.length.normal")}</option>
-                <option value="long">{t("ai.steer.length.long")}</option>
-              </select>
-            </label>
-            <div className="border-t border-line pt-2">
-              <AiPolicyControl
-                projectId={projectId}
-                policy={policy}
-                isOwner={isOwner}
-                onChange={(p) => {
-                  setPolicy(p);
-                  // React immediately: "off" blocks everyone; the other two
-                  // depend on the user's endpoint and are recomputed on load.
-                  setBlocked(p === "off" ? "off" : null);
-                }}
+                «{selText}»
+              </span>
+              <RewriteMenu
+                disabled={busy || !isTex}
+                onPick={(r) => void run("improve", r.instruction, r.key)}
               />
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => run("explain")}
+                disabled={busy}
+              >
+                {t("ai.explain")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm ml-auto shrink-0"
+                aria-label={t("ai.ctx.dismiss")}
+                title={t("ai.ctx.dismiss")}
+                onClick={() => setDismissedSel(selText)}
+              >
+                <X size={12} aria-hidden />
+              </button>
             </div>
-            <DisclosureCard
-              projectId={projectId}
-              onInsert={(latex) => editor.current?.insertAtCursor(latex)}
-            />
-          </div>
-        )}
-        <label htmlFor="ai-question" className="sr-only">
-          {t("papers.search")}
-        </label>
-        <textarea
-          id="ai-question"
-          className="input min-h-[60px] resize-none"
-          placeholder={t("ai.placeholder")}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={onKey}
-          maxLength={4000}
-        />
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-muted">
-            {indexing
-              ? t("rag.indexing")
-              : rag
-                ? t("rag.status", {
-                    n: rag.chunks,
-                    m: rag.files,
-                    date: new Intl.DateTimeFormat(lang, {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    }).format(new Date(rag.updatedAt)),
-                  })
-                : t("rag.none")}
-            {!indexing && (
+          )}
+          {lastLog && (
+            <div className="flex items-center justify-between gap-2" data-testid="fix-strip">
+              <p className="min-w-0 flex-1 truncate text-xs text-[var(--pill-warning-ink)]">
+                {t("ai.fix.strip")}
+              </p>
               <button
                 type="button"
-                className="ml-1 underline hover:text-ink"
-                onClick={() => void runIndex()}
+                className="btn btn-sm shrink-0"
+                onClick={() => void fixRun()}
+                data-testid="fix-button"
               >
-                {t("rag.index")}
+                {t("ai.fix")}
               </button>
-            )}
-          </p>
-          {busy ? (
-            <button type="button" className="btn" onClick={() => abort.current?.abort()}>
-              {t("ai.stop")}
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  if (!isTex) {
-                    setHint(t("ai.draft.needsTex"));
-                    return;
-                  }
-                  const q = question.trim();
-                  if (q.length < 8) {
-                    setHint(t("ai.draft.hint"));
-                    return;
-                  }
-                  setQuestion("");
-                  void draft(q);
-                }}
-                title={t("ai.draft.hint")}
-              >
-                {t("ai.draft.button")}
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  if (!isTex) {
-                    setHint(t("ai.draft.needsTex"));
-                    return;
-                  }
-                  const q = question.trim();
-                  if (q.length < 8) {
-                    setHint(t("ai.plan.hint"));
-                    return;
-                  }
-                  setQuestion("");
-                  void planRun(q);
-                }}
-                title={t("ai.plan.hint")}
-              >
-                {t("ai.plan.button")}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={send}
-                disabled={!question.trim()}
-              >
-                {t("ai.send")}
-              </button>
-            </>
+            </div>
           )}
         </div>
+      )}
+      {imageOpen && (
+        <ImageToLatex
+          projectId={projectId}
+          onResult={addImageTurn}
+          onClose={() => setImageOpen(false)}
+        />
+      )}
+      {csvOpen && (
+        <CsvTable
+          onInsert={(latex) => editor.current?.insertAtCursor(latex)}
+          onClose={() => setCsvOpen(false)}
+        />
+      )}
+
+      {/* Composer: + menu for insertions, Enter to ask, the mode under Send. */}
+      <div className="shrink-0 space-y-1.5 border-t border-line p-2.5">
+        <div className="flex items-end gap-1.5">
+          <details className="relative shrink-0" ref={plusRef}>
+            <summary
+              className="btn cursor-pointer list-none"
+              aria-label={t("ai.plus")}
+              title={t("ai.plus")}
+              data-testid="plus-menu"
+            >
+              <Plus size={15} aria-hidden />
+            </summary>
+            <div className="absolute bottom-full left-0 z-20 mb-1 w-56 rounded-lg border border-line bg-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+              <button
+                type="button"
+                className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-raised"
+                onClick={() => {
+                  plusRef.current?.removeAttribute("open");
+                  setImageOpen((o) => !o);
+                }}
+                disabled={busy || !isTex || !!blocked}
+              >
+                {t("ai.image.button")}
+              </button>
+              <button
+                type="button"
+                className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-raised"
+                onClick={() => {
+                  plusRef.current?.removeAttribute("open");
+                  setCsvOpen((o) => !o);
+                }}
+                disabled={busy || !isTex || !!blocked}
+              >
+                {t("ai.csv.button")}
+              </button>
+              <button
+                type="button"
+                className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-raised"
+                onClick={() => {
+                  plusRef.current?.removeAttribute("open");
+                  run("continue");
+                }}
+                disabled={busy || !isTex || !!blocked}
+              >
+                {t("ai.continue")}
+              </button>
+            </div>
+          </details>
+          <label htmlFor="ai-question" className="sr-only">
+            {t("ai.placeholder")}
+          </label>
+          <textarea
+            id="ai-question"
+            className="input min-h-[52px] flex-1 resize-none"
+            placeholder={t("ai.placeholder")}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={onKey}
+            maxLength={4000}
+          />
+          {busy ? (
+            <button
+              type="button"
+              className="btn shrink-0"
+              onClick={() => abort.current?.abort()}
+              aria-label={t("ai.stop")}
+            >
+              <Square size={13} aria-hidden />
+            </button>
+          ) : (
+            <div className="flex shrink-0 items-stretch">
+              <button
+                type="button"
+                className="btn btn-primary rounded-r-none"
+                onClick={send}
+                disabled={!question.trim()}
+                data-testid="ai-send"
+                aria-label={t("ai.send")}
+              >
+                <Send size={14} aria-hidden />
+              </button>
+              <details className="relative">
+                <summary
+                  className="btn btn-primary cursor-pointer list-none rounded-l-none border-l border-line/40 px-1.5"
+                  aria-label={t("ai.mode")}
+                  title={t("ai.mode")}
+                  data-testid="mode-menu"
+                >
+                  <ChevronDown size={13} aria-hidden />
+                </summary>
+                <div className="absolute bottom-full right-0 z-20 mb-1 w-60 rounded-lg border border-line bg-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+                  <button
+                    type="button"
+                    className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-raised"
+                    onClick={() => {
+                      modeRef.current?.removeAttribute("open");
+                      sendMode("draft");
+                    }}
+                    title={t("ai.draft.hint")}
+                  >
+                    {t("ai.draft.button")}
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-raised"
+                    onClick={() => {
+                      modeRef.current?.removeAttribute("open");
+                      sendMode("plan");
+                    }}
+                    title={t("ai.plan.hint")}
+                  >
+                    {t("ai.plan.button")}
+                  </button>
+                </div>
+              </details>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-muted" aria-live="polite">
+          {hint ?? t("ai.hint")}
+        </p>
       </div>
     </div>
   );
