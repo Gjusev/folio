@@ -34,6 +34,16 @@ const es = {
   "landing.prism.step1": "En Prism: Settings → Data Controls → Export all.",
   "landing.prism.step2": "Crea tu cuenta en Folio.",
   "landing.prism.step3": "Importa el ZIP en Proyectos: Folio detecta el archivo principal.",
+  // landing: the films (real clips; captions describe the feature, never "real capture")
+  "landing.prism.film": "El ZIP de Prism llega al árbol de archivos.",
+  "landing.window.alt":
+    "El asistente propone un cambio como diff y una cita que no está en el .bib se rechaza.",
+  "landing.ai.film": "Vídeo: redactar con el asistente, de la instrucción al borrador con citas.",
+  "landing.sheet.h": "En movimiento",
+  "landing.sheet.1": "La revisión cita tu .bib",
+  "landing.sheet.2": "El error, con su arreglo",
+  "landing.sheet.3": "Versiones marcadas con latexdiff",
+  "landing.sheet.4": "Tu agente edita por MCP",
   // landing: capabilities (poster list: capability name + one-sentence description)
   "landing.feat.title": "Qué hay dentro",
   "landing.cap.1.s": "Escribe con IA",
@@ -151,6 +161,15 @@ const en: Record<keyof typeof es, string> = {
   "landing.prism.step1": "In Prism: Settings → Data Controls → Export all.",
   "landing.prism.step2": "Create your Folio account.",
   "landing.prism.step3": "Import the ZIP in Projects: Folio finds the main file.",
+  "landing.prism.film": "The Prism ZIP lands in the file tree.",
+  "landing.window.alt":
+    "The assistant proposes a change as a diff; a citation that is not in the .bib is rejected.",
+  "landing.ai.film": "Video: writing with the assistant, from instruction to a cited draft.",
+  "landing.sheet.h": "In motion",
+  "landing.sheet.1": "The review cites your .bib",
+  "landing.sheet.2": "The error, with its fix",
+  "landing.sheet.3": "Versions marked with latexdiff",
+  "landing.sheet.4": "Your agent edits over MCP",
   "landing.feat.title": "What is inside",
   "landing.cap.1.s": "Write with AI",
   "landing.cap.1.d":
@@ -260,6 +279,16 @@ const de: Record<keyof typeof es, string> = {
   "landing.prism.step1": "In Prism: Settings → Data Controls → Export all.",
   "landing.prism.step2": "Erstelle dein Folio-Konto.",
   "landing.prism.step3": "Importiere das ZIP unter Projekte: Folio findet die Hauptdatei.",
+  "landing.prism.film": "Das Prism-ZIP landet im Dateibaum.",
+  "landing.window.alt":
+    "Der Assistent schlägt eine Änderung als Diff vor; ein Zitat, das nicht im .bib ist, wird verworfen.",
+  "landing.ai.film":
+    "Video: Schreiben mit dem Assistenten, von der Anweisung zum Entwurf mit Zitaten.",
+  "landing.sheet.h": "In Bewegung",
+  "landing.sheet.1": "Das Review zitiert dein .bib",
+  "landing.sheet.2": "Der Fehler, mit seiner Lösung",
+  "landing.sheet.3": "Versionen mit latexdiff markiert",
+  "landing.sheet.4": "Dein Agent bearbeitet über MCP",
   "landing.feat.title": "Was drinsteckt",
   "landing.cap.1.s": "Mit KI schreiben",
   "landing.cap.1.d":
