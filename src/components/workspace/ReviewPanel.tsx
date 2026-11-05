@@ -7,6 +7,7 @@ import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import { tourEvent } from "@/components/onboarding/tasks";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
+import { itemsFromFolioReview, parsePastedReview, type LetterItem } from "@/lib/letter";
 import { compareReviews, type CompareResult } from "@/lib/review-compare";
 import type { CommentState, ReviewStates, SavedReview, SavedReviewMeta } from "@/lib/reviews-store";
 import {
@@ -96,6 +97,7 @@ export function ReviewPanel({
   flush,
   onOpenAt,
   onRequestFix,
+  onOpenFile,
 }: {
   projectId: string;
   enabled: boolean;
@@ -106,6 +108,8 @@ export function ReviewPanel({
   onOpenAt: (path: string, line: number) => void;
   /** Hands an instruction to the assistant tab ("Fix with the assistant"). */
   onRequestFix: (instruction: string) => void;
+  /** Opens a file the server just created (the response letter) in the editor. */
+  onOpenFile: (file: { id: string; path: string; content: string; version: number }) => void;
 }) {
   const { t, lang } = useI18n();
   const raw = useSyncExternalStore(
@@ -145,6 +149,29 @@ export function ReviewPanel({
   const [states, setStates] = useState<ReviewStates>({});
   const [compareId, setCompareId] = useState("");
   const [compare, setCompare] = useState<{ id: string; counts: CompareResult } | null>(null);
+  // Response letter: sources (a saved review plus pasted text), per-item
+  // responses keyed by `${index}|${id}`, an optional snapshot for the appendix.
+  const [letterOpen, setLetterOpen] = useState(false);
+  // null = nothing explicitly picked: the review on screen is preselected.
+  const [letterPicked, setLetterPicked] = useState<string | null>(null);
+  const [letterDetail, setLetterDetail] = useState<SavedReview | null>(null);
+  const [letterSrc, setLetterSrc] = useState("");
+  const [letterSnaps, setLetterSnaps] = useState<
+    { id: string; label: string; createdAt: string }[] | null
+  >(null);
+  const [letterSnapId, setLetterSnapId] = useState("");
+  const [responses, setResponses] = useState<
+    Record<string, { response: string; aiDraft: boolean }>
+  >({});
+  const [letterBusy, setLetterBusy] = useState<"drafts" | "create" | null>(null);
+  const [letterError, setLetterError] = useState<string | null>(null);
+  const [letterDone, setLetterDone] = useState<{
+    path: string;
+    fileId: string;
+    version: number;
+    content: string;
+    pages?: number;
+  } | null>(null);
   // Best-effort own-user id (the comments drawer caches it after posting one):
   // decides whether history rows offer a delete button. The server enforces
   // authorship anyway; useSyncExternalStore keeps the read SSR-safe.
@@ -162,6 +189,123 @@ export function ReviewPanel({
   useEffect(() => {
     refreshHist();
   }, [refreshHist]);
+
+  // Snapshots are only needed once the letter section is open.
+  useEffect(() => {
+    if (!letterOpen || letterSnaps !== null) return;
+    api<{ snapshots: { id: string; label: string; createdAt: string }[] }>(
+      "GET",
+      `/api/projects/${projectId}/snapshots`,
+    )
+      .then((r) => setLetterSnaps(r.snapshots ?? []))
+      .catch(() => setLetterSnaps([]));
+  }, [letterOpen, letterSnaps, projectId]);
+
+  // Preselection: whatever review is on screen (the history one or the
+  // localStorage fallback) until the author picks another source.
+  const letterSel = letterPicked ?? loaded?.id ?? saved?.savedId ?? (saved?.review ? "local" : "");
+
+  async function pickLetterReview(id: string) {
+    setLetterPicked(id);
+    setLetterDetail(null);
+    if (!id || id === "local" || id === loaded?.id) return;
+    try {
+      setLetterDetail(await fetchDetail(id));
+    } catch (err) {
+      setLetterError((err as Error).message);
+    }
+  }
+
+  const folioReview =
+    letterSel === "local"
+      ? (saved?.review ?? null)
+      : letterDetail && letterDetail.id === letterSel
+        ? letterDetail.result
+        : loaded && loaded.id === letterSel
+          ? loaded.result
+          : saved && saved.savedId === letterSel
+            ? saved.review
+            : null;
+  // Folio items first, then the pasted ones; edits live in `responses` so the
+  // derived list can rebuild (typing in the paste box) without losing them.
+  const letterDerived = useMemo<LetterItem[]>(
+    () => [
+      ...(folioReview ? itemsFromFolioReview(folioReview) : []),
+      ...parsePastedReview(letterSrc),
+    ],
+    [folioReview, letterSrc],
+  );
+  const keyOf = (i: number, it: LetterItem) => `${i}|${it.id}`;
+  const letterItems = letterDerived.map((it, i) => ({ ...it, ...responses[keyOf(i, it)] }));
+  const letterHasEmpty = letterItems.some((it) => !it.response.trim());
+
+  function setResponse(key: string, text: string) {
+    setResponses((r) => ({ ...r, [key]: { response: text, aiDraft: false } }));
+  }
+
+  /** AI drafts: filled into the EMPTY slots only, marked as drafts. */
+  async function letterDrafts() {
+    setLetterBusy("drafts");
+    setLetterError(null);
+    try {
+      const r = await api<{ drafts: { id: string; response: string }[] }>(
+        "POST",
+        `/api/projects/${projectId}/letter/drafts`,
+        {
+          items: letterItems.slice(0, 40).map(({ id, comment, quote }) => ({
+            id,
+            comment,
+            quote: quote ?? undefined,
+          })),
+          lang,
+        },
+      );
+      setResponses((prev) => {
+        const next = { ...prev };
+        for (const d of r.drafts)
+          letterItems.forEach((it, i) => {
+            if (it.id === d.id && !it.response.trim())
+              next[keyOf(i, it)] = { response: d.response, aiDraft: true };
+          });
+        return next;
+      });
+    } catch (err) {
+      setLetterError((err as Error).message);
+    } finally {
+      setLetterBusy(null);
+    }
+  }
+
+  /** Creates response-letter.tex, compiles it and offers it in the editor. */
+  async function createLetter() {
+    setLetterBusy("create");
+    setLetterError(null);
+    setLetterDone(null);
+    try {
+      const snap = (letterSnaps ?? []).find((s) => s.id === letterSnapId);
+      const created = await api<{
+        path: string;
+        fileId: string;
+        version: number;
+        content: string;
+      }>("POST", `/api/projects/${projectId}/letter`, {
+        items: letterItems.slice(0, 40),
+        lang,
+        snapshotLabel: snap ? snap.label || fmtDate(snap.createdAt) : undefined,
+      });
+      const compiled = await api<{ ok: boolean; pages?: number }>(
+        "POST",
+        `/api/projects/${projectId}/compile`,
+        { mainFile: created.path },
+      ).catch(() => null);
+      if (!compiled?.ok) return setLetterError(t("letter.failCompile"));
+      setLetterDone({ ...created, pages: compiled.pages });
+    } catch (err) {
+      setLetterError(`${t("letter.failCreate")}: ${(err as Error).message}`);
+    } finally {
+      setLetterBusy(null);
+    }
+  }
 
   // The displayed review: a saved one opened from the history wins over the
   // localStorage copy, which stays as the offline fallback.
@@ -747,6 +891,186 @@ export function ReviewPanel({
           )}
         </section>
       )}
+
+      <section className="mt-6" aria-label={t("letter.title")} data-testid="letter-section">
+        <details open={letterOpen} onToggle={(e) => setLetterOpen(e.currentTarget.open)}>
+          <summary className="cursor-pointer select-none py-1 text-sm font-semibold">
+            {t("letter.title")}
+          </summary>
+          <div className="mt-2 space-y-3">
+            <div>
+              <label htmlFor="letter-review" className="label">
+                {t("letter.review")}
+              </label>
+              <select
+                id="letter-review"
+                className="select h-7 text-xs"
+                value={letterSel}
+                onChange={(e) => void pickLetterReview(e.target.value)}
+              >
+                <option value="">{t("letter.review.none")}</option>
+                {saved?.review && !saved.savedId && (
+                  <option value="local">{t("letter.review.current")}</option>
+                )}
+                {(hist ?? []).map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.userName} · {fmtDate(h.createdAt)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="letter-pasted" className="label">
+                {t("letter.pasted")}
+              </label>
+              <textarea
+                id="letter-pasted"
+                className="input min-h-[6.5rem] resize-y text-xs"
+                rows={8}
+                placeholder={t("letter.pasted.ph")}
+                value={letterSrc}
+                onChange={(e) => setLetterSrc(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="letter-snapshot" className="label">
+                {t("letter.snapshot")}
+              </label>
+              <select
+                id="letter-snapshot"
+                className="select h-7 text-xs"
+                value={letterSnapId}
+                onChange={(e) => setLetterSnapId(e.target.value)}
+              >
+                <option value="">{t("letter.snapshot.none")}</option>
+                {(letterSnaps ?? []).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label || fmtDate(s.createdAt)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {letterError && (
+              <p
+                role="alert"
+                data-testid="letter-error"
+                className="rounded-md bg-[var(--pill-negative-bg)] px-3 py-2 text-xs text-[var(--pill-negative-ink)]"
+              >
+                {letterError}
+              </p>
+            )}
+
+            {letterItems.length === 0 ? (
+              <p className="text-xs text-muted">{t("letter.empty")}</p>
+            ) : (
+              <>
+                <p className="text-xs text-muted">{t("letter.count", { n: letterItems.length })}</p>
+                <ul className="space-y-2" data-testid="letter-items">
+                  {letterItems.map((it, i) => {
+                    const key = keyOf(i, it);
+                    return (
+                      <li
+                        key={key}
+                        data-testid="letter-item"
+                        className="rounded-lg border border-line bg-surface p-2.5"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5 text-[13px]">
+                          <span className="num font-medium">{it.id}</span>
+                          <span className="text-muted">{it.reviewer}</span>
+                          {it.severity && (
+                            <span className={`rounded-full px-2 py-0.5 ${SEV_PILL[it.severity]}`}>
+                              {t(`rv.sev.${it.severity}` as MsgKey)}
+                            </span>
+                          )}
+                          {it.aiDraft && (
+                            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-accent">
+                              {t("letter.aiBadge")}
+                            </span>
+                          )}
+                          {it.file && it.line != null && (
+                            <button
+                              type="button"
+                              className="num ml-auto rounded px-1.5 py-1 text-accent hover:bg-accent-soft [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center"
+                              title={t("rv.go")}
+                              onClick={() => onOpenAt(it.file!, it.line!)}
+                            >
+                              {it.file}:{it.line}
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted">
+                          {it.comment}
+                        </p>
+                        <label className="sr-only" htmlFor={`letter-r-${key}`}>
+                          {it.id}
+                        </label>
+                        <textarea
+                          id={`letter-r-${key}`}
+                          className="input mt-1 min-h-[2.5rem] resize-y text-xs"
+                          rows={2}
+                          maxLength={4000}
+                          placeholder={t("letter.response.ph")}
+                          value={it.response}
+                          onChange={(e) => setResponse(key, e.target.value)}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="grid gap-1.5">
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={letterBusy !== null || !enabled || !letterHasEmpty}
+                    onClick={() => void letterDrafts()}
+                  >
+                    <Wand2 aria-hidden className="h-3.5 w-3.5" />
+                    {letterBusy === "drafts" ? t("letter.drafts.busy") : t("letter.drafts")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={letterBusy !== null}
+                    onClick={() => void createLetter()}
+                  >
+                    {letterBusy === "create" ? t("letter.create.busy") : t("letter.create")}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {letterDone && (
+              <p
+                role="status"
+                data-testid="letter-done"
+                className="flex flex-wrap items-center gap-2 rounded-md bg-[var(--pill-neutral-bg)] px-3 py-2 text-xs text-[var(--pill-neutral-ink)]"
+              >
+                <span>
+                  {t("letter.created", { path: letterDone.path })}
+                  {letterDone.pages ? ` · ${t("letter.pages", { n: letterDone.pages })}` : ""}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm shrink-0"
+                  onClick={() =>
+                    onOpenFile({
+                      id: letterDone.fileId,
+                      path: letterDone.path,
+                      content: letterDone.content,
+                      version: letterDone.version,
+                    })
+                  }
+                >
+                  {t("letter.open")}
+                </button>
+              </p>
+            )}
+          </div>
+        </details>
+      </section>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { arxivDict } from "./arxiv-dict";
 import { commentsDict } from "./comments-dict";
 import { graphDict } from "./graph-dict";
 import { landingDict } from "./landing-dict";
+import { letterDict } from "./letter-dict";
 import { libraryDict } from "./library-dict";
 import { library2Dict } from "./library2-dict";
 import { onboardingDict } from "./onboarding-dict";
@@ -508,6 +509,9 @@ const baseEs = {
   "api.agent.interrupted": "La redacción se interrumpió",
   "api.review.nothingToReview": "Nada que revisar en esa selección",
   "api.review.badReview": "La IA no devolvió una revisión válida. Inténtalo de nuevo",
+  "api.letter.badPath": "La ruta de la carta debe terminar en .tex y no contener '..'",
+  "api.letter.badDrafts": "La IA no devolvió borradores válidos; prueba de nuevo",
+  "api.compile.badMain": "«{path}» no es un archivo .tex del proyecto",
   "api.reviews.notFound": "Revisión no encontrada",
   "api.reviews.statesForbidden": "Solo el autor puede cambiar el estado de los comentarios",
   "api.reviews.noSuchComment": "No hay ningún comentario número {n} en esa revisión",
@@ -529,6 +533,7 @@ export const es = {
   ...library2Dict.es,
   ...landingDict.es,
   ...reviewDict.es,
+  ...letterDict.es,
   ...arxivDict.es,
   ...commentsDict.es,
   ...aiDict.es,
@@ -1008,6 +1013,9 @@ const baseEn = {
   "api.agent.interrupted": "The drafting was interrupted",
   "api.review.nothingToReview": "Nothing to review in that selection",
   "api.review.badReview": "The AI did not return a valid review. Try again",
+  "api.letter.badPath": "The letter path must end in .tex and contain no '..'",
+  "api.letter.badDrafts": "The AI did not return valid drafts. Try again",
+  "api.compile.badMain": "“{path}” is not a .tex file of this project",
   "api.reviews.notFound": "Review not found",
   "api.reviews.statesForbidden": "Only the author can change comment states",
   "api.reviews.noSuchComment": "There is no comment number {n} in that review",
@@ -1503,6 +1511,9 @@ const baseDe = {
   "api.agent.interrupted": "Das Verfassen wurde unterbrochen",
   "api.review.nothingToReview": "Nichts zu überprüfen in dieser Auswahl",
   "api.review.badReview": "Die KI hat keine gültige Überprüfung geliefert. Versuche es erneut",
+  "api.letter.badPath": "Der Pfad des Briefs muss auf .tex enden und kein „..“ enthalten",
+  "api.letter.badDrafts": "Die KI hat keine gültigen Entwürfe geliefert. Versuche es erneut",
+  "api.compile.badMain": "„{path}“ ist keine .tex-Datei dieses Projekts",
   "api.reviews.notFound": "Überprüfung nicht gefunden",
   "api.reviews.statesForbidden": "Nur der Autor kann den Status der Kommentare ändern",
   "api.reviews.noSuchComment": "Es gibt keinen Kommentar Nummer {n} in dieser Überprüfung",
@@ -1524,6 +1535,7 @@ export const en: Dict = {
   ...library2Dict.en,
   ...landingDict.en,
   ...reviewDict.en,
+  ...letterDict.en,
   ...arxivDict.en,
   ...commentsDict.en,
   ...aiDict.en,
@@ -1536,6 +1548,7 @@ export const de: Dict = {
   ...library2Dict.de,
   ...landingDict.de,
   ...reviewDict.de,
+  ...letterDict.de,
   ...arxivDict.de,
   ...commentsDict.de,
   ...aiDict.de,

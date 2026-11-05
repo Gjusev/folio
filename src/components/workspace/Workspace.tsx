@@ -665,6 +665,10 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
         setSide("assistant");
         setMobile("assistant");
       }}
+      onOpenFile={(f) => {
+        syncServerFiles(f);
+        open(f.id);
+      }}
     />
   );
 
