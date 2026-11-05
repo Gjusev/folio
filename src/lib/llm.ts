@@ -3,7 +3,48 @@ import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import type { Endpoint } from "@/lib/llm-profiles";
 
-export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+/** One block of a multimodal message. `data` is bare base64 (no `data:` prefix). */
+export type ContentPart =
+  | { type: "text"; text: string }
+  | {
+      type: "image";
+      mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+      data: string;
+    };
+
+export type ChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string | ContentPart[];
+};
+
+/** A non-2xx answer from the provider. Clients still get 502; callers may branch on the provider's status. */
+export class ProviderError extends HttpError {
+  constructor(
+    readonly providerStatus: number,
+    message: string,
+  ) {
+    super(502, message);
+  }
+}
+
+const toParts = (c: ChatMessage["content"]): ContentPart[] =>
+  typeof c === "string" ? [{ type: "text", text: c }] : c;
+
+const openAiPart = (p: ContentPart) =>
+  p.type === "text"
+    ? { type: "text", text: p.text }
+    : {
+        type: "image_url",
+        image_url: { url: `data:${p.mediaType};base64,${p.data}` },
+      };
+
+const anthropicPart = (p: ContentPart) =>
+  p.type === "text"
+    ? { type: "text", text: p.text }
+    : {
+        type: "image",
+        source: { type: "base64", media_type: p.mediaType, data: p.data },
+      };
 
 export function llmConfigured(): boolean {
   const { LLM_BASE_URL, LLM_MODEL, LLM_ENV_SHARED } = env();
@@ -40,7 +81,10 @@ export function openAiBody(
     },
     body: JSON.stringify({
       model: e.model,
-      messages,
+      // String messages pass through untouched: same bytes as before images existed.
+      messages: messages.map((m) =>
+        typeof m.content === "string" ? m : { ...m, content: m.content.map(openAiPart) },
+      ),
       stream: true,
       temperature: 0.3,
       ...(Object.keys(e.extra).length ? e.extra : {}),
@@ -55,18 +99,31 @@ export function anthropicBody(
 ): { url: string; headers: Record<string, string>; body: string } {
   const system = messages
     .filter((m) => m.role === "system")
-    .map((m) => m.content)
+    // The system field is text-only: an image there has nowhere to go.
+    .map((m) =>
+      toParts(m.content)
+        .flatMap((p) => (p.type === "text" ? [p.text] : []))
+        .join("\n\n"),
+    )
     .join("\n\n");
   const rest = messages
     .filter((m) => m.role !== "system")
     // Messages must alternate; merge consecutive same-role turns.
     .reduce<ChatMessage[]>((acc, m) => {
       const prev = acc[acc.length - 1];
-      if (prev && prev.role === m.role) prev.content += `\n\n${m.content}`;
-      else acc.push({ ...m });
+      if (!prev || prev.role !== m.role) acc.push({ ...m });
+      else if (typeof prev.content === "string" && typeof m.content === "string")
+        prev.content += `\n\n${m.content}`;
+      else prev.content = [...toParts(prev.content), ...toParts(m.content)];
       return acc;
     }, [])
-    .filter((m) => m.content.trim());
+    // Anthropic rejects empty text blocks: drop them, then any turn left empty.
+    .map((m) =>
+      typeof m.content === "string"
+        ? m
+        : { ...m, content: m.content.filter((p) => p.type === "image" || p.text.trim()) },
+    )
+    .filter((m) => (typeof m.content === "string" ? m.content.trim() : m.content.length));
   if (rest.length === 0) rest.push({ role: "user", content: "(vacío)" });
   if (rest[0].role === "assistant") rest.shift();
   return {
@@ -80,7 +137,9 @@ export function anthropicBody(
       model: e.model,
       max_tokens: 8192,
       ...(system ? { system } : {}),
-      messages: rest,
+      messages: rest.map((m) =>
+        typeof m.content === "string" ? m : { ...m, content: m.content.map(anthropicPart) },
+      ),
       stream: true,
     }),
   };
@@ -151,7 +210,7 @@ export async function* streamChat(
   if (!res.ok || !res.body) {
     const detail = (await res.text().catch(() => "")).slice(0, 300);
     console.error("LLM error", e.label, res.status, detail);
-    throw new HttpError(502, `${e.label} respondió con un error (${res.status})`);
+    throw new ProviderError(res.status, `${e.label} respondió con un error (${res.status})`);
   }
 
   const filter = thinkFilter();

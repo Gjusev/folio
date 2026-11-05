@@ -31,16 +31,43 @@ Settings offers presets for each.
   `LLM_ALLOWED_LOCAL_PORTS`); redirects are refused.
 - **Collaboration.** The assistant always runs with the key of whoever invokes
   it; the collaboration relay only carries text and cursors.
+- **Agent keys.** Personal access tokens ([MCP](mcp.md)) are a separate thing
+  from AI providers: they authenticate *your tools* to Folio, carry their own
+  scopes, and never reach an AI provider.
 
 ## Features
 
 | Feature        | Where         | What it does                                                                                                                                              |
 | -------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Assistant      | Assistant tab | Improve, explain, continue, fix the last compile error, or ask about the document; conversations are persisted                                            |
+| Rewrites       | Assistant tab | Improve, shorten, academic tone, simplify, fix grammar or translate a selection; every proposal is shown as a word-level diff and applied by you          |
+| Error patches  | Assistant tab | "Fix" turns the first locatable compile error into a minimal patch on the failing lines: diff, *Apply and recompile*; a free-form explanation when the log has no file and line |
+| Image to LaTeX | Assistant tab | A photo of a whiteboard, equation, table or sketch becomes LaTeX (through any vision model); the snippet is compiled in the sandbox before it is shown, and the image is never stored |
 | RAG            | Assistant tab | Indexes your `.tex`/`.bib` with your provider's embedding model; answers use the relevant fragments                                                       |
 | Drafting agent | Assistant tab | Retrieves real literature, shows it as evidence and streams a section; new references enter your `.bib` only when you accept                              |
 | Section plan   | Assistant tab | Plans the paper section by section (persisted); each row drafts with a word budget, a critique pass and citation verification against a throwaway compile |
 | Review mode    | Review tab    | A structured critique of the manuscript, described below                                                                                                  |
+| AI-use record  | Assistant tab | Every successful AI call is logged (action, model, date — never content) and Folio writes the journal declaration from it                                 |
+| Your own agent | MCP `/api/mcp`| Claude Code, Codex or any MCP client work on your projects with a scoped personal token — [`docs/mcp.md`](mcp.md)                                        |
+
+## Per-project AI policy
+
+The manuscript belongs to the project, so its **owner** decides whether AI may
+touch it at all: *any provider* (default), *local models only*, or *off*. The
+rule is enforced on the server for every collaborator's own key — assistant,
+agent, review, image conversion and retrieval indexing included. "Local only"
+accepts endpoints whose host resolves exclusively to loopback or private
+addresses (Ollama, vLLM on this host) and fails closed on DNS errors. When the
+policy — not a missing provider — is what stops a user, the panel says so.
+
+## AI-use record and declaration
+
+Journals ask authors to declare generative-AI use (Elsevier, for example, wants
+a separate section before the references). Folio keeps an append-only ledger of
+AI use per project — what kind of help, which model, when; document content is
+never stored in it — and generates that declaration in English, Spanish or
+German from what was actually recorded. The declaration covers AI use inside
+Folio only; it is a proposal like any other, inserted by the author.
 
 ## Review mode
 
@@ -80,6 +107,9 @@ as a Markdown report. Reviews are rate limited to 6 per user every 10 minutes.
 
 Prompts, parsers and the verification steps are unit-tested; the routes are
 tested end to end against fake OpenAI-compatible servers (streaming, invented
-keys, out-of-range locations, junk answers, rate limits). The drafting
-executor was verified live with a fake model and a real compile. **No AI
+keys, out-of-range locations, junk answers, rate limits, images on both wire
+formats). The diff engine carries a reconstruction property test (same + del
+rebuilds the original, same + ins rebuilds the proposal). The drafting
+executor and the error-patch flow were verified live with a fake model and a
+real compile. **No AI
 feature has been verified against a paid model in CI.**

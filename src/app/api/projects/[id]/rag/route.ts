@@ -1,5 +1,4 @@
-import { HttpError, enforceRateLimit, requireUser, route } from "@/lib/http";
-import { resolveEndpoint } from "@/lib/llm-profiles";
+import { enforceRateLimit, requireUser, route } from "@/lib/http";
 import { getEditableProject, getViewableProject } from "@/lib/projects";
 import { deleteRagIndex, indexProject, indexStatus } from "@/lib/rag";
 
@@ -12,15 +11,13 @@ export const GET = route(async (req, { params }: Ctx) => {
   return Response.json({ status: await indexStatus(project.id) });
 });
 
-/** Rebuilds the index (editors only): chunk → embed → replace. */
+/** Rebuilds the index (editors only): chunk → embed → replace. indexProject
+ *  answers 503 without an embedder and 403 when the project's AI policy forbids it. */
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
   const project = await getEditableProject(user.id, (await params).id);
   enforceRateLimit(`rag:${user.id}`, 6, 3_600_000);
-  if (!(await resolveEndpoint(user.id, "embed"))) {
-    throw new HttpError(503, "Configura un proveedor con modelo de embeddings en Ajustes");
-  }
-  return Response.json(await indexProject(user.id, project.id));
+  return Response.json(await indexProject(user.id, project));
 });
 
 export const DELETE = route(async (req, { params }: Ctx) => {

@@ -5,33 +5,10 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type SubmitEvent } from "react";
 import { Compass, FilePlus2, FolderInput } from "lucide-react";
 import { api } from "@/lib/client/api";
-import { useI18n } from "@/lib/i18n/client";
+import { ago, useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 
 type Item = { id: string; name: string; files: number; updatedAt: string; role?: string | null };
-
-const RTF = {
-  es: new Intl.RelativeTimeFormat("es"),
-  en: new Intl.RelativeTimeFormat("en"),
-  de: new Intl.RelativeTimeFormat("de"),
-};
-
-function ago(iso: string, lang: keyof typeof RTF) {
-  let v = (new Date(iso).getTime() - Date.now()) / 1000;
-  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["second", 60],
-    ["minute", 60],
-    ["hour", 24],
-    ["day", 30],
-    ["month", 12],
-    ["year", Infinity],
-  ];
-  for (const [unit, size] of steps) {
-    if (Math.abs(v) < size) return RTF[lang].format(Math.round(v), unit);
-    v /= size;
-  }
-  return "";
-}
 
 export function ProjectList({
   initial,

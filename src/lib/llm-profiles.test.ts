@@ -186,6 +186,69 @@ describe("request builders", () => {
     ]);
   });
 
+  it("maps an image part to each wire format, and string-only turns stay strings", () => {
+    const withImage: ChatMessage[] = [
+      { role: "system", content: "be terse" },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "what is this?" },
+          { type: "image", mediaType: "image/png", data: "aWNvbg==" },
+        ],
+      },
+    ];
+    const openAi = JSON.parse(openAiBody(endpoint, withImage).body);
+    expect(openAi.messages).toEqual([
+      { role: "system", content: "be terse" },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "what is this?" },
+          { type: "image_url", image_url: { url: "data:image/png;base64,aWNvbg==" } },
+        ],
+      },
+    ]);
+
+    const anthropic = JSON.parse(
+      anthropicBody({ ...endpoint, kind: "anthropic" as const }, withImage).body,
+    );
+    expect(anthropic.messages).toEqual([
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "what is this?" },
+          { type: "image", source: { type: "base64", media_type: "image/png", data: "aWNvbg==" } },
+        ],
+      },
+    ]);
+  });
+
+  it("anthropic merges mixed string/array turns into parts and drops empty text blocks", () => {
+    const r = anthropicBody({ ...endpoint, kind: "anthropic" as const }, [
+      { role: "user", content: "look at" },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "   " }, // whitespace-only: dropped, image survives
+          { type: "image", mediaType: "image/gif", data: "R0lGOD" },
+        ],
+      },
+      { role: "assistant", content: [{ type: "text", text: "   " }] }, // empties to nothing: dropped
+      { role: "assistant", content: "yes" },
+    ]);
+    const body = JSON.parse(r.body);
+    expect(body.messages).toEqual([
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "look at" },
+          { type: "image", source: { type: "base64", media_type: "image/gif", data: "R0lGOD" } },
+        ],
+      },
+      { role: "assistant", content: [{ type: "text", text: "yes" }] },
+    ]);
+  });
+
   it("deltaText parses both wire formats and surfaces provider errors", () => {
     expect(deltaText("openai", '{"choices":[{"delta":{"content":"hola"}}]}')).toBe("hola");
     expect(deltaText("openai", '{"choices":[{"delta":{}}]}')).toBeNull();

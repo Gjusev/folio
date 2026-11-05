@@ -1,9 +1,11 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
+import { resolveProjectEndpoint } from "@/lib/ai-policy";
+import { recordAiUsage } from "@/lib/ai-usage";
 import { db, schema } from "@/lib/db";
 import { EMBED_DIMS } from "@/lib/db/schema";
 import { HttpError } from "@/lib/http";
-import { resolveEndpoint, type Endpoint } from "@/lib/llm-profiles";
+import type { Endpoint } from "@/lib/llm-profiles";
 import { listFilesWithData } from "@/lib/projects";
 
 export { EMBED_DIMS };
@@ -188,10 +190,15 @@ export async function embedTexts(endpoint: Endpoint, texts: string[]): Promise<n
 
 /* ---------------- index + retrieval ---------------- */
 
+/** Who embeds, for which project: chunks are manuscript text, so the project's
+ *  AI policy filters the user's embedding endpoint (403 when it forbids it). */
+type RagProject = { id: string; aiPolicy: string };
+
 /** Rebuilds the project's RAG index: previous chunks are deleted only after the
  *  new embeddings succeed, so a failed run keeps the old index intact. */
-export async function indexProject(userId: string, projectId: string) {
-  const endpoint = await resolveEndpoint(userId, "embed");
+export async function indexProject(userId: string, project: RagProject) {
+  const projectId = project.id;
+  const endpoint = await resolveProjectEndpoint(userId, project, "embed");
   if (!endpoint) {
     throw new HttpError(503, "Configura un proveedor con modelo de embeddings en Ajustes");
   }
@@ -229,6 +236,7 @@ export async function indexProject(userId: string, projectId: string) {
       .insert(schema.ragChunks)
       .values(rows.slice(i, i + 500));
   }
+  await recordAiUsage(projectId, "embed", endpoint.model).catch(() => {});
   return {
     files: new Set(chunks.map((c) => c.file)).size,
     chunks: rows.length,
@@ -241,11 +249,11 @@ export async function indexProject(userId: string, projectId: string) {
  *  pgvector's <=> operator if projects grow past that. */
 export async function retrieve(
   userId: string,
-  projectId: string,
+  project: RagProject,
   query: string,
   k = TOP_K,
 ): Promise<Retrieved[]> {
-  const endpoint = await resolveEndpoint(userId, "embed");
+  const endpoint = await resolveProjectEndpoint(userId, project, "embed");
   if (!endpoint) return [];
   const [qv] = await embedTexts(endpoint, [query]);
   const rows = await db()
@@ -255,7 +263,7 @@ export async function retrieve(
       embedding: schema.ragChunks.embedding,
     })
     .from(schema.ragChunks)
-    .where(eq(schema.ragChunks.projectId, projectId));
+    .where(eq(schema.ragChunks.projectId, project.id));
   return rows
     .map((r) => ({ file: r.file, content: r.content, score: cosine(qv, r.embedding) }))
     .sort((a, b) => b.score - a.score)

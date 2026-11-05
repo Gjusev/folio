@@ -55,3 +55,27 @@ export function LangSwitcher() {
     </label>
   );
 }
+
+const RTF: Record<Lang, Intl.RelativeTimeFormat> = {
+  es: new Intl.RelativeTimeFormat("es"),
+  en: new Intl.RelativeTimeFormat("en"),
+  de: new Intl.RelativeTimeFormat("de"),
+};
+
+/** "hace 3 min" style timestamps, stepping up from seconds to years. */
+export function ago(iso: string, lang: Lang) {
+  let v = (new Date(iso).getTime() - Date.now()) / 1000;
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["second", 60],
+    ["minute", 60],
+    ["hour", 24],
+    ["day", 30],
+    ["month", 12],
+    ["year", Infinity],
+  ];
+  for (const [unit, size] of steps) {
+    if (Math.abs(v) < size) return RTF[lang].format(Math.round(v), unit);
+    v /= size;
+  }
+  return "";
+}
