@@ -107,7 +107,7 @@ const card = (w: number, h: number) => `
 <div class="c" style="width:${w}px;height:${h}px;padding:${h * 0.1}px ${w * 0.06}px;background:${BRAND.paper};color:${BRAND.ink}">
   ${logoImg(logoSvg(light), h * 0.085)}
   <div><h1 style="font-size:${h * 0.135}px">Your paper<br>on your server.</h1>
-  <p style="margin-top:${h * 0.05}px;font-size:${h * 0.045}px;line-height:1.35;max-width:${w * 0.5}px;color:${BRAND.stone}">The open-source LaTeX editor for scientific papers.</p></div>
+  <p style="margin-top:${h * 0.05}px;font-size:${h * 0.045}px;line-height:1.35;max-width:${w * 0.5}px;color:${BRAND.stone}">The open workspace for writing scientific papers with AI.</p></div>
   <p style="font-size:${h * 0.046}px;font-weight:500;color:${BRAND.ink}">Open source · Self-hosted · Apache-2.0</p>
   <div style="position:absolute;left:${w * 0.63}px;top:0;right:0;bottom:0;background:${BRAND.sand}">
     <img alt="" src="${page}" style="position:absolute;left:${w * 0.035}px;top:${h * 0.13}px;width:${w * 0.3}px;display:block;background:#fff">
@@ -122,7 +122,7 @@ const banner = (w: number, h: number, mode: "light" | "dark") => {
   return `
 <div class="c" style="width:${w}px;height:${h}px;padding:${h * 0.16}px ${w * 0.05}px;background:${bg};color:${fg};flex-direction:row;align-items:center">
   ${logoImg(logoSvg(mode === "light" ? light : dark), h * 0.3)}
-  <p style="font-size:${h * 0.085}px;font-weight:500;max-width:${w * 0.42}px;text-align:right;color:${sub};line-height:1.25">The open-source LaTeX editor for scientific papers.</p>
+  <p style="font-size:${h * 0.085}px;font-weight:500;max-width:${w * 0.42}px;text-align:right;color:${sub};line-height:1.25">The open workspace for writing scientific papers with AI.</p>
 </div>`;
 };
 

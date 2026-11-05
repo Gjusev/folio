@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Folio",
     short_name: "Folio",
     description:
-      "The open-source LaTeX editor for scientific papers, with literature search and isolated compilation.",
+      "The open workspace for writing scientific papers with AI: any model, verifiable citations, LaTeX compiled in a sandbox.",
     start_url: "/projects",
     display: "standalone",
     background_color: "#f6f5f1",

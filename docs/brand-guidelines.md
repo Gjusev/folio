@@ -9,9 +9,9 @@
 | Element    | Value                                                                  |
 | ---------- | ---------------------------------------------------------------------- |
 | Name       | **Folio** (always capital F, never "FOLIO" or "folio" in running text) |
-| Promise    | Scientific writing in LaTeX, on your own server.                       |
+| Promise    | Write scientific papers with AI you can audit, on your own server.     |
 | Short line | Your paper on your server.                                             |
-| Descriptor | The open-source LaTeX editor for scientific papers.                    |
+| Descriptor | The open workspace for writing scientific papers with AI.             |
 | Colours    | Ink `#141413` · Paper `#f6f5f1` · Teal `#1b6c80`                       |
 | Typefaces  | Switzer (brand) · IBM Plex Sans (interface) · IBM Plex Mono (code)     |
 | Voice      | Precise, plain, honest about limits                                    |
@@ -146,12 +146,22 @@ Folio talks like a careful colleague who has read your paper.
 
 **Messaging pillars**
 
-1. **Yours** — self-hosted, Apache-2.0, your Postgres, export at any time.
-2. **Correct** — compiles in an isolated sandbox; citations only from your
-   `.bib`; locations checked before they are shown.
-3. **Literate** — real literature search and a citation graph built into the
+1. **AI you can audit** — the AI drafts, rewrites, fixes and reviews, and
+   every step is checkable: changes arrive as diffs the author applies, cite
+   keys come only from the `.bib` or retrieved literature, drafts are verified
+   by a real compile, and AI use is recorded for the journal's disclosure. Say
+   what the AI does; never "AI-powered".
+2. **Yours** — self-hosted, Apache-2.0, your Postgres, export at any time; any
+   model including local ones, each user's own key, and the owner decides
+   whether a manuscript may leave the server.
+3. **Correct** — compiles in an isolated sandbox; locations and quotes checked
+   before they are shown.
+4. **Literate** — real literature search and a citation graph built into the
    editor.
-4. **Optional AI** — any provider, your key, never edits without confirmation.
+
+Positioning: Folio is the open alternative to OpenAI's Prism — LaTeX is the
+format, the product is the writing loop. See
+[`prism-alternative.md`](prism-alternative.md).
 
 **Words we avoid:** revolutionary, seamless, effortless, magic, best-in-class,
 leverage, AI-powered (say what the AI does instead).

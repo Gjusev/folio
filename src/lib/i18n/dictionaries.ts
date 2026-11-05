@@ -2,6 +2,7 @@
 // registering it below. API error messages carry a `code`; the client maps
 // known codes through these dictionaries and falls back to the server text.
 
+import { aiDict } from "./ai-dict";
 import { arxivDict } from "./arxiv-dict";
 import { commentsDict } from "./comments-dict";
 import { graphDict } from "./graph-dict";
@@ -20,9 +21,9 @@ export const LANG_COOKIE = "folio_lang";
 const baseEs = {
   // brand / meta
   "meta.description":
-    "Editor LaTeX científico de código abierto, con búsqueda de artículos y compilación aislada.",
+    "Espacio abierto para escribir artículos científicos con IA: cualquier modelo, citas verificables y LaTeX compilado en un sandbox, en tu propio servidor.",
   // auth
-  "auth.tagline": "Editor LaTeX para artículos científicos, en tu propio servidor.",
+  "auth.tagline": "Escribe artículos científicos con IA, en tu propio servidor.",
   "auth.create": "Crear cuenta",
   "auth.login": "Iniciar sesión",
   "auth.name": "Nombre",
@@ -413,14 +414,15 @@ export const es = {
   ...reviewDict.es,
   ...arxivDict.es,
   ...commentsDict.es,
+  ...aiDict.es,
 };
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
 
 const baseEn = {
   "meta.description":
-    "Open-source scientific LaTeX editor with paper search and sandboxed compilation.",
-  "auth.tagline": "A LaTeX editor for scientific papers, on your own server.",
+    "Open workspace for writing scientific papers with AI: any model, verifiable citations and LaTeX compiled in a sandbox, on your own server.",
+  "auth.tagline": "Write scientific papers with AI, on your own server.",
   "auth.create": "Create account",
   "auth.login": "Sign in",
   "auth.name": "Name",
@@ -791,8 +793,8 @@ const baseEn = {
 
 const baseDe = {
   "meta.description":
-    "Open-Source-LaTeX-Editor für wissenschaftliche Texte, mit Literatursuche und isoliertem Kompilieren.",
-  "auth.tagline": "Ein LaTeX-Editor für wissenschaftliche Arbeiten, auf deinem eigenen Server.",
+    "Offener Arbeitsplatz für wissenschaftliches Schreiben mit KI: jedes Modell, überprüfbare Zitate und LaTeX, kompiliert in einer Sandbox, auf deinem eigenen Server.",
+  "auth.tagline": "Wissenschaftliche Arbeiten mit KI schreiben, auf deinem eigenen Server.",
   "auth.create": "Konto erstellen",
   "auth.login": "Anmelden",
   "auth.name": "Name",
@@ -1175,6 +1177,7 @@ export const en: Dict = {
   ...reviewDict.en,
   ...arxivDict.en,
   ...commentsDict.en,
+  ...aiDict.en,
 };
 export const de: Dict = {
   ...baseDe,
@@ -1184,6 +1187,7 @@ export const de: Dict = {
   ...reviewDict.de,
   ...arxivDict.de,
   ...commentsDict.de,
+  ...aiDict.de,
 };
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };

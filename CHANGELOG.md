@@ -6,6 +6,38 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — the AI writing pack
+
+- **Reviewed rewrites.** Select a passage and rewrite it — improve, shorten,
+  academic tone, simplify, fix grammar, or translate (English, Spanish, German).
+  Every proposal is shown as a word-level diff (deletions struck, insertions
+  highlighted) and lands only when the author applies it; an *Apply* that finds
+  the text changed says so instead of writing somewhere else. The diff engine
+  is a token-level Myers diff with a reconstruction property test.
+- **Compile errors as patches.** "Fix" now locates the first error with a file
+  and line, asks the model for a minimal patch inside a numbered window of the
+  source, validates the line range, and shows the patch as a diff with one
+  *Apply and recompile* action. When the log has nothing locatable, it falls
+  back to today's streamed explanation.
+- **Image → LaTeX.** Drop, paste or pick a photo — a whiteboard, a handwritten
+  equation, a table, a sketch — and get LaTeX back through any vision model on
+  either wire format (OpenAI-compatible or Anthropic's Messages API). Folio
+  compiles the snippet in the sandbox before showing whether it builds, says so
+  honestly when the compiler cannot be reached, and never stores the image.
+- **Per-project AI policy.** The project owner decides whether AI may touch the
+  manuscript at all: any provider (default), local models only, or off —
+  enforced on the server for every collaborator's own key, retrieval indexing
+  included, with a clear message when the policy (rather than a missing
+  provider) is what stops a user.
+- **AI-use record and journal declaration.** Every successful AI call is logged
+  per project (action, model, date — never content, never pruned), and Folio
+  generates the generative-AI declaration journals ask for (Elsevier's
+  structure) in English, Spanish or German, ready to insert before the
+  references.
+- **Positioning.** Folio is the open alternative to OpenAI's Prism: new landing
+  copy, README opening, capability map against Prism and Overleaf AI with
+  sources, and the next steps (`docs/prism-alternative.md`).
+
 ### Fixed
 
 - Literature graph: OpenAlex can return the same work both among an origin's
