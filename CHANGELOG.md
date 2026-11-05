@@ -6,7 +6,24 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — bring your own agent
+
+- **Personal access tokens** (Settings → Agent access): scoped keys
+  (`read`, `write`, `compile`, `literature`) that let your own tools act as
+  you. Only the SHA-256 hash is stored; the token is shown once. Tokens cannot
+  manage tokens.
+- **MCP server** at `/api/mcp` (Streamable HTTP, stateless): nine tools —
+  list/get projects, read/write files with optimistic concurrency, compile in
+  the sandbox (log and errors, never PDF bytes), search literature, add a
+  reference to the `.bib`, create/list snapshots. Project roles are enforced
+  (a viewer's token cannot write); every tool checks its scope. Tool list and
+  permission model documented in `docs/mcp.md`.
+
 ### Added — the AI writing pack
+
+- **Tables from pasted data.** Paste a CSV or a spreadsheet range and get a
+  booktabs table — deterministic, no AI: the preview is exactly the LaTeX that
+  will be inserted, numeric columns align right, and every special is escaped.
 
 - **Reviewed rewrites.** Select a passage and rewrite it — improve, shorten,
   academic tone, simplify, fix grammar, or translate (English, Spanish, German).

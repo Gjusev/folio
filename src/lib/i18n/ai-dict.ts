@@ -49,6 +49,15 @@ const es = {
   "ai.image.unchecked": "Sin comprobar: el compilador no respondió.",
   "ai.image.unreadable": "El modelo no pudo leer la imagen.",
   "ai.image.prompt": "Imagen → LaTeX ({kind})",
+  // CSV / spreadsheet range -> booktabs table (deterministic, no AI)
+  "ai.csv.button": "Tabla desde CSV",
+  "ai.csv.title": "Tabla booktabs desde datos pegados",
+  "ai.csv.ph": "Pega un CSV o un rango de hoja de cálculo (coma, punto y coma o tabulador)",
+  "ai.csv.header": "La primera fila es la cabecera",
+  "ai.csv.caption.ph": "Caption opcional",
+  "ai.csv.note":
+    "Determinista, sin IA: la vista previa es exactamente el LaTeX que se insertará. Las columnas numéricas se alinean a la derecha.",
+
   // project AI policy
   "ai.policy.title": "IA en este proyecto",
   "ai.policy.any": "Cualquier proveedor",
@@ -113,6 +122,14 @@ const en: Record<keyof typeof es, string> = {
   "ai.image.unchecked": "Not checked: the compiler did not answer.",
   "ai.image.unreadable": "The model could not read the image.",
   "ai.image.prompt": "Image → LaTeX ({kind})",
+  "ai.csv.button": "Table from CSV",
+  "ai.csv.title": "Booktabs table from pasted data",
+  "ai.csv.ph": "Paste CSV or a spreadsheet range (comma, semicolon or tab separated)",
+  "ai.csv.header": "First row is the header",
+  "ai.csv.caption.ph": "Optional caption",
+  "ai.csv.note":
+    "Deterministic, no AI: the preview is exactly the LaTeX that will be inserted. Numeric columns align right.",
+
   "ai.policy.title": "AI in this project",
   "ai.policy.any": "Any provider",
   "ai.policy.local": "Local models only",
@@ -175,6 +192,14 @@ const de: Record<keyof typeof es, string> = {
   "ai.image.unchecked": "Nicht geprüft: Der Compiler hat nicht geantwortet.",
   "ai.image.unreadable": "Das Modell konnte das Bild nicht lesen.",
   "ai.image.prompt": "Bild → LaTeX ({kind})",
+  "ai.csv.button": "Tabelle aus CSV",
+  "ai.csv.title": "Booktabs-Tabelle aus eingefügten Daten",
+  "ai.csv.ph": "Füge CSV oder einen Tabellenkalkulationsbereich ein (Komma, Semikolon oder Tabulator)",
+  "ai.csv.header": "Erste Zeile ist die Kopfzeile",
+  "ai.csv.caption.ph": "Optionale Bildunterschrift",
+  "ai.csv.note":
+    "Deterministisch, ohne KI: Die Vorschau ist exakt das LaTeX, das eingefügt wird. Numerische Spalten werden rechtsbündig ausgerichtet.",
+
   "ai.policy.title": "KI in diesem Projekt",
   "ai.policy.any": "Jeder Anbieter",
   "ai.policy.local": "Nur lokale Modelle",

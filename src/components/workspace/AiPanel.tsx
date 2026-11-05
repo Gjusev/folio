@@ -6,6 +6,7 @@ import type { MsgKey } from "@/lib/i18n/dictionaries";
 import type { EditorHandle } from "./CodeEditor";
 import { useOutsideClose } from "./useOutsideClose";
 import { AiPolicyControl, DisclosureCard, type AiPolicy } from "./ai/AiProjectSettings";
+import { CsvTable } from "./ai/CsvTable";
 import { DiffView } from "./ai/DiffView";
 import { ImageToLatex, type ImageKind, type ImageResult } from "./ai/ImageToLatex";
 
@@ -197,6 +198,7 @@ export function AiPanel({
   // Set when the project's policy (not a missing provider) blocks this user.
   const [blocked, setBlocked] = useState<"off" | "local" | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
   const abort = useRef<AbortController | null>(null);
   // Leaving the workspace mid-stream must stop the generation: nobody is
   // reading it and it keeps burning the user's ai rate-limit budget.
@@ -672,12 +674,27 @@ export function AiPanel({
           >
             {t("ai.image.button")}
           </button>
+          <button
+            type="button"
+            className="btn"
+            aria-expanded={csvOpen}
+            onClick={() => setCsvOpen((o) => !o)}
+            disabled={busy || !isTex || !!blocked}
+          >
+            {t("ai.csv.button")}
+          </button>
         </div>
         {imageOpen && (
           <ImageToLatex
             projectId={projectId}
             onResult={addImageTurn}
             onClose={() => setImageOpen(false)}
+          />
+        )}
+        {csvOpen && (
+          <CsvTable
+            onInsert={(latex) => editor.current?.insertAtCursor(latex)}
+            onClose={() => setCsvOpen(false)}
           />
         )}
         <p className="mt-2 text-xs text-muted" aria-live="polite">
