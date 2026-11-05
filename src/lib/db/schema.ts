@@ -252,6 +252,35 @@ export const integrations = pgTable(
   (t) => [uniqueIndex("integrations_user_kind_uq").on(t.userId, t.kind)],
 );
 
+/**
+ * Personal access tokens ("agent keys"): let the user's own tools (Claude
+ * Code, Codex, scripts) talk to Folio's API as them, with a narrower set of
+ * permissions than the browser session. Only the SHA-256 hash is stored; the
+ * full token is shown exactly once at creation.
+ */
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    // sha256 hex of the full "folio_…" token.
+    tokenHash: text("token_hash").notNull(),
+    // First characters, for recognising the row ("folio_ab12…").
+    prefix: text().notNull(),
+    // Comma-separated subset of TOKEN_SCOPES ("read,write,compile,literature").
+    scopes: text().notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("api_tokens_hash_uq").on(t.tokenHash),
+    index("api_tokens_user_idx").on(t.userId),
+  ],
+);
+
 /** Threaded review comments, optionally anchored to a span of a file. Replies
  *  reference a root comment (parentId null); deleting a root cascades. */
 export const comments = pgTable(
