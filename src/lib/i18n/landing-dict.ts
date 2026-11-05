@@ -5,14 +5,15 @@
 // extra key fails the typecheck.
 
 const es = {
-  // landing: nav + hero (the sentence reads "Tu [página compilada] en tu servidor.")
+  // landing: nav + hero (the shout: Folio, unlike Prism, never closes)
   "landing.nav": "Navegación",
-  "landing.hero.a": "Tu",
-  "landing.hero.word": "artículo",
-  "landing.hero.b": "en tu servidor.",
+  "landing.hero.l1": "Folio",
+  "landing.hero.l2": "no cierra.",
+  "landing.hero.scrap-alt": "Una página del PDF compilado del proyecto demo.",
   "landing.hero.cat": "El editor LaTeX autoalojado con IA.",
   "landing.hero.sub":
     "Folio es el espacio abierto para escribir artículos científicos con IA: tu modelo, tu servidor, citas que no se pueden inventar y cada cambio a la vista antes de aplicarlo.",
+  "landing.window.h": "El producto",
   "landing.cta.main": "Probar el proyecto demo",
   "landing.cta.more": "Ver qué incluye",
   "landing.cta.selfhost": "Instálalo en tu servidor",
@@ -25,22 +26,22 @@ const es = {
   "landing.prism.step1": "En Prism: Settings → Data Controls → Export all.",
   "landing.prism.step2": "Crea tu cuenta en Folio.",
   "landing.prism.step3": "Importa el ZIP en Proyectos: Folio detecta el archivo principal.",
-  // landing: features (sentences with switches)
+  // landing: capabilities (poster list: capability name + one-sentence description)
   "landing.feat.title": "Qué hay dentro",
-  "landing.band.1.s": "Escribe con una IA que conoce todo tu artículo.",
-  "landing.band.1.d":
+  "landing.cap.1.s": "Escribe con IA",
+  "landing.cap.1.d":
     "Redacta secciones con literatura real como evidencia, reescribe un párrafo viendo el diff y convierte la foto de una pizarra en LaTeX.",
-  "landing.band.2.s": "Cada cita existe. Cada cambio lo apruebas tú.",
-  "landing.band.2.d":
+  "landing.cap.2.s": "Citas que existen",
+  "landing.cap.2.d":
     "Las claves inventadas se eliminan en el servidor, los borradores se comprueban compilando y ninguna edición se aplica sin que veas el diff.",
-  "landing.band.3.s": "Ve cada paper que conecta tu .bib.",
-  "landing.band.3.d":
+  "landing.cap.3.s": "Grafo de citas",
+  "landing.cap.3.d":
     "Un grafo de citas al estilo Connected Papers, construido desde tu bibliografía con datos abiertos de OpenAlex.",
-  "landing.band.4.s": "Compila sin instalar TeX.",
-  "landing.band.4.d":
+  "landing.cap.4.s": "Compila sin TeX",
+  "landing.cap.4.d":
     "latexmk en un contenedor sin Internet, SyncTeX en ambos sentidos y versiones con las marcas de latexdiff.",
-  "landing.band.5.s": "Tu modelo, tu clave, tu servidor.",
-  "landing.band.5.d":
+  "landing.cap.5.s": "Tu servidor",
+  "landing.cap.5.d":
     "Cualquier API compatible con OpenAI, Anthropic o modelos locales. El propietario decide si un manuscrito puede salir del servidor, y Folio redacta la declaración de uso de IA que piden las revistas.",
   // landing: the name
   "landing.folio.h": "Un folio es una hoja plegada una vez.",
@@ -48,34 +49,42 @@ const es = {
     "Dos hojas, cuatro páginas: tu fuente a un lado, el resultado al otro. El libro más conocido de su clase es el Primer Folio de Shakespeare, de 1623. Este compila.",
   "landing.folio.alt": "Portada del Primer Folio de Shakespeare, 1623, con el retrato grabado.",
   "landing.folio.cap": "Portada del Primer Folio, 1623 (British Library).",
-  // landing: stages
-  "landing.stage.aria": "Fase",
-  "landing.stage.1.c": "Escribe en el editor.",
+  // landing: how it works (tinted accordion) + the demo library as a board
+  "landing.stages.h": "Cómo funciona",
+  "landing.stages.p":
+    "De la primera nota al PDF compilado sin salir de Folio: cuatro movimientos que ya están en la demo.",
   "landing.stage.1.d":
     "La fuente a la izquierda, el PDF compilado a la derecha. Pulsa Compilar o Ctrl+Enter.",
   "landing.stage.1.n": "Escribe",
   "landing.stage.1.alt": "Editor de Folio con el código LaTeX y el PDF compilado lado a lado.",
-  "landing.stage.2.c": "Cita desde tu biblioteca.",
   "landing.stage.2.d": "Busca en OpenAlex y arXiv, pulsa Citar, y la entrada llega a tu .bib.",
   "landing.stage.2.n": "Cita",
   "landing.stage.2.alt": "Biblioteca de Folio con las referencias del .bib y su estado.",
-  "landing.stage.3.c": "Explora el grafo.",
   "landing.stage.3.d":
     "Trabajo previo y derivado de cualquier paper, con tu propia bibliografía como semilla.",
   "landing.stage.3.n": "Explora",
   "landing.stage.3.alt": "Explorador de grafo de citas de Folio con la lista, el grafo y la ficha.",
-  "landing.stage.4.c": "Ejecútalo en tu servidor.",
   "landing.stage.4.d": "Postgres, el compilador y la app en un solo archivo compose.",
   "landing.stage.4.n": "Aloja",
-  "landing.stage.4.alt": "Los dos comandos para levantar Folio con Docker Compose.",
-  // landing: close + footer
-  "landing.close.h": "Pruébalo con un artículo terminado.",
+  "landing.board.h": "La biblioteca del demo",
+  "landing.board.aria": "Bibliografía del proyecto demo",
+  "landing.board.detail":
+    "La nota de lectura del demo cita este artículo: abre la demo, pulsa el PDF y SyncTeX salta a la línea exacta.",
+  "landing.board.st.read": "Leído",
+  "landing.board.st.cited": "Citado",
+  "landing.board.st.queued": "En cola",
+  // landing: close (one word is the button) + footer
   "landing.close.p":
     "Crea tu cuenta y Folio abre un proyecto demo que ya compila: pulsa el PDF, cita un paper, guarda una versión.",
-  "landing.close.cta": "Crear cuenta y abrir la demo",
+  "landing.cta.word": "Pruébalo",
   "landing.foot.note": "Autoalojado: tus artículos se quedan en tu propio Postgres.",
   "landing.foot.note2": "Interfaz en español, English y Deutsch.",
   "landing.foot.top": "Volver arriba",
+  "landing.foot.col.self": "Autoalojado",
+  "landing.foot.col.code": "Código",
+  "landing.foot.col.credit": "Créditos",
+  "landing.foot.source": "Código fuente",
+  "landing.foot.legal": "© 2026 Folio. Publicado bajo Apache-2.0.",
   "landing.foot.credit":
     "Imagen: portada del Primer Folio, British Library, CC0. Vídeo: «Printing in a letterpress», Subhashish Panigrahi, CC BY-SA 4.0. Vía Wikimedia Commons.",
   "landing.folio.reel": "Imprenta tipográfica en Cuttack, India.",
@@ -121,12 +130,13 @@ const es = {
 
 const en: Record<keyof typeof es, string> = {
   "landing.nav": "Navigation",
-  "landing.hero.a": "Your",
-  "landing.hero.word": "paper",
-  "landing.hero.b": "on your server.",
+  "landing.hero.l1": "Folio",
+  "landing.hero.l2": "can't close.",
+  "landing.hero.scrap-alt": "A page from the compiled PDF of the demo project.",
   "landing.hero.cat": "The self-hosted LaTeX editor with AI.",
   "landing.hero.sub":
     "Folio is the open workspace for writing scientific papers with AI: your model, your server, citations that cannot be invented, and every change in view before it lands.",
+  "landing.window.h": "The product",
   "landing.cta.main": "Try the demo project",
   "landing.cta.more": "See what is inside",
   "landing.cta.selfhost": "Run it on your server",
@@ -139,53 +149,61 @@ const en: Record<keyof typeof es, string> = {
   "landing.prism.step2": "Create your Folio account.",
   "landing.prism.step3": "Import the ZIP in Projects: Folio finds the main file.",
   "landing.feat.title": "What is inside",
-  "landing.band.1.s": "Write with an AI that knows your whole paper.",
-  "landing.band.1.d":
+  "landing.cap.1.s": "Write with AI",
+  "landing.cap.1.d":
     "Draft sections with real literature as evidence, rewrite a paragraph with the diff in view, and turn a whiteboard photo into LaTeX.",
-  "landing.band.2.s": "Every citation exists. Every change is yours to approve.",
-  "landing.band.2.d":
+  "landing.cap.2.s": "Citations that exist",
+  "landing.cap.2.d":
     "Invented keys are removed on the server, drafts are checked by compiling, and no edit lands until you have seen its diff.",
-  "landing.band.3.s": "See every paper your .bib connects to.",
-  "landing.band.3.d":
+  "landing.cap.3.s": "Citation graph",
+  "landing.cap.3.d":
     "A citation graph in the style of Connected Papers, built from your bibliography with open OpenAlex data.",
-  "landing.band.4.s": "Compile without installing TeX.",
-  "landing.band.4.d":
+  "landing.cap.4.s": "Compile without TeX",
+  "landing.cap.4.d":
     "latexmk in a container with no Internet, SyncTeX both ways, and versions with latexdiff markup.",
-  "landing.band.5.s": "Your model, your key, your server.",
-  "landing.band.5.d":
+  "landing.cap.5.s": "Your server",
+  "landing.cap.5.d":
     "Any OpenAI-compatible API, Anthropic or local models. The owner decides whether a manuscript may leave the server, and Folio writes the AI-use declaration journals ask for.",
   "landing.folio.h": "A folio is a sheet folded once.",
   "landing.folio.p":
     "Two leaves, four pages: your source on one side, the result on the other. The best-known book of the kind is Shakespeare's First Folio of 1623. This one compiles.",
   "landing.folio.alt": "Title page of Shakespeare's First Folio, 1623, with the engraved portrait.",
   "landing.folio.cap": "Title page of the First Folio, 1623 (British Library).",
-  "landing.stage.aria": "Stage",
-  "landing.stage.1.c": "Write in the editor.",
+  "landing.stages.h": "How it works",
+  "landing.stages.p":
+    "From the first note to the compiled PDF without leaving Folio: four moves already in the demo.",
   "landing.stage.1.d":
     "Source on the left, the compiled PDF on the right. Press Compile or Ctrl+Enter.",
   "landing.stage.1.n": "Write",
   "landing.stage.1.alt": "Folio editor with LaTeX source and the compiled PDF side by side.",
-  "landing.stage.2.c": "Cite from your library.",
   "landing.stage.2.d": "Search OpenAlex and arXiv, press Cite, and the entry lands in your .bib.",
   "landing.stage.2.n": "Cite",
   "landing.stage.2.alt": "Folio library listing the references in the .bib and their status.",
-  "landing.stage.3.c": "Explore the graph.",
   "landing.stage.3.d":
     "Prior and derivative work of any paper, with your own bibliography as the seed.",
   "landing.stage.3.n": "Explore",
   "landing.stage.3.alt":
     "Folio citation graph explorer with the list, the graph and the paper card.",
-  "landing.stage.4.c": "Run it on your server.",
   "landing.stage.4.d": "Postgres, the compiler and the app in a single compose file.",
   "landing.stage.4.n": "Host",
-  "landing.stage.4.alt": "The two commands that start Folio with Docker Compose.",
-  "landing.close.h": "Try it with a finished paper.",
+  "landing.board.h": "The demo library",
+  "landing.board.aria": "The demo project's bibliography",
+  "landing.board.detail":
+    "The demo's reading note cites this paper: open the demo, click the PDF and SyncTeX jumps to the exact line.",
+  "landing.board.st.read": "Read",
+  "landing.board.st.cited": "Cited",
+  "landing.board.st.queued": "Queued",
   "landing.close.p":
     "Create your account and Folio opens a demo project that already compiles: click the PDF, cite a paper, save a version.",
-  "landing.close.cta": "Create account and open the demo",
+  "landing.cta.word": "Try it",
   "landing.foot.note": "Self-hosted: your papers stay in your own Postgres.",
   "landing.foot.note2": "Interface in English, Español and Deutsch.",
   "landing.foot.top": "Back to top",
+  "landing.foot.col.self": "Self-hosted",
+  "landing.foot.col.code": "Code",
+  "landing.foot.col.credit": "Credits",
+  "landing.foot.source": "Source code",
+  "landing.foot.legal": "© 2026 Folio. Released under Apache-2.0.",
   "landing.foot.credit":
     'Image: First Folio title page, British Library, CC0. Video: "Printing in a letterpress", Subhashish Panigrahi, CC BY-SA 4.0. Via Wikimedia Commons.',
   "landing.folio.reel": "A letterpress at work in Cuttack, India.",
@@ -226,12 +244,13 @@ const en: Record<keyof typeof es, string> = {
 
 const de: Record<keyof typeof es, string> = {
   "landing.nav": "Navigation",
-  "landing.hero.a": "Dein",
-  "landing.hero.word": "Paper",
-  "landing.hero.b": "auf deinem Server.",
+  "landing.hero.l1": "Folio",
+  "landing.hero.l2": "schließt nie.",
+  "landing.hero.scrap-alt": "Eine Seite des kompilierten PDFs aus dem Demo-Projekt.",
   "landing.hero.cat": "Der selbst gehostete LaTeX-Editor mit KI.",
   "landing.hero.sub":
     "Folio ist der offene Arbeitsplatz für wissenschaftliches Schreiben mit KI: dein Modell, dein Server, Zitate, die sich nicht erfinden lassen, und jede Änderung sichtbar, bevor sie übernommen wird.",
+  "landing.window.h": "Das Produkt",
   "landing.cta.main": "Demo-Projekt ausprobieren",
   "landing.cta.more": "Ansehen, was drinsteckt",
   "landing.cta.selfhost": "Auf deinem Server betreiben",
@@ -244,20 +263,20 @@ const de: Record<keyof typeof es, string> = {
   "landing.prism.step2": "Erstelle dein Folio-Konto.",
   "landing.prism.step3": "Importiere das ZIP unter Projekte: Folio findet die Hauptdatei.",
   "landing.feat.title": "Was drinsteckt",
-  "landing.band.1.s": "Schreibe mit einer KI, die dein ganzes Paper kennt.",
-  "landing.band.1.d":
+  "landing.cap.1.s": "Mit KI schreiben",
+  "landing.cap.1.d":
     "Entwirf Abschnitte mit echter Literatur als Beleg, formuliere einen Absatz mit sichtbarem Diff um und mach aus einem Whiteboard-Foto LaTeX.",
-  "landing.band.2.s": "Jedes Zitat existiert. Jede Änderung bestätigst du.",
-  "landing.band.2.d":
+  "landing.cap.2.s": "Zitate, die existieren",
+  "landing.cap.2.d":
     "Erfundene Schlüssel werden auf dem Server entfernt, Entwürfe durch Kompilieren geprüft, und keine Änderung wird übernommen, bevor du ihren Diff gesehen hast.",
-  "landing.band.3.s": "Sieh jede Arbeit, die dein .bib verbindet.",
-  "landing.band.3.d":
+  "landing.cap.3.s": "Zitiergraph",
+  "landing.cap.3.d":
     "Ein Zitiergraph im Stil von Connected Papers, aus deiner Bibliografie mit offenen OpenAlex-Daten gebaut.",
-  "landing.band.4.s": "Kompilieren ohne TeX-Installation.",
-  "landing.band.4.d":
+  "landing.cap.4.s": "Kompilieren ohne TeX",
+  "landing.cap.4.d":
     "latexmk in einem Container ohne Internet, SyncTeX in beide Richtungen und Versionen mit latexdiff-Markierungen.",
-  "landing.band.5.s": "Dein Modell, dein Schlüssel, dein Server.",
-  "landing.band.5.d":
+  "landing.cap.5.s": "Dein Server",
+  "landing.cap.5.d":
     "Jede OpenAI-kompatible API, Anthropic oder lokale Modelle. Der Eigentümer entscheidet, ob ein Manuskript den Server verlassen darf, und Folio schreibt die KI-Erklärung, die Zeitschriften verlangen.",
   "landing.folio.h": "Ein Folio ist ein einmal gefaltetes Blatt.",
   "landing.folio.p":
@@ -265,33 +284,41 @@ const de: Record<keyof typeof es, string> = {
   "landing.folio.alt":
     "Titelblatt von Shakespeares First Folio, 1623, mit dem gestochenen Porträt.",
   "landing.folio.cap": "Titelblatt des First Folio, 1623 (British Library).",
-  "landing.stage.aria": "Phase",
-  "landing.stage.1.c": "Schreib im Editor.",
+  "landing.stages.h": "So funktioniert es",
+  "landing.stages.p":
+    "Von der ersten Notiz zum kompilierten PDF, ohne Folio zu verlassen: vier Schritte, die schon in der Demo stecken.",
   "landing.stage.1.d":
     "Quelltext links, kompiliertes PDF rechts. Klicke auf Kompilieren oder drücke Strg+Enter.",
   "landing.stage.1.n": "Schreiben",
   "landing.stage.1.alt": "Folio-Editor mit LaTeX-Quelltext und kompiliertem PDF nebeneinander.",
-  "landing.stage.2.c": "Zitiere aus deiner Bibliothek.",
   "landing.stage.2.d":
     "Suche in OpenAlex und arXiv, klicke auf Zitieren, und der Eintrag landet in deinem .bib.",
   "landing.stage.2.n": "Zitieren",
   "landing.stage.2.alt": "Folio-Bibliothek mit den Referenzen des .bib und ihrem Status.",
-  "landing.stage.3.c": "Erkunde den Graph.",
   "landing.stage.3.d":
     "Vorarbeiten und Folgearbeiten jeder Arbeit, mit deiner eigenen Bibliografie als Ausgangspunkt.",
   "landing.stage.3.n": "Erkunden",
   "landing.stage.3.alt": "Zitiergraph-Explorer von Folio mit Liste, Graph und Karte.",
-  "landing.stage.4.c": "Betreib es auf deinem Server.",
   "landing.stage.4.d": "Postgres, Compiler und App in einer einzigen Compose-Datei.",
   "landing.stage.4.n": "Hosten",
-  "landing.stage.4.alt": "Die zwei Befehle, die Folio mit Docker Compose starten.",
-  "landing.close.h": "Probier es mit einer fertigen Arbeit.",
+  "landing.board.h": "Die Demo-Bibliothek",
+  "landing.board.aria": "Bibliografie des Demo-Projekts",
+  "landing.board.detail":
+    "Die Lesenotiz der Demo zitiert diese Arbeit: Öffne die Demo, klicke ins PDF, und SyncTeX springt zur exakten Zeile.",
+  "landing.board.st.read": "Gelesen",
+  "landing.board.st.cited": "Zitiert",
+  "landing.board.st.queued": "Offen",
   "landing.close.p":
     "Erstelle dein Konto und Folio öffnet ein Demo-Projekt, das schon kompiliert: ins PDF klicken, eine Arbeit zitieren, eine Version speichern.",
-  "landing.close.cta": "Konto erstellen und Demo öffnen",
+  "landing.cta.word": "Testen",
   "landing.foot.note": "Selbst gehostet: Deine Arbeiten bleiben in deinem eigenen Postgres.",
   "landing.foot.note2": "Oberfläche auf Español, English und Deutsch.",
   "landing.foot.top": "Nach oben",
+  "landing.foot.col.self": "Selbst gehostet",
+  "landing.foot.col.code": "Code",
+  "landing.foot.col.credit": "Credits",
+  "landing.foot.source": "Quellcode",
+  "landing.foot.legal": "© 2026 Folio. Unter Apache-2.0 veröffentlicht.",
   "landing.foot.credit":
     "Bild: Titelblatt des First Folio, British Library, CC0. Video: „Printing in a letterpress“, Subhashish Panigrahi, CC BY-SA 4.0. Über Wikimedia Commons.",
   "landing.folio.reel": "Eine Buchdruckpresse in Cuttack, Indien.",

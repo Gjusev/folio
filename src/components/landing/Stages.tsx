@@ -5,78 +5,78 @@ import { useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 
-// One slider drives two fields: the clause (which is the section's heading)
-// and a real fragment of the product. Dragging, arrow keys or tapping a stage
-// name changes both.
+// How it works as one horizontal accordion of tinted panels: the open stage
+// takes most of the strip and shows name, paragraph and a real fragment of
+// the product; the rest wait as slivers carrying their name rotated. Order is
+// carried by colour (dark to light, in CSS via data-k). Clicking a sliver
+// opens it; the whole panel is the button.
 const STAGES = [
-  { n: 1, src: "/landing/editor-source.jpg", alt: "landing.stage.1.alt" },
-  { n: 2, src: "/landing/library.jpg", alt: "landing.stage.2.alt" },
-  { n: 3, src: "/landing/graph-explorer.jpg", alt: "landing.stage.3.alt" },
-  { n: 4, src: null, alt: "landing.stage.4.alt" },
+  { n: 1, src: "/landing/editor-source.jpg", w: 1600, h: 1636 },
+  { n: 2, src: "/landing/library.jpg", w: 1920, h: 1080 },
+  { n: 3, src: "/landing/graph-explorer.jpg", w: 1600, h: 900 },
+  { n: 4, src: null, w: 0, h: 0 },
 ] as const;
 
 const COMMANDS = `cp .env.example .env
 docker compose --profile app up -d --build`;
 
+const rise = (i: number) => ({ "--i": i }) as React.CSSProperties;
+
 export function Stages() {
   const { t } = useI18n();
   const [i, setI] = useState(0);
-  const stage = STAGES[i];
-  const pct = i / (STAGES.length - 1);
 
   return (
-    <div className="lp-stages" data-reveal>
-      <div className="lp-stage-text" data-reveal>
-        <h2 id="stages-title" className="lp-stage-clause" aria-live="polite">
-          {t(`landing.stage.${stage.n}.c` as MsgKey)}
+    <section className="lp-acc" aria-labelledby="stages-title">
+      <div className="lp-acc-intro">
+        <h2 id="stages-title" className="lp-acc-h" data-reveal>
+          {t("landing.stages.h")}
         </h2>
-        <p className="lp-stage-sub" data-reveal style={{ "--i": 1 } as React.CSSProperties}>
-          {t(`landing.stage.${stage.n}.d` as MsgKey)}
+        <p className="lp-acc-p" data-reveal style={rise(1)}>
+          {t("landing.stages.p")}
         </p>
       </div>
-      <div className="lp-stage-view" data-reveal style={{ "--i": 2 } as React.CSSProperties}>
-        <div className="lp-stage-frame" key={stage.n} data-ui>
-          {stage.src ? (
-            <Image
-              src={stage.src}
-              alt={t(stage.alt as MsgKey)}
-              width={1600}
-              height={900}
-              sizes="(min-width: 900px) 50vw, 100vw"
-              unoptimized
-            />
-          ) : (
-            <pre>
-              <code>{COMMANDS}</code>
-            </pre>
-          )}
-        </div>
-      </div>
-      <div className="lp-slider">
-        <div className="lp-rangewrap">
-          <div className="lp-bar" />
-          <div className="lp-fill" style={{ width: `calc(16px + (100% - 32px) * ${pct})` }} />
-          <input
-            type="range"
-            min={0}
-            max={STAGES.length - 1}
-            step={1}
-            value={i}
-            aria-label={t("landing.stage.aria")}
-            aria-valuetext={t(`landing.stage.${stage.n}.n` as MsgKey)}
-            onChange={(e) => setI(Number(e.target.value))}
-          />
-        </div>
-        <ol>
-          {STAGES.map((s, j) => (
-            <li key={s.n} aria-current={j === i ? "step" : undefined}>
-              <button type="button" onClick={() => setI(j)}>
-                {t(`landing.stage.${s.n}.n` as MsgKey)}
+      <div className="lp-acc-strip" data-active={i} data-ui data-reveal style={rise(2)}>
+        {STAGES.map((s, j) => {
+          const isOpen = j === i;
+          const name = t(`landing.stage.${s.n}.n` as MsgKey);
+          return (
+            <div key={s.n} className="lp-acc-panel" data-k={j} data-open={isOpen}>
+              <button
+                type="button"
+                className="lp-acc-tab"
+                aria-expanded={isOpen}
+                onClick={() => setI(j)}
+              >
+                <span className="lp-acc-slv" aria-hidden>
+                  {name}
+                </span>
+                <span className="lp-acc-name">{name}</span>
               </button>
-            </li>
-          ))}
-        </ol>
+              <div className="lp-acc-body" aria-hidden={!isOpen}>
+                <p className="lp-acc-d">{t(`landing.stage.${s.n}.d` as MsgKey)}</p>
+                <div className="lp-acc-media">
+                  {s.src ? (
+                    <Image
+                      src={s.src}
+                      alt={t(`landing.stage.${s.n}.alt` as MsgKey)}
+                      width={s.w}
+                      height={s.h}
+                      sizes="(min-width: 900px) 40vw, 92vw"
+                      loading="lazy"
+                      unoptimized
+                    />
+                  ) : (
+                    <pre>
+                      <code>{COMMANDS}</code>
+                    </pre>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 }
