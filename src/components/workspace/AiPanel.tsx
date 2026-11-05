@@ -66,6 +66,9 @@ type Props = {
   initialSteering: { instructions: string; sample: string };
   /** Section plan saved on the project from a previous "plan" run, if any. */
   initialPlan?: AgentPlan | null;
+  /** One-shot instruction from the review panel ("Fix with the assistant"):
+   *  seeds the input once each time the value changes, never on remounts. */
+  initialInstruction?: string;
 };
 
 const LABEL_KEY: Record<AiAction | "draft", MsgKey> = {
@@ -98,6 +101,7 @@ export function AiPanel({
   onAddPapers,
   initialSteering,
   initialPlan,
+  initialInstruction,
 }: Props) {
   const { t, lang } = useI18n();
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -147,6 +151,14 @@ export function AiPanel({
       })
       .catch(() => {});
   }, [projectId, seeded]);
+  // One-shot seeding from the review panel: the ref remembers the last value
+  // consumed, so re-renders and tab switches never overwrite what the user types.
+  const lastSeed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialInstruction || lastSeed.current === initialInstruction) return;
+    lastSeed.current = initialInstruction;
+    setQuestion(initialInstruction);
+  }, [initialInstruction]);
   const nextId = useRef(1);
   const busy = turns.some((t) => t.streaming);
   const [steerOpen, setSteerOpen] = useState(false);

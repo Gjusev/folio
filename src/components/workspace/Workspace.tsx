@@ -110,6 +110,8 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
   });
   const [notice, setNotice] = useState<string | null>(null);
   const [arxivOpen, setArxivOpen] = useState(false);
+  // Instruction handed over by the review panel ("Fix with the assistant").
+  const [fixInstruction, setFixInstruction] = useState("");
   const [copied, setCopied] = useState(false);
   const pdfUrl = useRef<string | undefined>(undefined);
 
@@ -510,6 +512,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
         sample: project.aiStyleSample ?? "",
       }}
       initialPlan={(project.aiPlan as AgentPlan | null) ?? null}
+      initialInstruction={fixInstruction}
     />
   );
 
@@ -523,6 +526,11 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       onOpenAt={(path, line) => {
         const target = docs.files.find((f) => f.path === path);
         if (target) open(target.id, line);
+      }}
+      onRequestFix={(instruction) => {
+        setFixInstruction(instruction);
+        setSide("assistant");
+        setMobile("assistant");
       }}
     />
   );
