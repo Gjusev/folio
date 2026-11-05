@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ApiTokensSettings } from "@/components/ApiTokensSettings";
 import { LlmSettings } from "@/components/LlmSettings";
 import { LogoutButton } from "@/components/LogoutButton";
 import { Wordmark } from "@/components/Wordmark";
@@ -37,6 +38,7 @@ export default async function SettingsPage() {
               sealConfigured={sealConfigured()}
             />
             <ZoteroSettings sealConfigured={sealConfigured()} />
+            <ApiTokensSettings />
           </div>
         </div>
       </main>
