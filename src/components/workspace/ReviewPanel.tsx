@@ -68,7 +68,7 @@ function Chip({
       aria-pressed={on}
       title={title}
       onClick={onClick}
-      className={`h-7 rounded-full px-2.5 text-xs transition-colors ${
+      className={`inline-flex min-h-7 items-center rounded-full px-2.5 text-[13px] transition-colors [@media(hover:none)]:min-h-11 [@media(hover:none)]:px-4 ${
         on
           ? "bg-primary text-primary-ink"
           : "border border-control bg-raised text-ink hover:bg-active"
@@ -134,6 +134,9 @@ export function ReviewPanel({
   const [aspectOff, setAspectOff] = useState<Set<Aspect>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Clearing the whole report is destructive: it asks twice like the library
+  // delete instead of sitting one mis-tap away from "Copy report".
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // v2: saved history + per-comment states. `states` is the map the server
   // persists (key = comment index); without a savedId it stays local.
@@ -315,14 +318,19 @@ export function ReviewPanel({
     return lines.join("\n");
   }
 
+  // Children never shrink: the scroll container scrolls instead of compressing
+  // the Focus input and the run button.
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto p-3 text-sm">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto p-3 text-sm [&>*]:shrink-0">
       <p className="text-xs leading-5 text-muted">{t("rv.note")}</p>
 
       {!enabled && (
         <p className="mt-3 rounded-md bg-[var(--pill-warning-bg)] px-3 py-2 text-xs text-[var(--pill-warning-ink)]">
           {t("rv.off")}{" "}
-          <Link href="/settings" className="font-medium underline">
+          <Link
+            href="/settings"
+            className="mt-2 inline-flex font-medium underline [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center"
+          >
             {t("rv.off.link")}
           </Link>
         </p>
@@ -368,12 +376,12 @@ export function ReviewPanel({
                     .map((s) => (
                       <label
                         key={s.id}
-                        className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 hover:bg-raised"
+                        className="flex cursor-pointer items-start gap-2 rounded px-1 py-2 hover:bg-raised [@media(hover:none)]:min-h-11"
                         style={{ paddingLeft: `${0.25 + Math.max(0, s.level - 1) * 0.9}rem` }}
                       >
                         <input
                           type="checkbox"
-                          className="mt-0.5 accent-[var(--accent)]"
+                          className="mt-0.5 size-4 accent-[var(--accent)]"
                           checked={chosen.has(s.id)}
                           onChange={() => setPicked(toggle(chosen, s.id))}
                         />
@@ -522,13 +530,13 @@ export function ReviewPanel({
             )}
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-xs text-muted">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted">
             <span>{t("rv.count", { n: visible.length })}</span>
             <span className="flex items-center gap-3">
               {dismissed.size > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 hover:text-ink"
+                  className="inline-flex items-center gap-1 py-1 hover:text-ink [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center"
                   onClick={() => setShowDismissed((v) => !v)}
                 >
                   {showDismissed ? (
@@ -541,7 +549,7 @@ export function ReviewPanel({
               )}
               <button
                 type="button"
-                className="inline-flex items-center gap-1 hover:text-ink"
+                className="inline-flex items-center gap-1 py-1 hover:text-ink [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center"
                 onClick={() => void copyReport()}
               >
                 <ClipboardCopy aria-hidden className="h-3.5 w-3.5" />
@@ -549,14 +557,22 @@ export function ReviewPanel({
               </button>
               <button
                 type="button"
-                className="hover:text-ink"
+                className={`inline-flex items-center py-1 hover:text-ink [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center ${
+                  confirmClear ? "text-danger" : ""
+                }`}
                 onClick={() => {
+                  if (!confirmClear) {
+                    setConfirmClear(true);
+                    return;
+                  }
+                  setConfirmClear(false);
                   write(projectId, null);
                   setLoaded(null);
                   setStates({});
                 }}
+                onBlur={() => setConfirmClear(false)}
               >
-                {t("rv.clear")}
+                {confirmClear ? t("common.confirm") : t("rv.clear")}
               </button>
             </span>
           </div>
@@ -573,7 +589,7 @@ export function ReviewPanel({
                     states[String(i)] ? "opacity-60" : ""
                   }`}
                 >
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[13px]">
                     <span className={`rounded-full px-2 py-0.5 ${SEV_PILL[c.severity]}`}>
                       {t(`rv.sev.${c.severity}` as MsgKey)}
                     </span>
@@ -586,7 +602,7 @@ export function ReviewPanel({
                     {c.file && c.line ? (
                       <button
                         type="button"
-                        className="num ml-auto rounded px-1.5 py-0.5 text-accent hover:bg-accent-soft"
+                        className="num ml-auto rounded px-1.5 py-1 text-accent hover:bg-accent-soft [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center"
                         title={t("rv.go")}
                         onClick={() => onOpenAt(c.file!, c.line!)}
                       >
@@ -597,7 +613,7 @@ export function ReviewPanel({
                     )}
                     <button
                       type="button"
-                      className={`rounded p-0.5 hover:bg-raised hover:text-ink ${
+                      className={`rounded p-1.5 hover:bg-raised hover:text-ink [@media(hover:none)]:min-h-11 [@media(hover:none)]:min-w-11 ${
                         states[String(i)] === "resolved" ? "text-ok" : "text-muted"
                       }`}
                       aria-label={t("rv.state.resolve")}
@@ -612,7 +628,7 @@ export function ReviewPanel({
                     </button>
                     <button
                       type="button"
-                      className="rounded p-0.5 text-muted hover:bg-raised hover:text-ink"
+                      className="rounded p-1.5 text-muted hover:bg-raised hover:text-ink [@media(hover:none)]:min-h-11 [@media(hover:none)]:min-w-11"
                       aria-label={dismissed.has(i) ? t("rv.restore") : t("rv.dismiss")}
                       title={dismissed.has(i) ? t("rv.restore") : t("rv.dismiss")}
                       onClick={() => markState(i, "dismissed")}
@@ -627,7 +643,7 @@ export function ReviewPanel({
                   )}
                   <p className="mt-2 leading-6">{c.comment}</p>
                   {c.suggestion && (
-                    <p className="mt-2 rounded-md bg-accent-soft px-2.5 py-1.5 text-xs leading-5">
+                    <p className="mt-2 rounded-md bg-accent-soft px-2.5 py-1.5 text-[13px] leading-5">
                       <span className="font-medium">{t("rv.suggest")}: </span>
                       {c.suggestion}
                     </p>
@@ -659,11 +675,11 @@ export function ReviewPanel({
               {hist.map((h) => (
                 <li
                   key={h.id}
-                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface p-2 text-xs"
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface p-2 text-[13px]"
                 >
                   <button
                     type="button"
-                    className="min-w-0 flex-1 truncate text-left hover:text-ink"
+                    className="min-w-0 flex-1 truncate py-1 text-left hover:text-ink"
                     aria-label={t("rv.history.load")}
                     aria-current={loaded?.id === h.id || undefined}
                     onClick={() => void loadReview(h.id)}
@@ -677,7 +693,7 @@ export function ReviewPanel({
                   {ownUid === h.userId && (
                     <button
                       type="button"
-                      className="shrink-0 rounded p-0.5 text-muted hover:bg-raised hover:text-ink"
+                      className="shrink-0 rounded p-1.5 text-muted hover:bg-raised hover:text-ink [@media(hover:none)]:min-h-11 [@media(hover:none)]:min-w-11"
                       aria-label={t("rv.history.delete")}
                       title={t("rv.history.delete")}
                       onClick={() => void removeReview(h.id)}

@@ -159,6 +159,9 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
     );
   }
   const [mobile, setMobile] = useState<MobileView>("editor");
+  // Review jumps (main.tex:28, "Fix with the assistant") switch the mobile
+  // view away; this hint offers the way back until the user navigates on.
+  const [backFromReview, setBackFromReview] = useState(false);
   const [compile, setCompile] = useState<CompileState>({
     status: "idle",
     errors: [],
@@ -651,10 +654,14 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       flush={docs.store.flush}
       onOpenAt={(path, line) => {
         const target = docs.files.find((f) => f.path === path);
-        if (target) open(target.id, line);
+        if (target) {
+          if (mobile === "review") setBackFromReview(true);
+          open(target.id, line);
+        }
       }}
       onRequestFix={(instruction) => {
         setFixInstruction(instruction);
+        setBackFromReview(mobile === "review");
         setSide("assistant");
         setMobile("assistant");
       }}
@@ -804,6 +811,9 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       {/* On phones the action group wraps to a second row instead of pushing
           the compile button off-screen. */}
       <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1 sm:h-12 sm:flex-nowrap sm:py-0">
+        {/* The screen's title: the rename input below is a control, not a
+            heading, so assistive tech gets the name here. */}
+        <h1 className="sr-only">{name}</h1>
         <Link href="/projects" className="btn btn-ghost btn-sm">
           {t("ws.back")}
         </Link>
@@ -825,7 +835,8 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
           />
           <Pencil size={12} className="shrink-0 text-muted" aria-hidden />
         </div>
-        {/* On mobile only the dot fits; its title carries the full state. */}
+        {/* On mobile only the dot fits; the state text stays for screen
+            readers instead of living in a tooltip touch users never see. */}
         <span
           className="flex items-center text-xs text-muted sm:hidden"
           role="status"
@@ -833,6 +844,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
           title={t(STATUS_KEY[docs.status])}
         >
           <span className={`h-2 w-2 rounded-full ${statusDot}`} aria-hidden />
+          <span className="sr-only">{t(STATUS_KEY[docs.status])}</span>
         </span>
         <span
           className="hidden items-center gap-1.5 text-xs text-muted sm:flex"
@@ -858,7 +870,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
             {unresolved > 0 && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-semibold text-white"
+                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[11px] leading-none font-semibold text-white"
               >
                 {unresolved > 9 ? "9+" : unresolved}
               </span>
@@ -1004,7 +1016,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       ) : (
         <>
           <div
-            className="flex shrink-0 gap-4 border-b border-line px-3"
+            className="flex shrink-0 gap-2 overflow-x-auto border-b border-line px-3 sm:gap-4"
             role="tablist"
             aria-label={t("ws.view")}
           >
@@ -1023,12 +1035,27 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
                 role="tab"
                 aria-selected={mobile === id}
                 className="tab"
-                onClick={() => setMobile(id)}
+                onClick={() => {
+                  setMobile(id);
+                  setBackFromReview(false);
+                }}
               >
                 {label}
               </button>
             ))}
           </div>
+          {backFromReview && mobile !== "review" && (
+            <button
+              type="button"
+              className="btn btn-sm mx-2 mt-2 self-start border-accent bg-accent-soft"
+              onClick={() => {
+                setMobile("review");
+                setBackFromReview(false);
+              }}
+            >
+              ← {t("ws.back.review")}
+            </button>
+          )}
           <div className="min-h-0 flex-1 p-2">
             <div className={mobile === "editor" ? "h-full" : "hidden"}>{editorSheet}</div>
             <div className={mobile === "pdf" ? "h-full" : "hidden"}>{pdfSheet}</div>

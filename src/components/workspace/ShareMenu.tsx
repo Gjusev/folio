@@ -122,7 +122,7 @@ export function ShareMenu({ projectId }: Props) {
             {t("share.invite")}
           </button>
         </div>
-        <p className="mt-1.5 text-[10px] leading-4 text-muted">{t("share.hint")}</p>
+        <p className="mt-1.5 text-[11px] leading-4 text-muted">{t("share.hint")}</p>
         {error && (
           <p role="alert" className="mt-1.5 text-danger">
             {error}

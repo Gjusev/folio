@@ -64,6 +64,7 @@ const baseEs = {
   "projects.actions": "Acciones",
   // workspace header
   "ws.back": "Proyectos",
+  "ws.back.review": "Volver a Revisión",
   "ws.rename": "Nombre del proyecto",
   "ws.export": "Exportar",
   "ws.export.pdf": "PDF",
@@ -124,6 +125,8 @@ const baseEs = {
   "pdf.empty.head": "El PDF aparecerá aquí",
   "pdf.empty.body":
     "Compila con el botón de arriba o con {kbd}. Haz clic en el texto del PDF para ir a esa frase en el código.",
+  "pdf.empty.body.touch":
+    "Pulsa Compilar para construir el PDF. Toca el texto del PDF para ir a esa frase en el código.",
   "pdf.empty.cta": "Compilar ahora",
   "pdf.words": "{n:palabra|palabras}",
   "pdf.lint": "Lint",
@@ -286,6 +289,7 @@ const baseEs = {
   "settings.tokens.desc":
     "Claves de agente para que Claude Code, Codex o tus scripts usen la API de Folio en tu nombre. El token completo solo se muestra al crearlo.",
   "settings.tokens.name.ph": "p. ej. Claude Code en el portátil",
+  "settings.tokens.name": "Nombre",
   "settings.tokens.scopes": "Permisos",
   "settings.tokens.scope.read": "lectura",
   "settings.tokens.scope.read.hint": "Ver proyectos y archivos",
@@ -573,6 +577,7 @@ const baseEn = {
   "projects.edited": "Edited",
   "projects.actions": "Actions",
   "ws.back": "Projects",
+  "ws.back.review": "Back to Review",
   "ws.rename": "Project name",
   "ws.export": "Export",
   "ws.export.pdf": "PDF",
@@ -628,6 +633,8 @@ const baseEn = {
   "pdf.empty.head": "The PDF will appear here",
   "pdf.empty.body":
     "Compile with the button above or {kbd}. Click text in the PDF to jump to that sentence in the source.",
+  "pdf.empty.body.touch":
+    "Tap Compile to build the PDF. Tap text in the PDF to jump to that sentence in the source.",
   "pdf.empty.cta": "Compile now",
   "pdf.words": "{n:word|words}",
   "pdf.lint": "Lint",
@@ -786,6 +793,7 @@ const baseEn = {
   "settings.tokens.desc":
     "Agent keys that let Claude Code, Codex or your scripts use Folio's API as you. The full token is shown only once, when created.",
   "settings.tokens.name.ph": "e.g. Claude Code on the laptop",
+  "settings.tokens.name": "Name",
   "settings.tokens.scopes": "Permissions",
   "settings.tokens.scope.read": "read",
   "settings.tokens.scope.read.hint": "View projects and files",
@@ -1055,6 +1063,7 @@ const baseDe = {
   "projects.edited": "Bearbeitet",
   "projects.actions": "Aktionen",
   "ws.back": "Projekte",
+  "ws.back.review": "Zurück zur Review",
   "ws.rename": "Projektname",
   "ws.export": "Exportieren",
   "ws.export.pdf": "PDF",
@@ -1111,6 +1120,8 @@ const baseDe = {
   "pdf.empty.head": "Das PDF erscheint hier",
   "pdf.empty.body":
     "Kompiliere mit der Schaltfläche oben oder mit {kbd}. Klicke auf Text im PDF, um zu der Stelle im Quelltext zu springen.",
+  "pdf.empty.body.touch":
+    "Tippe auf Kompilieren, um das PDF zu bauen. Tippe auf Text im PDF, um zu der Stelle im Quelltext zu springen.",
   "pdf.empty.cta": "Jetzt kompilieren",
   "pdf.words": "{n:Wort|Wörter}",
   "pdf.lint": "Lint",
@@ -1271,6 +1282,7 @@ const baseDe = {
   "settings.tokens.desc":
     "Agent-Schlüssel, mit denen Claude Code, Codex oder deine Skripte die Folio-API in deinem Namen nutzen. Der vollständige Token wird nur einmal angezeigt — bei der Erstellung.",
   "settings.tokens.name.ph": "z. B. Claude Code auf dem Laptop",
+  "settings.tokens.name": "Name",
   "settings.tokens.scopes": "Berechtigungen",
   "settings.tokens.scope.read": "Lesen",
   "settings.tokens.scope.read.hint": "Projekte und Dateien ansehen",

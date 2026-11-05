@@ -89,7 +89,7 @@ export function LibraryView({
           data-testid="lib-graph"
         >
           <Network size={13} aria-hidden /> {t("lib.graph")}
-          <span className="num ml-auto text-[10px] font-normal text-muted">
+          <span className="num ml-auto text-[11px] font-normal text-muted">
             {t("lib.inGraph", { n: withDoi })}
           </span>
         </button>
@@ -102,7 +102,7 @@ export function LibraryView({
               className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-muted"
             />
             <input
-              className="input h-7 pl-7 text-xs"
+              className="input h-7 pl-7 text-[13px]"
               placeholder={t("lib.filter.ph")}
               value={query}
               maxLength={80}
@@ -112,7 +112,7 @@ export function LibraryView({
           <label>
             <span className="sr-only">{t("lib.sort")}</span>
             <select
-              className="select h-7 text-xs"
+              className="select h-7 text-[13px]"
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
             >
@@ -133,11 +133,13 @@ export function LibraryView({
               <p className="line-clamp-2 text-[13px] leading-[18px] font-medium">
                 {e.title || e.key}
               </p>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                <span className="truncate">
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
+                {/* the venue must survive: the meta line wraps instead of
+                    truncating everything after the authors */}
+                <span className="min-w-0">
                   {[family(e.authors), e.year, e.venue].filter(Boolean).join(" · ")}
                 </span>
-                <code className="rounded border border-line px-1 py-px font-mono text-[10px]">
+                <code className="rounded border border-line px-1 py-px font-mono text-[11px]">
                   {e.key}
                 </code>
                 {cited ? (

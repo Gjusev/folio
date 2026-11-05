@@ -149,16 +149,16 @@ export function SearchView({
           <summary className="btn btn-ghost btn-sm inline-flex cursor-pointer list-none">
             <SlidersHorizontal size={13} aria-hidden /> {t("ps.filters")}
             {activeFilters > 0 && (
-              <span className="num rounded-full bg-accent px-1.5 text-[10px] leading-4 text-white">
+              <span className="num rounded-full bg-accent px-1.5 text-[11px] leading-4 text-white">
                 {activeFilters}
               </span>
             )}
           </summary>
-          <div className="absolute left-0 z-20 mt-1 w-72 space-y-2.5 rounded-lg border border-line bg-surface p-3 text-xs shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <div className="absolute left-0 z-20 mt-1 w-[min(18rem,calc(100vw-24px))] space-y-2.5 rounded-lg border border-line bg-surface p-3 text-[13px] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
             <label className="flex items-center justify-between gap-2">
               {t("papers.source")}
               <select
-                className="select h-7 text-xs"
+                className="select h-7 text-[13px]"
                 value={source}
                 onChange={(e) => {
                   setSource(e.target.value as "all" | Source);
@@ -175,7 +175,7 @@ export function SearchView({
             <label className="flex items-center justify-between gap-2">
               {t("papers.sort")}
               <select
-                className="select h-7 text-xs"
+                className="select h-7 text-[13px]"
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
               >
@@ -190,17 +190,17 @@ export function SearchView({
                 type="number"
                 min={1900}
                 max={2100}
-                className="select num h-7 w-20 text-xs"
+                className="select num h-7 w-20 text-[13px]"
                 placeholder="2020"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               />
             </label>
             {source !== "arxiv" && (
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 py-1 [@media(hover:none)]:min-h-11">
                 <input
                   type="checkbox"
-                  className="accent-[var(--accent)]"
+                  className="size-4 accent-[var(--accent)]"
                   checked={oa}
                   onChange={(e) => setOa(e.target.checked)}
                 />

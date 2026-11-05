@@ -46,7 +46,24 @@ export function LibraryPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [busyProject, setBusyProject] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLDialogElement>(null);
+
+  // The picker is a real modal: showModal() gives it the scrim, focus trap and
+  // Escape-to-close that a plain `open` attribute never had.
+  useEffect(() => {
+    const d = pickerRef.current;
+    if (!d) return;
+    if (picker && !d.open) {
+      try {
+        d.showModal();
+      } catch {
+        /* already open elsewhere */
+      }
+    }
+    if (!picker && d.open) d.close();
+  }, [picker]);
 
   const load = useCallback(async () => {
     try {
@@ -256,97 +273,139 @@ export function LibraryPage() {
           <Library aria-hidden className="h-5 w-5 text-muted" />
           <h2 className="mt-3 text-base font-semibold">{t("lb.empty.head")}</h2>
           <p className="mt-1 text-sm leading-6 text-muted">{t("lb.empty.body")}</p>
+          <button
+            type="button"
+            className="btn btn-sm mt-3"
+            onClick={() => fileInput.current?.click()}
+          >
+            {t("lb.upload.pick")}
+          </button>
         </div>
       ) : (
-        <table className="mt-6 w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-xs text-muted">
-              <th className="py-2 pr-4 font-medium">{t("lb.col.title")}</th>
-              <th className="num py-2 pr-4 text-right font-medium">{t("lb.col.pages")}</th>
-              <th className="num py-2 pr-4 text-right font-medium">{t("lb.col.size")}</th>
-              <th className="hidden py-2 pr-4 font-medium md:table-cell">{t("lb.col.projects")}</th>
-              <th className="py-2">
-                <span className="sr-only">{t("lb.delete")}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {(papers ?? []).map((p) => (
-              <tr key={p.id} className="group border-b border-rule hover:bg-raised">
-                <td className="max-w-0 py-0 pr-4">
-                  <button
-                    type="button"
-                    className="flex w-full flex-col items-start gap-0.5 truncate py-3 text-left font-medium"
-                    onClick={() => void open(p)}
-                    title={t("lb.open")}
-                  >
-                    <span className="truncate">{p.title}</span>
-                    {p.doi ? (
-                      <span className="num text-xs font-normal text-muted">{p.doi}</span>
-                    ) : null}
-                    {!p.text ? (
-                      <span className="text-xs font-normal text-muted">{t("lb.noText")}</span>
-                    ) : null}
-                  </button>
-                </td>
-                <td className="num py-3 pr-4 text-right text-muted">
-                  {p.pages ? t("lb.pages", { n: p.pages }) : t("lb.noPages")}
-                </td>
-                <td className="num py-3 pr-4 whitespace-nowrap text-right text-muted">
-                  {fmtSize(p.size)}
-                </td>
-                <td className="hidden max-w-0 py-3 pr-4 md:table-cell">
-                  <span className="flex flex-wrap gap-1">
-                    {p.attachedTo.map((a) => (
-                      <span key={a.projectId} className="pill shrink-0">
-                        {a.name}
-                      </span>
-                    ))}
-                  </span>
-                </td>
-                <td className="w-0 py-2 text-right">
-                  <span className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => startCite(p)}
-                      disabled={!p.doi}
-                      title={p.doi ? t("lb.cite") : t("lb.noDoi")}
-                    >
-                      {t("lb.cite")}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => startAttach(p)}
-                      disabled={!p.text}
-                      title={p.text ? t("lb.attach") : t("lb.noText")}
-                    >
-                      {t("lb.attach")}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-                      onClick={() =>
-                        confirmDelete === p.id ? void remove(p) : setConfirmDelete(p.id)
-                      }
-                      onBlur={() => setConfirmDelete((id) => (id === p.id ? null : id))}
-                      aria-label={`${t("lb.delete")} ${p.title}`}
-                    >
-                      {confirmDelete === p.id ? t("common.confirm") : t("lb.delete")}
-                    </button>
-                  </span>
-                </td>
+        <>
+          {papers && papers.length > 3 && (
+            <input
+              type="search"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="input mt-4 max-w-72"
+              placeholder={t("lb.filter")}
+              aria-label={t("lb.filter")}
+            />
+          )}
+          <table className="mt-6 w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs text-muted">
+                <th className="py-2 pr-4 font-medium">{t("lb.col.title")}</th>
+                <th className="num hidden py-2 pr-4 text-right font-medium md:table-cell">
+                  {t("lb.col.pages")}
+                </th>
+                <th className="num hidden py-2 pr-4 text-right font-medium md:table-cell">
+                  {t("lb.col.size")}
+                </th>
+                <th className="hidden py-2 pr-4 font-medium md:table-cell">
+                  {t("lb.col.projects")}
+                </th>
+                <th className="py-2">
+                  <span className="sr-only">{t("lb.delete")}</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(papers ?? [])
+                .filter(
+                  (p) =>
+                    !filter ||
+                    p.title.toLowerCase().includes(filter.toLowerCase()) ||
+                    (p.doi ?? "").toLowerCase().includes(filter.toLowerCase()),
+                )
+                .map((p) => (
+                  <tr key={p.id} className="group border-b border-rule hover:bg-raised">
+                    <td className="max-w-0 py-0 pr-4">
+                      <button
+                        type="button"
+                        className="flex w-full flex-col items-start gap-0.5 truncate py-3 text-left font-medium"
+                        onClick={() => void open(p)}
+                        title={t("lb.open")}
+                      >
+                        <span className="truncate">{p.title}</span>
+                        <span className="num text-xs font-normal text-muted md:hidden">
+                          {p.pages ? t("lb.pages", { n: p.pages }) : t("lb.noPages")} ·{" "}
+                          {fmtSize(p.size)}
+                        </span>
+                        {p.doi ? (
+                          <span className="num text-xs font-normal text-muted">{p.doi}</span>
+                        ) : null}
+                        {!p.text ? (
+                          <span className="text-xs font-normal text-muted">{t("lb.noText")}</span>
+                        ) : null}
+                      </button>
+                    </td>
+                    <td className="num hidden py-3 pr-4 text-right text-muted md:table-cell">
+                      {p.pages ? t("lb.pages", { n: p.pages }) : t("lb.noPages")}
+                    </td>
+                    <td className="num hidden py-3 pr-4 whitespace-nowrap text-right text-muted md:table-cell">
+                      {fmtSize(p.size)}
+                    </td>
+                    <td className="hidden max-w-0 py-3 pr-4 md:table-cell">
+                      <span className="flex flex-wrap gap-1">
+                        {p.attachedTo.map((a) => (
+                          <span key={a.projectId} className="pill shrink-0">
+                            {a.name}
+                          </span>
+                        ))}
+                      </span>
+                    </td>
+                    <td className="w-0 py-2 text-right">
+                      <span className="flex flex-wrap items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => startCite(p)}
+                          disabled={!p.doi}
+                          title={p.doi ? t("lb.cite") : t("lb.noDoi")}
+                        >
+                          {t("lb.cite")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => startAttach(p)}
+                          disabled={!p.text}
+                          title={p.text ? t("lb.attach") : t("lb.noText")}
+                        >
+                          {t("lb.attach")}
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 [@media(hover:none)]:!opacity-100 ${
+                            confirmDelete === p.id ? "text-danger" : ""
+                          }`}
+                          onClick={() =>
+                            confirmDelete === p.id ? void remove(p) : setConfirmDelete(p.id)
+                          }
+                          onBlur={() => setConfirmDelete((id) => (id === p.id ? null : id))}
+                          aria-label={`${t("lb.delete")} ${p.title}`}
+                        >
+                          {confirmDelete === p.id ? t("common.confirm") : t("lb.delete")}
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </>
       )}
 
       {picker && (
         <dialog
-          open
-          className="m-auto w-[min(480px,calc(100vw-24px))] rounded-2xl border border-line bg-surface p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.18)] /* taste-skill-ignore shadow: modal dialog = real overlay */"
+          ref={pickerRef}
+          onCancel={() => setPicker(null)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPicker(null);
+          }}
+          className="m-auto w-[min(480px,calc(100vw-24px))] rounded-2xl border border-line bg-surface p-5 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop:bg-black/40 /* taste-skill-ignore shadow: modal dialog = real overlay */"
           aria-labelledby="library-pick-title"
         >
           <h2 id="library-pick-title" className="text-base font-semibold">

@@ -136,7 +136,7 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored, openRequest }: Pr
       >
         <Clock size={14} aria-hidden />
       </summary>
-      <div className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-line bg-surface p-3 text-xs shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="absolute right-0 z-20 mt-1 w-[min(18rem,calc(100vw-24px))] rounded-lg border border-line bg-surface p-3 text-xs shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <p className="label">{t("snap.title")}</p>
         <div className="mt-1.5 flex gap-1.5">
           <input
@@ -173,7 +173,7 @@ export function SnapshotsMenu({ projectId, onDiff, onRestored, openRequest }: Pr
               <p className="truncate font-medium" title={s.label}>
                 {s.label || fmt.format(new Date(s.createdAt))}
               </p>
-              <p className="num mt-0.5 text-[10px] text-muted">
+              <p className="num mt-0.5 text-[11px] text-muted">
                 {fmt.format(new Date(s.createdAt))} · {s.files}
               </p>
               {confirmId === s.id ? (

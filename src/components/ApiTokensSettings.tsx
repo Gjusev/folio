@@ -136,7 +136,7 @@ export function ApiTokensSettings() {
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-1 flex-col gap-1 text-sm sm:max-w-md">
-          <span className="sr-only">{t("settings.tokens.name.ph")}</span>
+          <span className="label mb-0">{t("settings.tokens.name")}</span>
           <input
             className="input"
             value={name}
@@ -159,7 +159,11 @@ export function ApiTokensSettings() {
         <legend className="label">{t("settings.tokens.scopes")}</legend>
         <div className="flex flex-wrap gap-x-4 gap-y-1.5">
           {SCOPES.map((s) => (
-            <label key={s} className="flex items-center gap-1.5 text-sm" title={t(scopeHint[s])}>
+            <label
+              key={s}
+              className="flex items-center gap-1.5 py-1 text-sm [@media(hover:none)]:min-h-11"
+              title={t(scopeHint[s])}
+            >
               <input
                 type="checkbox"
                 className="size-4"

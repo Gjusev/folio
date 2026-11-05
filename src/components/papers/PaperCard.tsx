@@ -40,10 +40,10 @@ export function PaperCard({
       >
         {p.title}
       </button>
-      <p className="mt-0.5 text-xs text-muted">
+      <p className="mt-0.5 text-[13px] text-muted">
         {[authorLine(p.authors), p.year, p.venue].filter(Boolean).join(" · ")}
       </p>
-      <p className="num mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+      <p className="num mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
         {p.citedBy > 0 && (
           <span>
             {nf.format(p.citedBy)}{" "}
@@ -74,12 +74,12 @@ export function PaperCard({
 
       {p.abstract && (
         <div className="mt-1.5">
-          <p className={`text-xs leading-[18px] text-muted ${open ? "" : "line-clamp-2"}`}>
+          <p className={`text-[13px] leading-[18px] text-muted ${open ? "" : "line-clamp-2"}`}>
             {p.abstract}
           </p>
           <button
             type="button"
-            className="mt-0.5 flex items-center gap-0.5 text-xs text-accent hover:underline"
+            className="mt-0.5 flex items-center gap-0.5 py-1 text-[13px] text-accent hover:underline [@media(hover:none)]:min-h-11 [@media(hover:none)]:items-center"
             aria-expanded={open}
             onClick={() => setOpen(!open)}
           >

@@ -44,6 +44,11 @@ export async function extractPdfText(
 ): Promise<{ text: string; pages: number; truncated: boolean }> {
   // pdf.js may take ownership of the buffer it is handed; the caller still
   // wants its bytes (they get stored), so hand over a copy.
+  // The worker module must be imported FIRST: it registers its
+  // WorkerMessageHandler on globalThis, so pdf.mjs runs it in-process instead
+  // of dynamic-importing a worker chunk that does not exist in the Next
+  // standalone build (the old failure left every upload with text:false).
+  await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const task = pdfjs.getDocument({ data: bytes.slice() });
   const doc = await task.promise;

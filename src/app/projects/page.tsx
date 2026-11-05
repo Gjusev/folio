@@ -19,14 +19,14 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/project
   const projects = await listProjects(user.id);
   return (
     <div className="flex min-h-full flex-col">
-      <header className="flex h-12 shrink-0 items-center justify-between px-4 sm:px-6">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-1 sm:h-12 sm:flex-nowrap sm:py-0 sm:px-6">
         <Wordmark />
         <div className="flex items-center gap-3 text-sm text-muted">
           <LangSwitcherWrapper />
-          <a href="/library" className="hover:text-ink">
+          <a href="/library" className="whitespace-nowrap py-2 hover:text-ink">
             {dict["lb.link"]}
           </a>
-          <a href="/settings" className="hover:text-ink">
+          <a href="/settings" className="whitespace-nowrap py-2 hover:text-ink">
             {dict["settings.title"]}
           </a>
           <span className="hidden sm:inline">{user.name}</span>
