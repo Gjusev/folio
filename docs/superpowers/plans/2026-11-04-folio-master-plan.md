@@ -159,6 +159,18 @@ draft responses, marked as drafts.
 **Acceptance:** from a pasted three-point review, the letter compiles with three
 items; with a snapshot selected, the letter's appendix links the diff.
 
+**Status: DONE (2026-11-06, 419d16e).** `src/lib/letter.ts` (pure: escapeLatex,
+parsePastedReview, itemsFromFolioReview, buildResponseLetter, draft
+messages/parse), `POST /api/projects/[id]/letter` (upsert of
+`response-letter.tex`), `/letter/drafts` (AI drafts, ids not in input dropped),
+`/compile` gains an optional `mainFile` (bodyless callers unchanged), and a
+collapsible "Carta de respuesta" section in ReviewPanel. Acceptance verified in
+production (letter of 3 pasted points compiles, `pages=1`; snapshot → appendix
+names it; upsert bumps version; bad mainFile → 400). 27 unit + 3 e2e specs;
+adversarial pass fixed one defect (dangling empty point marker blocked
+creation). The latexdiff itself is the existing snapshot diff route; the letter
+appendix references it.
+
 ---
 
 ## Phase 4a — Venue profiles
