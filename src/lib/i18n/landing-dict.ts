@@ -11,7 +11,7 @@ const es = {
   "landing.hero.word": "artículo",
   "landing.hero.b": "en tu servidor.",
   "landing.hero.sub":
-    "Folio es el editor LaTeX de código abierto para artículos científicos: compila sin instalar TeX, cita desde una biblioteca y conserva cada versión.",
+    "Folio es el espacio abierto para escribir artículos científicos con IA: tu modelo, tu servidor, citas que no se pueden inventar y cada cambio a la vista antes de aplicarlo.",
   "landing.cta.main": "Probar el proyecto demo",
   "landing.cta.more": "Ver qué incluye",
   "landing.cta.selfhost": "Instálalo en tu servidor",
@@ -26,21 +26,21 @@ const es = {
   "landing.prism.step3": "Importa el ZIP en Proyectos: Folio detecta el archivo principal.",
   // landing: features (sentences with switches)
   "landing.feat.title": "Qué hay dentro",
-  "landing.band.1.s": "Compila LaTeX sin instalar TeX.",
+  "landing.band.1.s": "Escribe con una IA que conoce todo tu artículo.",
   "landing.band.1.d":
-    "latexmk corre en un contenedor sin salida a Internet. Tu máquina sigue limpia.",
-  "landing.band.2.s": "Pulsa el PDF y caes en su línea.",
+    "Redacta secciones con literatura real como evidencia, reescribe un párrafo viendo el diff y convierte la foto de una pizarra en LaTeX.",
+  "landing.band.2.s": "Cada cita existe. Cada cambio lo apruebas tú.",
   "landing.band.2.d":
-    "SyncTeX funciona en ambos sentidos, y los errores del log también saltan a su línea.",
+    "Las claves inventadas se eliminan en el servidor, los borradores se comprueban compilando y ninguna edición se aplica sin que veas el diff.",
   "landing.band.3.s": "Ve cada paper que conecta tu .bib.",
   "landing.band.3.d":
     "Un grafo de citas al estilo Connected Papers, construido desde tu bibliografía con datos abiertos de OpenAlex.",
-  "landing.band.4.s": "Guarda versiones y lee qué cambió.",
+  "landing.band.4.s": "Compila sin instalar TeX y pulsa el PDF para ir a su línea.",
   "landing.band.4.d":
-    "Snapshots de todo el proyecto, con marcas de latexdiff entre cualquier versión y el texto actual.",
-  "landing.band.5.s": "Añade un asistente de IA, si quieres.",
+    "latexmk en un contenedor sin Internet, SyncTeX en ambos sentidos y versiones con las marcas de latexdiff.",
+  "landing.band.5.s": "Tu modelo, tu clave, tu servidor.",
   "landing.band.5.d":
-    "Trae tu propia clave: cualquier API compatible con OpenAI, o Anthropic. Solo cita claves de tu .bib y nunca edita sin tu confirmación.",
+    "Cualquier API compatible con OpenAI, Anthropic o modelos locales. El propietario decide si un manuscrito puede salir del servidor, y Folio redacta la declaración de uso de IA que piden las revistas.",
   // landing: the name
   "landing.folio.h": "Un folio es una hoja plegada una vez.",
   "landing.folio.p":
@@ -80,9 +80,9 @@ const es = {
   "landing.folio.reel": "Imprenta tipográfica en Cuttack, India.",
   // register page pitch
   "auth.register.lead": "Tu primer artículo compilando en un minuto.",
-  "auth.register.b1.t": "Compila sin instalar TeX",
+  "auth.register.b1.t": "Escribe con IA que puedes auditar",
   "auth.register.b1.d":
-    "latexmk corre en un contenedor aislado y el PDF aparece mientras trabajas.",
+    "Redacta, reescribe y arregla errores con tu propio modelo; cada cambio llega como un diff que aplicas tú.",
   "auth.register.b2.t": "Cita sin salir del editor",
   "auth.register.b2.d": "Busca en OpenAlex y arXiv, pulsa Citar y la entrada llega a tu .bib.",
   "auth.register.b3.t": "Tus datos, tu servidor",
@@ -124,7 +124,7 @@ const en: Record<keyof typeof es, string> = {
   "landing.hero.word": "paper",
   "landing.hero.b": "on your server.",
   "landing.hero.sub":
-    "Folio is the open-source LaTeX editor for scientific papers: compile without installing TeX, cite from a library, keep every version.",
+    "Folio is the open workspace for writing scientific papers with AI: your model, your server, citations that cannot be invented, and every change in view before it lands.",
   "landing.cta.main": "Try the demo project",
   "landing.cta.more": "See what is inside",
   "landing.cta.selfhost": "Run it on your server",
@@ -137,20 +137,21 @@ const en: Record<keyof typeof es, string> = {
   "landing.prism.step2": "Create your Folio account.",
   "landing.prism.step3": "Import the ZIP in Projects: Folio finds the main file.",
   "landing.feat.title": "What is inside",
-  "landing.band.1.s": "Compile LaTeX without installing TeX.",
+  "landing.band.1.s": "Write with an AI that knows your whole paper.",
   "landing.band.1.d":
-    "latexmk runs in a container with no internet access. Your machine stays clean.",
-  "landing.band.2.s": "Click the PDF, land on the source line.",
-  "landing.band.2.d": "SyncTeX works both ways, and errors in the log jump to their line too.",
+    "Draft sections with real literature as evidence, rewrite a paragraph with the diff in view, and turn a whiteboard photo into LaTeX.",
+  "landing.band.2.s": "Every citation exists. Every change is yours to approve.",
+  "landing.band.2.d":
+    "Invented keys are removed on the server, drafts are checked by compiling, and no edit lands until you have seen its diff.",
   "landing.band.3.s": "See every paper your .bib connects to.",
   "landing.band.3.d":
     "A citation graph in the style of Connected Papers, built from your bibliography with open OpenAlex data.",
-  "landing.band.4.s": "Save versions and read what changed.",
+  "landing.band.4.s": "Compile without installing TeX; click the PDF to reach its line.",
   "landing.band.4.d":
-    "Snapshots of the whole project, with latexdiff markup between any version and the current text.",
-  "landing.band.5.s": "Add an AI assistant, only if you want.",
+    "latexmk in a container with no Internet, SyncTeX both ways, and versions with latexdiff markup.",
+  "landing.band.5.s": "Your model, your key, your server.",
   "landing.band.5.d":
-    "Bring your own key for any OpenAI-compatible API, or Anthropic. It cites only keys from your .bib and never edits without your confirmation.",
+    "Any OpenAI-compatible API, Anthropic or local models. The owner decides whether a manuscript may leave the server, and Folio writes the AI-use declaration journals ask for.",
   "landing.folio.h": "A folio is a sheet folded once.",
   "landing.folio.p":
     "Two leaves, four pages: your source on one side, the result on the other. The best-known book of the kind is Shakespeare's First Folio of 1623. This one compiles.",
@@ -187,8 +188,9 @@ const en: Record<keyof typeof es, string> = {
     'Image: First Folio title page, British Library, CC0. Video: "Printing in a letterpress", Subhashish Panigrahi, CC BY-SA 4.0. Via Wikimedia Commons.',
   "landing.folio.reel": "A letterpress at work in Cuttack, India.",
   "auth.register.lead": "Your first paper, compiling in a minute.",
-  "auth.register.b1.t": "Compile without installing TeX",
-  "auth.register.b1.d": "latexmk runs in an isolated container and the PDF appears as you work.",
+  "auth.register.b1.t": "Write with AI you can audit",
+  "auth.register.b1.d":
+    "Draft, rewrite and fix errors with your own model; every change arrives as a diff you apply.",
   "auth.register.b2.t": "Cite without leaving the editor",
   "auth.register.b2.d": "Search OpenAlex and arXiv, press Cite, and the entry lands in your .bib.",
   "auth.register.b3.t": "Your data, your server",
@@ -226,7 +228,7 @@ const de: Record<keyof typeof es, string> = {
   "landing.hero.word": "Paper",
   "landing.hero.b": "auf deinem Server.",
   "landing.hero.sub":
-    "Folio ist der Open-Source-LaTeX-Editor für wissenschaftliche Arbeiten: kompilieren ohne TeX-Installation, aus einer Bibliothek zitieren, jede Version behalten.",
+    "Folio ist der offene Arbeitsplatz für wissenschaftliches Schreiben mit KI: dein Modell, dein Server, Zitate, die sich nicht erfinden lassen, und jede Änderung sichtbar, bevor sie übernommen wird.",
   "landing.cta.main": "Demo-Projekt ausprobieren",
   "landing.cta.more": "Ansehen, was drinsteckt",
   "landing.cta.selfhost": "Auf deinem Server betreiben",
@@ -239,21 +241,21 @@ const de: Record<keyof typeof es, string> = {
   "landing.prism.step2": "Erstelle dein Folio-Konto.",
   "landing.prism.step3": "Importiere das ZIP unter Projekte: Folio findet die Hauptdatei.",
   "landing.feat.title": "Was drinsteckt",
-  "landing.band.1.s": "LaTeX kompilieren ohne TeX-Installation.",
+  "landing.band.1.s": "Schreibe mit einer KI, die dein ganzes Paper kennt.",
   "landing.band.1.d":
-    "latexmk läuft in einem Container ohne Internetzugang. Dein Rechner bleibt sauber.",
-  "landing.band.2.s": "Klick ins PDF, Sprung zur Quellzeile.",
+    "Entwirf Abschnitte mit echter Literatur als Beleg, formuliere einen Absatz mit sichtbarem Diff um und mach aus einem Whiteboard-Foto LaTeX.",
+  "landing.band.2.s": "Jedes Zitat existiert. Jede Änderung bestätigst du.",
   "landing.band.2.d":
-    "SyncTeX funktioniert in beide Richtungen, und Fehler im Log springen ebenfalls zur Zeile.",
+    "Erfundene Schlüssel werden auf dem Server entfernt, Entwürfe durch Kompilieren geprüft, und keine Änderung wird übernommen, bevor du ihren Diff gesehen hast.",
   "landing.band.3.s": "Sieh jede Arbeit, die dein .bib verbindet.",
   "landing.band.3.d":
     "Ein Zitiergraph im Stil von Connected Papers, aus deiner Bibliografie mit offenen OpenAlex-Daten gebaut.",
-  "landing.band.4.s": "Versionen speichern, Änderungen lesen.",
+  "landing.band.4.s": "Kompiliere ohne TeX-Installation; klick ins PDF, um zur Zeile zu springen.",
   "landing.band.4.d":
-    "Snapshots des ganzen Projekts, mit latexdiff-Markierung zwischen jeder Version und dem aktuellen Text.",
-  "landing.band.5.s": "Füge einen KI-Assistenten hinzu, wenn du willst.",
+    "latexmk in einem Container ohne Internet, SyncTeX in beide Richtungen und Versionen mit latexdiff-Markierungen.",
+  "landing.band.5.s": "Dein Modell, dein Schlüssel, dein Server.",
   "landing.band.5.d":
-    "Bring deinen eigenen Schlüssel für jede OpenAI-kompatible API oder Anthropic. Er zitiert nur Schlüssel aus deinem .bib und ändert nie ohne deine Bestätigung.",
+    "Jede OpenAI-kompatible API, Anthropic oder lokale Modelle. Der Eigentümer entscheidet, ob ein Manuskript den Server verlassen darf, und Folio schreibt die KI-Erklärung, die Zeitschriften verlangen.",
   "landing.folio.h": "Ein Folio ist ein einmal gefaltetes Blatt.",
   "landing.folio.p":
     "Zwei Blätter, vier Seiten: der Quelltext auf der einen Seite, das Ergebnis auf der anderen. Das bekannteste Buch dieser Art ist Shakespeares First Folio von 1623. Dieses hier kompiliert.",
@@ -291,9 +293,9 @@ const de: Record<keyof typeof es, string> = {
     "Bild: Titelblatt des First Folio, British Library, CC0. Video: „Printing in a letterpress“, Subhashish Panigrahi, CC BY-SA 4.0. Über Wikimedia Commons.",
   "landing.folio.reel": "Eine Buchdruckpresse in Cuttack, Indien.",
   "auth.register.lead": "Deine erste Arbeit, in einer Minute kompiliert.",
-  "auth.register.b1.t": "Kompilieren ohne TeX-Installation",
+  "auth.register.b1.t": "Schreibe mit KI, die du prüfen kannst",
   "auth.register.b1.d":
-    "latexmk läuft in einem isolierten Container, und das PDF erscheint, während du arbeitest.",
+    "Entwerfen, umformulieren und Fehler beheben mit deinem eigenen Modell; jede Änderung kommt als Diff, den du übernimmst.",
   "auth.register.b2.t": "Zitieren, ohne den Editor zu verlassen",
   "auth.register.b2.d":
     "Suche in OpenAlex und arXiv, klicke auf Zitieren, und der Eintrag landet in deinem .bib.",
