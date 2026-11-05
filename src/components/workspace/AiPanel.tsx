@@ -1,9 +1,85 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { AiAction, AgentPlan, EvidenceItem } from "@/lib/ai-prompts";
-import { api } from "@/lib/client/api";
+import { ApiError, api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 import type { EditorHandle } from "./CodeEditor";
+import { useOutsideClose } from "./useOutsideClose";
+import { AiPolicyControl, DisclosureCard, type AiPolicy } from "./ai/AiProjectSettings";
+import { DiffView } from "./ai/DiffView";
+import { ImageToLatex, type ImageKind, type ImageResult } from "./ai/ImageToLatex";
+
+/** A compile-error fix as returned by POST /api/projects/[id]/ai/fix. */
+type FixPatch = {
+  explanation: string;
+  fileId: string;
+  path: string;
+  startLine: number;
+  endLine: number;
+  original: string;
+  replacement: string;
+  error: { message: string; line: number };
+};
+
+/** What the parent workspace does with a reviewed patch (undoable edit). */
+export type ApplyPatch = (p: {
+  fileId: string;
+  startLine: number;
+  endLine: number;
+  original: string;
+  replacement: string;
+}) => boolean;
+
+/**
+ * Rewrite presets for a selection. The instruction is model-facing (English
+ * on purpose); the label is what the author sees.
+ */
+const REWRITES: { key: MsgKey; instruction: string }[] = [
+  { key: "ai.rewrite.improve", instruction: "" },
+  {
+    key: "ai.rewrite.shorten",
+    instruction:
+      "Shorten the selection by about a third. Keep every claim, number, \\cite key, \\label and \\ref; keep the LaTeX valid.",
+  },
+  {
+    key: "ai.rewrite.formal",
+    instruction:
+      "Rewrite the selection in a formal academic register, precise and concise. Keep the meaning, citations, labels and math unchanged.",
+  },
+  {
+    key: "ai.rewrite.simplify",
+    instruction:
+      "Rewrite the selection in plainer, clearer language for a broad scientific audience. Keep the meaning, citations, labels and math unchanged.",
+  },
+  {
+    key: "ai.rewrite.grammar",
+    instruction:
+      "Fix only grammar, spelling and punctuation in the selection. Do not rephrase anything else.",
+  },
+  {
+    key: "ai.rewrite.toEn",
+    instruction:
+      "Translate the selection into English. Keep LaTeX commands, math, \\cite keys, \\label and \\ref untouched; translate only the prose.",
+  },
+  {
+    key: "ai.rewrite.toEs",
+    instruction:
+      "Translate the selection into Spanish. Keep LaTeX commands, math, \\cite keys, \\label and \\ref untouched; translate only the prose.",
+  },
+  {
+    key: "ai.rewrite.toDe",
+    instruction:
+      "Translate the selection into German. Keep LaTeX commands, math, \\cite keys, \\label and \\ref untouched; translate only the prose.",
+  },
+];
+
+const IMAGE_KIND_KEY: Record<ImageKind, MsgKey> = {
+  auto: "ai.image.kind.auto",
+  equation: "ai.image.kind.equation",
+  table: "ai.image.kind.table",
+  figure: "ai.image.kind.figure",
+  text: "ai.image.kind.text",
+};
 
 type DraftResult = {
   latex: string;
@@ -29,7 +105,11 @@ type VerifyResult = {
 
 type Turn = {
   id: number;
-  action: AiAction | "draft" | "plan";
+  action: AiAction | "draft" | "plan" | "image";
+  /** Compile-error patch (action "fix" through /ai/fix). */
+  fix?: FixPatch;
+  /** Image → LaTeX result. */
+  image?: ImageResult;
   prompt: string;
   answer: string;
   streaming: boolean;
@@ -66,6 +146,12 @@ type Props = {
   initialSteering: { instructions: string; sample: string };
   /** Section plan saved on the project from a previous "plan" run, if any. */
   initialPlan?: AgentPlan | null;
+  /** Project AI policy (owner's decision, enforced on the server). */
+  initialPolicy?: AiPolicy;
+  isOwner?: boolean;
+  /** Applies a reviewed compile-error patch as an undoable edit. */
+  applyPatch?: ApplyPatch;
+  onRecompile?: () => void;
 };
 
 const LABEL_KEY: Record<AiAction | "draft", MsgKey> = {
@@ -98,11 +184,19 @@ export function AiPanel({
   onAddPapers,
   initialSteering,
   initialPlan,
+  initialPolicy = "any",
+  isOwner = false,
+  applyPatch,
+  onRecompile,
 }: Props) {
   const { t, lang } = useI18n();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
   const [hint, setHint] = useState<string | null>(null);
+  const [policy, setPolicy] = useState<AiPolicy>(initialPolicy);
+  // Set when the project's policy (not a missing provider) blocks this user.
+  const [blocked, setBlocked] = useState<"off" | "local" | null>(null);
+  const [imageOpen, setImageOpen] = useState(false);
   const abort = useRef<AbortController | null>(null);
   // Leaving the workspace mid-stream must stop the generation: nobody is
   // reading it and it keeps burning the user's ai rate-limit budget.
@@ -112,11 +206,14 @@ export function AiPanel({
   useEffect(() => {
     if (seeded) return;
     setSeeded(true);
-    api<{ messages: { role: string; action: string; content: string }[] | null }>(
-      "GET",
-      `/api/projects/${projectId}/ai`,
-    )
+    api<{
+      messages: { role: string; action: string; content: string }[] | null;
+      policy?: AiPolicy;
+      blocked?: "off" | "local";
+    }>("GET", `/api/projects/${projectId}/ai`)
       .then((r) => {
+        if (r.policy) setPolicy(r.policy);
+        setBlocked(r.blocked ?? null);
         const msgs = (r.messages ?? []).filter((m) => m.content.trim());
         if (msgs.length === 0) return;
         setTurns((prev) => {
@@ -202,7 +299,20 @@ export function AiPanel({
     return (
       <div className="p-6 text-sm leading-relaxed text-muted">
         <h2 className="text-base font-semibold text-ink">{t("ai.disabled.title")}</h2>
-        <p className="mt-2">{t("ai.disabled.body", { var1: "LLM_BASE_URL", var2: "LLM_MODEL" })}</p>
+        {blocked ? (
+          // The owner's decision, not a missing provider, is what stops here.
+          <p
+            role="status"
+            data-testid="ai-blocked"
+            className="mt-2 rounded-md bg-[var(--pill-warning-bg)] px-2.5 py-1.5 text-xs text-[var(--pill-warning-ink)]"
+          >
+            {t(blocked === "off" ? "ai.policy.blocked.off" : "ai.policy.blocked.local")}
+          </p>
+        ) : (
+          <p className="mt-2">
+            {t("ai.disabled.body", { var1: "LLM_BASE_URL", var2: "LLM_MODEL" })}
+          </p>
+        )}
       </div>
     );
   }
@@ -210,7 +320,7 @@ export function AiPanel({
   const patch = (id: number, p: Partial<Turn>) =>
     setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...p } : t)));
 
-  async function run(action: AiAction, instruction = "") {
+  async function run(action: AiAction, instruction = "", labelKey?: MsgKey) {
     const ed = editor.current;
     if (!ed || !activeFile || busy) return;
     const sel = ed.selection();
@@ -220,7 +330,7 @@ export function AiPanel({
     }
     setHint(null);
     const id = nextId.current++;
-    const label = t(LABEL_KEY[action]);
+    const label = t(labelKey ?? LABEL_KEY[action]);
     const prompt =
       action === "ask"
         ? instruction
@@ -284,6 +394,55 @@ export function AiPanel({
       const aborted = (err as Error).name === "AbortError";
       patch(id, { streaming: false, error: aborted ? t("ai.stopped") : (err as Error).message });
     }
+  }
+
+  /**
+   * Compile error → a patch on the failing lines, reviewed as a diff. Falls
+   * back to the streamed explanation when the log has no locatable error.
+   */
+  async function fixRun() {
+    if (!activeFile || busy || !lastLog) return;
+    setHint(null);
+    const id = nextId.current++;
+    setTurns((ts) => [
+      ...ts,
+      { id, action: "fix", prompt: t(LABEL_KEY.fix), answer: "", streaming: true },
+    ]);
+    try {
+      await flush();
+      const fix = await api<FixPatch>("POST", `/api/projects/${projectId}/ai/fix`, {
+        log: lastLog.slice(-20_000),
+        lang,
+      });
+      patch(id, { streaming: false, fix, answer: fix.explanation });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        // No file:line in the log: the free-form explanation is still useful.
+        setTurns((ts) => ts.filter((x) => x.id !== id));
+        void run("fix");
+        return;
+      }
+      patch(id, { streaming: false, error: (err as Error).message });
+    }
+  }
+
+  function addImageTurn(result: ImageResult, req: { kind: ImageKind; hint: string }) {
+    const id = nextId.current++;
+    setTurns((ts) => [
+      ...ts,
+      {
+        id,
+        action: "image",
+        prompt:
+          t("ai.image.prompt", { kind: t(IMAGE_KIND_KEY[req.kind]) }) +
+          (req.hint ? ` · ${req.hint}` : ""),
+        answer: result.latex,
+        streaming: false,
+        image: result,
+        error: result.unreadable ? t("ai.image.unreadable") : undefined,
+      },
+    ]);
+    setImageOpen(false);
   }
 
   /** Drafting agent: search literature + stream a section draft (NDJSON). */
@@ -465,36 +624,62 @@ export function AiPanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 border-b border-line p-3">
+        {blocked && (
+          <p
+            role="status"
+            data-testid="ai-blocked"
+            className="mb-2 rounded-md bg-[var(--pill-warning-bg)] px-2.5 py-1.5 text-xs text-[var(--pill-warning-ink)]"
+          >
+            {t(blocked === "off" ? "ai.policy.blocked.off" : "ai.policy.blocked.local")}
+          </p>
+        )}
         <div className="flex flex-wrap gap-1.5">
+          <RewriteMenu
+            disabled={busy || !isTex || !!blocked}
+            onPick={(r) => void run("improve", r.instruction, r.key)}
+          />
           <button
             type="button"
             className="btn"
-            onClick={() => run("improve")}
-            disabled={busy || !isTex}
+            onClick={() => run("explain")}
+            disabled={busy || !!blocked}
           >
-            {t("ai.improve")}
-          </button>
-          <button type="button" className="btn" onClick={() => run("explain")} disabled={busy}>
             {t("ai.explain")}
           </button>
           <button
             type="button"
             className="btn"
             onClick={() => run("continue")}
-            disabled={busy || !isTex}
+            disabled={busy || !isTex || !!blocked}
           >
             {t("ai.continue")}
           </button>
           <button
             type="button"
             className="btn"
-            onClick={() => run("fix")}
-            disabled={busy || !lastLog}
+            onClick={() => void fixRun()}
+            disabled={busy || !lastLog || !!blocked}
             title={lastLog ? undefined : t("ai.fix.disabled")}
           >
             {t("ai.fix")}
           </button>
+          <button
+            type="button"
+            className="btn"
+            aria-expanded={imageOpen}
+            onClick={() => setImageOpen((o) => !o)}
+            disabled={busy || !isTex || !!blocked}
+          >
+            {t("ai.image.button")}
+          </button>
         </div>
+        {imageOpen && (
+          <ImageToLatex
+            projectId={projectId}
+            onResult={addImageTurn}
+            onClose={() => setImageOpen(false)}
+          />
+        )}
         <p className="mt-2 text-xs text-muted" aria-live="polite">
           {hint ?? t("ai.hint")}
         </p>
@@ -531,7 +716,20 @@ export function AiPanel({
               </details>
             )}
             <div className="rounded-lg border border-line bg-surface p-3 text-sm">
-              {turn.answer ? (
+              {turn.fix ? (
+                <FixBody fix={turn.fix} />
+              ) : turn.image ? (
+                <ImageBody image={turn.image} />
+              ) : turn.action === "improve" &&
+                turn.range &&
+                !turn.streaming &&
+                turn.answer &&
+                !turn.error ? (
+                <DiffView
+                  before={turn.range.text}
+                  after={keepEdges(turn.range.text, turn.answer)}
+                />
+              ) : turn.answer ? (
                 <div className="whitespace-pre-wrap">{turn.answer}</div>
               ) : turn.streaming ? (
                 <span className="text-muted">{t("ai.thinking")}</span>
@@ -545,6 +743,8 @@ export function AiPanel({
                 editor={editor}
                 activeFileId={activeFile?.id}
                 addReferences={addReferences}
+                applyPatch={applyPatch}
+                onRecompile={onRecompile}
               />
             )}
           </article>
@@ -596,6 +796,23 @@ export function AiPanel({
                 <option value="long">{t("ai.steer.length.long")}</option>
               </select>
             </label>
+            <div className="border-t border-line pt-2">
+              <AiPolicyControl
+                projectId={projectId}
+                policy={policy}
+                isOwner={isOwner}
+                onChange={(p) => {
+                  setPolicy(p);
+                  // React immediately: "off" blocks everyone; the other two
+                  // depend on the user's endpoint and are recomputed on load.
+                  setBlocked(p === "off" ? "off" : null);
+                }}
+              />
+            </div>
+            <DisclosureCard
+              projectId={projectId}
+              onInsert={(latex) => editor.current?.insertAtCursor(latex)}
+            />
           </div>
         )}
         <label htmlFor="ai-question" className="sr-only">
@@ -802,16 +1019,33 @@ function TurnActions({
   editor,
   activeFileId,
   addReferences,
+  applyPatch,
+  onRecompile,
 }: {
   turn: Turn;
   editor: React.RefObject<EditorHandle | null>;
   activeFileId?: string;
   addReferences: (turn: Turn) => Promise<void>;
+  applyPatch?: ApplyPatch;
+  onRecompile?: () => void;
 }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  // Outcome of applying a reviewed change: nothing yet / landed / text moved on.
+  const [applied, setApplied] = useState<"none" | "ok" | "stale">("none");
   const isEdit = turn.action === "improve" || turn.action === "continue";
-  const code = isEdit ? turn.answer.trim() : firstCodeBlock(turn.answer);
+  // The rewrite the author saw as a diff — boundary whitespace of the original
+  // restored around the model's trimmed answer, so diff and applied text match.
+  const improved =
+    turn.action === "improve" && turn.range
+      ? keepEdges(turn.range.text, turn.answer.trim())
+      : turn.answer.trim();
+  const code =
+    turn.action === "image"
+      ? (turn.image?.latex ?? null)
+      : isEdit
+        ? improved
+        : firstCodeBlock(turn.answer);
   const canReplace = turn.action === "improve" && turn.range && turn.range.fileId === activeFileId;
   if (turn.action === "draft" && turn.draft) {
     return (
@@ -850,20 +1084,68 @@ function TurnActions({
       </div>
     );
   }
+  // Compile-error patch: apply the reviewed lines and recompile in one click.
+  if (turn.action === "fix" && turn.fix) {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        {applied !== "ok" ? (
+          <button
+            type="button"
+            className="btn btn-primary"
+            data-testid="fix-apply"
+            onClick={() => {
+              const ok =
+                applyPatch?.({
+                  fileId: turn.fix!.fileId,
+                  startLine: turn.fix!.startLine,
+                  endLine: turn.fix!.endLine,
+                  original: turn.fix!.original,
+                  replacement: turn.fix!.replacement,
+                }) ?? false;
+              setApplied(ok ? "ok" : "stale");
+              if (ok) onRecompile?.();
+            }}
+          >
+            {t("ai.fix.apply")}
+          </button>
+        ) : (
+          <span className="text-xs text-ok">{t("ai.fix.applied")}</span>
+        )}
+        {applied === "stale" && <span className="text-xs text-danger">{t("ai.fix.stale")}</span>}
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={async () => {
+            await navigator.clipboard.writeText(turn.fix!.replacement);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+        >
+          {copied ? t("figure.copied") : t("ai.copy")}
+        </button>
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {canReplace && code && (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {canReplace && code && applied !== "ok" && (
         <button
           type="button"
           className="btn btn-primary"
-          onClick={() =>
-            editor.current?.replaceRange(turn.range!.from, turn.range!.to, turn.range!.text, code)
-          }
+          data-testid="rewrite-apply"
+          onClick={() => {
+            const { from, to, text } = turn.range!;
+            setApplied(
+              editor.current?.replaceIfUnchanged(from, to, text, improved) ? "ok" : "stale",
+            );
+          }}
         >
-          {t("ai.replace")}
+          {t("ai.diff.apply")}
         </button>
       )}
-      {code && (
+      {applied === "ok" && <span className="text-xs text-ok">{t("ai.diff.applied")}</span>}
+      {applied === "stale" && <span className="text-xs text-danger">{t("ai.diff.stale")}</span>}
+      {code && applied !== "ok" && (
         <button type="button" className="btn" onClick={() => editor.current?.insertAtCursor(code)}>
           {turn.action === "continue"
             ? t("ai.insertAtCursor")
@@ -883,6 +1165,94 @@ function TurnActions({
       >
         {copied ? t("figure.copied") : t("ai.copy")}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Restores the original's leading/trailing whitespace around the model's
+ * (usually trimmed) answer, so a rewrite never eats the space that separated
+ * it from the surrounding text — and the diff shows real changes only.
+ */
+function keepEdges(before: string, after: string): string {
+  const lead = /^\s*/.exec(before)?.[0] ?? "";
+  const tail = /\s*$/.exec(before)?.[0] ?? "";
+  let out = after;
+  if (lead && !out.startsWith(lead)) out = lead + out.trimStart();
+  if (tail && !out.endsWith(tail)) out = out.trimEnd() + tail;
+  return out;
+}
+
+/** Rewrite presets behind one menu button (selection required). */
+function RewriteMenu({
+  disabled,
+  onPick,
+}: {
+  disabled: boolean;
+  onPick: (preset: { key: MsgKey; instruction: string }) => void;
+}) {
+  const { t } = useI18n();
+  const ref = useOutsideClose();
+  return (
+    <details className="relative" ref={ref} data-testid="rewrite-menu">
+      <summary
+        className={`btn cursor-pointer list-none ${disabled ? "pointer-events-none opacity-50" : ""}`}
+      >
+        {t("ai.rewrite")}
+      </summary>
+      <div className="absolute left-0 z-20 mt-1 w-52 rounded-lg border border-line bg-surface p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        {REWRITES.map((r) => (
+          <button
+            key={r.key}
+            type="button"
+            className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-raised"
+            onClick={() => {
+              ref.current?.removeAttribute("open");
+              onPick(r);
+            }}
+          >
+            {t(r.key)}
+          </button>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** A compile-error fix: what happened, where, and the patch as a diff. */
+function FixBody({ fix }: { fix: FixPatch }) {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-1.5">
+      <p className="whitespace-pre-wrap">{fix.explanation}</p>
+      <p className="num text-xs text-muted" data-testid="fix-where">
+        {t("ai.fix.where", { path: fix.path, a: fix.startLine, b: fix.endLine })}
+      </p>
+      <DiffView before={fix.original} after={fix.replacement} />
+    </div>
+  );
+}
+
+/** Image → LaTeX result with its honest compile status. */
+function ImageBody({ image }: { image: ImageResult }) {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-1.5" data-testid="image-result">
+      {image.latex ? (
+        <pre className="max-h-60 overflow-auto font-mono text-[12px] leading-5 whitespace-pre-wrap">
+          {image.latex}
+        </pre>
+      ) : null}
+      {image.latex &&
+        (image.compiles === true ? (
+          <p className="text-xs text-ok">{t("ai.image.compiles")}</p>
+        ) : image.compiles === false ? (
+          <p className="text-xs text-danger">
+            {t("ai.image.fails", { error: image.error ?? "?" })}
+          </p>
+        ) : (
+          <p className="text-xs text-muted">{t("ai.image.unchecked")}</p>
+        ))}
     </div>
   );
 }

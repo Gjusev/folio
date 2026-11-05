@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { asPolicy, resolveProjectEndpoint } from "@/lib/ai-policy";
 import { AI_ACTIONS, buildMessages } from "@/lib/ai-prompts";
+import { recordAiUsage } from "@/lib/ai-usage";
 import { bibKeys } from "@/lib/bibtex";
 import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
 import { streamChat } from "@/lib/llm";
-import { anyEndpoint, resolveEndpoint } from "@/lib/llm-profiles";
 import { indexStatus, retrieve } from "@/lib/rag";
 import {
   addAiMessage,
@@ -32,7 +33,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
   const project = await getViewableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
-  const endpoint = await resolveEndpoint(user.id, "draft");
+  const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
   if (!endpoint)
     throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
   if (input.action === "ask" && !input.instruction)
@@ -56,7 +57,7 @@ export const POST = route(async (req, { params }: Ctx) => {
   if (input.instruction) {
     try {
       if (await indexStatus(project.id)) {
-        const found = await retrieve(user.id, project.id, input.instruction);
+        const found = await retrieve(user.id, project, input.instruction);
         if (found.length)
           projectContext = found.map(({ file: f, content }) => ({ file: f, content }));
       }
@@ -96,6 +97,7 @@ export const POST = route(async (req, { params }: Ctx) => {
           const prompt = input.instruction || `[${input.action}]`;
           await addAiMessage(project.id, "user", input.action, prompt).catch(() => {});
           await addAiMessage(project.id, "assistant", input.action, full).catch(() => {});
+          await recordAiUsage(project.id, input.action, endpoint.model).catch(() => {});
         }
       }
     },
@@ -117,5 +119,16 @@ export const GET = route(async (req, { params }: Ctx) => {
   const { id } = await params;
   const project = await getViewableProject(user.id, id);
   const messages = await listAiMessages(project.id);
-  return Response.json({ enabled: await anyEndpoint(user.id), messages });
+  const policy = asPolicy(project.aiPolicy);
+  // `blocked` says the owner's policy, not a missing provider, is what keeps
+  // AI off for this user (their own key is remote under "local").
+  let enabled = false;
+  let blocked: "off" | "local" | undefined;
+  try {
+    enabled = (await resolveProjectEndpoint(user.id, project, "draft")) !== null;
+  } catch (err) {
+    if (!(err instanceof HttpError && err.status === 403)) throw err;
+    blocked = policy === "off" ? "off" : "local";
+  }
+  return Response.json({ enabled, policy, blocked, messages });
 });

@@ -5,25 +5,33 @@ export type Ctx = { cookie: string; api: APIRequestContext; projectId: string; m
 const BASE = () => process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 let n = 0;
 
-/** Fresh account + project with the article template; returns session cookie.
- *  Falls back to a persistent local account when the register rate-limit
- *  (rightly) kicks in across repeated e2e runs. */
-export async function seed(): Promise<Ctx> {
+// One login for the whole run (workers:1): the suite registers/logs in far
+// more often than the (right) per-IP limits allow if every spec opens its own
+// account. Specs needing a DISTINCT account pass { fresh: true }.
+let sharedCookie: string | null = null;
+
+/** A project with the article template on a session. Default: the persistent
+ *  local account (one login per run, memoized). { fresh: true } registers a
+ *  unique account — for tests whose premise is two different users. */
+export async function seed(opts?: { fresh?: boolean }): Promise<Ctx> {
   const api = await request.newContext({ baseURL: BASE() });
-  const email = `e2e-${Date.now()}-${n++}@t.dev`;
   let cookie: string;
-  const reg = await api.post("/api/auth/register", {
-    data: { email, name: "E2E", password: "correct horse battery" },
-  });
-  if (reg.status() === 201) {
+  if (opts?.fresh) {
+    const email = `e2e-${Date.now()}-${n++}@t.dev`;
+    const reg = await api.post("/api/auth/register", {
+      data: { email, name: "E2E", password: "correct horse battery" },
+    });
+    expect(reg.status(), `register=${reg.status()}`).toBe(201);
     cookie = (reg.headers()["set-cookie"] ?? "").split(";")[0];
+  } else if (sharedCookie) {
+    cookie = sharedCookie;
   } else {
     const known = process.env.E2E_USER ?? "e2e-persistent@t.dev";
     const login = await api.post("/api/auth/login", {
       data: { email: known, password: process.env.E2E_PASS ?? "correct horse battery" },
     });
-    expect(login.status(), `register=${reg.status()} login=${login.status()}`).toBe(200);
-    cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];
+    expect(login.status(), `persistent login=${login.status()}`).toBe(200);
+    sharedCookie = cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];
   }
   const authed = await request.newContext({ baseURL: BASE(), extraHTTPHeaders: { cookie } });
   const proj = await authed.post("/api/projects", {
