@@ -57,6 +57,13 @@
       "when": 1793831755423,
       "tag": "0007_orange_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793870173665,
+      "tag": "0008_flowery_the_renegades",
+      "breakpoints": true
     }
   ]
 }

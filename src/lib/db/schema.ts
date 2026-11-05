@@ -67,6 +67,10 @@ export const projects = pgTable(
     aiStyleSample: text("ai_style_sample"),
     // Editable section plan produced by the agent (AgentPlan JSON), if any.
     aiPlan: jsonb("ai_plan"),
+    // Who may process this manuscript with AI, decided by the owner and
+    // enforced server-side for every collaborator's own key:
+    // any (any provider) | local (only endpoints on this host's network) | off.
+    aiPolicy: text("ai_policy").notNull().default("any"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -189,6 +193,27 @@ export const aiMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_messages_project_idx").on(t.projectId, t.createdAt)],
+);
+
+/**
+ * Append-only ledger of AI use per project: what kind of help, which model,
+ * when — never content. Unlike ai_messages (a trimmed chat history) it is not
+ * pruned, so the AI-use disclosure can cover the whole life of the manuscript.
+ */
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // ask | improve | explain | continue | fix | draft | plan | review | image | embed
+    action: text().notNull(),
+    // Model id as configured by the user (e.g. "mistral-large-latest").
+    model: text().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_usage_project_idx").on(t.projectId, t.createdAt)],
 );
 
 /** RAG index: chunks of a project's text files with their embeddings, so the
