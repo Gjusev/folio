@@ -26,7 +26,9 @@ What a closed, free-for-now service cannot promise:
   any time.
 
 How Folio compares with Prism and Overleaf, and what comes next:
-[Folio, the open alternative to Prism](docs/prism-alternative.md).
+[Folio, the open alternative to Prism](docs/prism-alternative.md). Let your own
+agent (Claude Code, Codex) work on a project through [Folio's MCP server](docs/mcp.md)
+with a scoped personal token.
 
 |                           Editor + compiled PDF                           |                                  Literature explorer                                   |
 | :-----------------------------------------------------------------------: | :------------------------------------------------------------------------------------: |

@@ -31,6 +31,9 @@ Settings offers presets for each.
   `LLM_ALLOWED_LOCAL_PORTS`); redirects are refused.
 - **Collaboration.** The assistant always runs with the key of whoever invokes
   it; the collaboration relay only carries text and cursors.
+- **Agent keys.** Personal access tokens ([MCP](mcp.md)) are a separate thing
+  from AI providers: they authenticate *your tools* to Folio, carry their own
+  scopes, and never reach an AI provider.
 
 ## Features
 
@@ -45,6 +48,7 @@ Settings offers presets for each.
 | Section plan   | Assistant tab | Plans the paper section by section (persisted); each row drafts with a word budget, a critique pass and citation verification against a throwaway compile |
 | Review mode    | Review tab    | A structured critique of the manuscript, described below                                                                                                  |
 | AI-use record  | Assistant tab | Every successful AI call is logged (action, model, date — never content) and Folio writes the journal declaration from it                                 |
+| Your own agent | MCP `/api/mcp`| Claude Code, Codex or any MCP client work on your projects with a scoped personal token — [`docs/mcp.md`](mcp.md)                                        |
 
 ## Per-project AI policy
 
