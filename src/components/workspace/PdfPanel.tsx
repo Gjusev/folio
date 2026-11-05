@@ -171,7 +171,13 @@ export function PdfPanel({
           <div className="flex h-full flex-col items-start justify-center gap-3 bg-[var(--pdf-desk)] p-8">
             <p className="text-base font-medium">{t("pdf.empty.head")}</p>
             <p className="max-w-xs text-sm text-muted">
-              {t("pdf.empty.body", { kbd: "Ctrl + Enter" })}
+              {/* touch devices have no keyboard: no desktop shortcut hint */}
+              <span className="[@media(hover:none)]:hidden">
+                {t("pdf.empty.body", { kbd: "Ctrl + Enter" })}
+              </span>
+              <span className="hidden [@media(hover:none)]:inline">
+                {t("pdf.empty.body.touch")}
+              </span>
             </p>
             <button
               type="button"

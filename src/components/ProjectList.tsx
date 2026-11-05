@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type SubmitEvent } from "react";
-import { Compass, FilePlus2, FolderInput } from "lucide-react";
+import { Compass, Copy, FilePlus2, FolderInput, Trash2 } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { ago, useI18n } from "@/lib/i18n/client";
 import { tourEvent } from "@/components/onboarding/tasks";
@@ -155,7 +155,7 @@ export function ProjectList({
                   : t("projects.count", { n: items.length })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <input
             ref={zipInput}
             type="file"
@@ -234,7 +234,7 @@ export function ProjectList({
       )}
 
       {items.length === 0 ? (
-        <div className="mt-6 grid gap-3 lg:grid-cols-3">
+        <div className="mt-6 grid items-start gap-3 lg:grid-cols-3">
           <div className="flex flex-col rounded-xl border border-accent/50 bg-accent-soft p-5">
             <Compass aria-hidden className="h-5 w-5 text-accent" />
             <h2 className="mt-3 text-base font-semibold">{t("onb.demo.t")}</h2>
@@ -295,26 +295,42 @@ export function ProjectList({
                 <td className="max-w-0 py-0 pr-4">
                   <Link
                     href={`/projects/${p.id}`}
-                    className="flex items-center gap-1.5 truncate py-3 font-medium"
+                    className="flex flex-col items-start gap-0.5 py-3 font-medium sm:flex-row sm:items-center sm:gap-1.5"
                   >
-                    <span className="truncate">{p.name}</span>
+                    <span className="max-w-full truncate">{p.name}</span>
                     {p.role === "viewer" && (
                       <span className="pill shrink-0">{t("share.role.viewer")}</span>
                     )}
                     {p.role === "editor" && (
                       <span className="pill shrink-0">{t("share.role.editor")}</span>
                     )}
+                    {/* edited moves under the name on phones: the name owns the line */}
+                    <span className="num text-xs font-normal text-muted sm:hidden">
+                      {ago(p.updatedAt, lang)}
+                    </span>
                   </Link>
                 </td>
                 <td className="num hidden py-3 pr-4 text-right text-muted sm:table-cell">
                   {p.files}
                 </td>
-                <td className="py-3 pr-4 whitespace-nowrap text-muted">{ago(p.updatedAt, lang)}</td>
+                <td className="num hidden py-3 pr-4 whitespace-nowrap text-muted sm:table-cell">
+                  {ago(p.updatedAt, lang)}
+                </td>
                 <td className="w-0 py-2 text-right">
                   <span className="flex items-center justify-end gap-1">
+                    {/* phones: icon-only actions keep the name readable */}
                     <button
                       type="button"
-                      className="btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                      className="btn btn-ghost btn-sm sm:hidden"
+                      onClick={() => void duplicate(p)}
+                      aria-label={`${t("projects.duplicate")} ${p.name}`}
+                      title={t("projects.duplicate")}
+                    >
+                      <Copy size={15} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm hidden sm:inline-flex sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                       onClick={() => void duplicate(p)}
                       aria-label={`${t("projects.duplicate")} ${p.name}`}
                       title={t("projects.duplicate")}
@@ -322,14 +338,24 @@ export function ProjectList({
                       {t("projects.duplicate")}
                     </button>
                     {p.role !== "viewer" && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-                        onClick={() => remove(p)}
-                        aria-label={`${t("projects.delete")} ${p.name}`}
-                      >
-                        {t("projects.delete")}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm sm:hidden"
+                          onClick={() => remove(p)}
+                          aria-label={`${t("projects.delete")} ${p.name}`}
+                        >
+                          <Trash2 size={15} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm hidden sm:inline-flex sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                          onClick={() => remove(p)}
+                          aria-label={`${t("projects.delete")} ${p.name}`}
+                        >
+                          {t("projects.delete")}
+                        </button>
+                      </>
                     )}
                   </span>
                 </td>
@@ -346,7 +372,7 @@ export function ProjectList({
         className="m-auto w-[min(640px,calc(100vw-24px))] rounded-2xl border border-line bg-surface p-0 text-ink shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop:bg-black/30 /* taste-skill-ignore shadow: modal dialog = real overlay */"
         aria-labelledby="new-project-title"
       >
-        <form onSubmit={create} className="p-5">
+        <form onSubmit={create} className="flex max-h-[calc(100dvh-40px)] flex-col p-5">
           <h2 id="new-project-title" className="text-base font-semibold">
             {t("projects.new")}
           </h2>
@@ -369,9 +395,11 @@ export function ProjectList({
             maxLength={120}
             autoFocus
           />
-          <fieldset className="mt-4">
+          {/* the template list scrolls on its own so the actions survive the
+              on-screen keyboard instead of hiding below the fold */}
+          <fieldset className="mt-4 flex min-h-0 flex-col">
             <legend className="label">{t("projects.template")}</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto sm:grid-cols-2">
               {templateIds.map((id, i) => (
                 <label
                   key={id}
@@ -392,7 +420,7 @@ export function ProjectList({
               ))}
             </div>
           </fieldset>
-          <div className="mt-5 flex justify-end gap-2">
+          <div className="mt-5 flex shrink-0 justify-end gap-2">
             <button type="button" className="btn" onClick={() => dialog.current?.close()}>
               {t("projects.cancel")}
             </button>

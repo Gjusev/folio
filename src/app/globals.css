@@ -205,6 +205,35 @@ body {
   }
 }
 
+/* ---- touch: every control reaches the 44px minimum on coarse pointers, and
+   inputs sit at 16px so iOS Safari does not zoom on focus. Visual sizes stay
+   untouched on hover-capable devices. ---- */
+@media (hover: none) and (pointer: coarse) {
+  @layer components {
+    .btn,
+    .btn-sm,
+    .input,
+    .select,
+    .tab {
+      min-height: 44px; /* absolute touch minimum, immune to font-scale rem */
+    }
+    .btn,
+    .btn-sm {
+      min-width: 44px;
+    }
+    .tab {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .input,
+    .select {
+      font-size: 1rem; /* 16px: no iOS focus zoom */
+    }
+  }
+}
+
 /* CodeMirror fills its sheet. */
 .cm-editor {
   height: 100%;

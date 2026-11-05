@@ -42,6 +42,9 @@ export function LlmSettings({ initialProfiles, initialRoutes, sealConfigured }: 
   const [saved, setSaved] = useState(false);
   const [test, setTest] = useState<"idle" | "busy" | "ok" | "fail">("idle");
   const [busy, setBusy] = useState(false);
+  // Provider deletion asks twice inline, like tokens: no window.confirm that
+  // blocks the JS thread and feels foreign on phones.
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   async function refresh() {
     const [{ profiles: list }, r] = await Promise.all([
@@ -118,13 +121,14 @@ export function LlmSettings({ initialProfiles, initialRoutes, sealConfigured }: 
   }
 
   async function remove(id: string) {
-    if (!window.confirm(t("settings.llm.delete") + "?")) return;
     setError(null);
     try {
       await api("DELETE", `/api/llm/profiles/${id}`);
       await refresh();
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setConfirmId(null);
     }
   }
 
@@ -338,10 +342,11 @@ export function LlmSettings({ initialProfiles, initialRoutes, sealConfigured }: 
                     </button>
                     <button
                       type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => void remove(p.id)}
+                      className={`btn btn-ghost btn-sm ${confirmId === p.id ? "text-danger" : ""}`}
+                      onClick={() => (confirmId === p.id ? void remove(p.id) : setConfirmId(p.id))}
+                      onBlur={() => setConfirmId((id) => (id === p.id ? null : id))}
                     >
-                      {t("settings.llm.delete")}
+                      {confirmId === p.id ? t("common.confirm") : t("settings.llm.delete")}
                     </button>
                   </span>
                 )}

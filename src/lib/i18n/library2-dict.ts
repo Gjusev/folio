@@ -5,6 +5,7 @@
 const es = {
   "lb.title": "Mi biblioteca",
   "lb.link": "Mi biblioteca",
+  "lb.filter": "Filtrar por título o DOI",
   "lb.upload.head": "Sube tus PDF",
   "lb.upload.body":
     "Arrastra aquí artículos o recursos que ya tengas descargados, o elígelos del disco. Se extrae el texto para buscar y citar.",
@@ -51,6 +52,7 @@ const es = {
 const en: Record<keyof typeof es, string> = {
   "lb.title": "My library",
   "lb.link": "My library",
+  "lb.filter": "Filter by title or DOI",
   "lb.upload.head": "Upload your PDFs",
   "lb.upload.body":
     "Drop papers or resources you already have downloaded, or pick them from disk. Their text is extracted for search and citation.",
@@ -94,6 +96,7 @@ const en: Record<keyof typeof es, string> = {
 const de: Record<keyof typeof es, string> = {
   "lb.title": "Meine Bibliothek",
   "lb.link": "Meine Bibliothek",
+  "lb.filter": "Nach Titel oder DOI filtern",
   "lb.upload.head": "Lade deine PDFs hoch",
   "lb.upload.body":
     "Zieh bereits heruntergeladene Arbeiten oder Ressourcen hierher oder wähle sie von der Festplatte. Ihr Text wird für Suche und Zitation extrahiert.",

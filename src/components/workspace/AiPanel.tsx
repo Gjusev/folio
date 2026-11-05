@@ -1264,7 +1264,7 @@ function PlanView({
                 {t("ai.plan.draft")}
               </button>
               {s.cite.length > 0 && (
-                <span className="font-mono text-[10px] text-muted">{s.cite.join(" · ")}</span>
+                <span className="font-mono text-[11px] text-muted">{s.cite.join(" · ")}</span>
               )}
             </div>
           </li>

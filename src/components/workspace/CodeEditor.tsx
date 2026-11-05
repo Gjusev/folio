@@ -4,10 +4,11 @@ import {
   type CompletionResult,
 } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
-import { StreamLanguage } from "@codemirror/language";
+import { HighlightStyle, StreamLanguage, syntaxHighlighting } from "@codemirror/language";
 import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { EditorSelection, EditorState, Prec, type Extension } from "@codemirror/state";
 import { type BlockInfo, EditorView, GutterMarker, gutter, keymap } from "@codemirror/view";
+import { tags } from "@lezer/highlight";
 import { basicSetup } from "codemirror";
 import {
   Awareness,
@@ -64,6 +65,18 @@ type Props = {
   /** Live selection of the active file; null when the selection is empty. */
   onSelectionChange?: (sel: { from: number; to: number; text: string } | null) => void;
 };
+
+// Syntax colours are built from the app's theme tokens so they resolve to
+// combinations that already pass 4.5:1 on each theme's surface — CodeMirror's
+// default highlight style is light-only (purple #221199 brackets, #990
+// comments) and went unreadable on the dark surface.
+const syntax = HighlightStyle.define([
+  { tag: tags.keyword, color: "var(--accent)" },
+  { tag: tags.comment, color: "var(--muted)", fontStyle: "italic" },
+  { tag: tags.string, color: "color-mix(in srgb, var(--accent) 45%, var(--ink))" },
+  { tag: tags.atom, color: "color-mix(in srgb, var(--danger) 70%, var(--ink))" },
+  { tag: tags.bracket, color: "color-mix(in srgb, var(--ink) 72%, var(--accent))" },
+]);
 
 const theme = EditorView.theme({
   "&": { backgroundColor: "var(--surface)", color: "var(--ink)" },
@@ -210,6 +223,8 @@ export function CodeEditor({
   function baseExtensions(): Extension[] {
     extensions.current ??= [
       basicSetup,
+      // Overrides basicSetup's light-only default colours (see `syntax`).
+      Prec.high(syntaxHighlighting(syntax)),
       StreamLanguage.define(stex),
       EditorView.lineWrapping,
       theme,

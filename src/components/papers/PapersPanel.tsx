@@ -180,19 +180,19 @@ export function PapersPanel({
               setView(tab.id);
               if (tab.id === "library") tourEvent("library");
             }}
-            className={`flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
+            className={`flex h-7 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors [@media(hover:none)]:min-h-11 ${
               view === tab.id ? "bg-active text-ink" : "text-muted hover:bg-raised hover:text-ink"
             }`}
           >
             {tab.label}
             {tab.badge ? (
-              <span className="num text-[10px] font-normal text-muted">{tab.badge}</span>
+              <span className="num text-[11px] font-normal text-muted">{tab.badge}</span>
             ) : null}
           </button>
         ))}
         <a
           href="/library"
-          className="ml-auto flex h-7 items-center gap-1 px-2 text-xs text-muted hover:text-ink"
+          className="ml-auto flex h-7 items-center gap-1 px-2 text-[13px] text-muted hover:text-ink [@media(hover:none)]:min-h-11"
         >
           {t("lb.link")}
         </a>
