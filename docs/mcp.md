@@ -26,12 +26,12 @@ The server is stateless (no sessions); every call carries the token.
 
 ## Scopes
 
-| Scope       | Allows                                                       |
-| ----------- | ------------------------------------------------------------ |
-| `read`      | List projects and files, read file contents and snapshots    |
-| `write`     | Create and overwrite files, add references, create snapshots |
-| `compile`   | Run the sandboxed compiler and read its log                  |
-| `literature`| Search the literature and fetch papers                       |
+| Scope        | Allows                                                       |
+| ------------ | ------------------------------------------------------------ |
+| `read`       | List projects and files, read file contents and snapshots    |
+| `write`      | Create and overwrite files, add references, create snapshots |
+| `compile`    | Run the sandboxed compiler and read its log                  |
+| `literature` | Search the literature and fetch papers                       |
 
 - `add_reference` needs **literature + write** (it searches, then edits a `.bib`).
 - The token acts **as you**: project access follows your role. A viewer's
@@ -42,17 +42,17 @@ The server is stateless (no sessions); every call carries the token.
 
 ## Tools (v1)
 
-| Tool               | Scope            | What it does                                                            |
-| ------------------ | ---------------- | ----------------------------------------------------------------------- |
-| `list_projects`    | read             | Your projects with your role in each                                    |
-| `get_project`      | read             | Files (path, size, version) and the main file of one project            |
-| `read_file`        | read             | A text file's content and version (binary files are refused)            |
-| `write_file`       | write            | Upsert a file. Existing files need the `baseVersion` you got from `read_file`; on conflict the current version is returned |
-| `compile`          | compile          | Compile in the sandbox; returns ok/seconds/errors(file,line,message) — never PDF bytes |
-| `search_literature`| literature       | OpenAlex search: title, authors, year, DOI, citations, paper id         |
-| `add_reference`    | literature+write | Add a retrieved paper to the project's first `.bib`; returns the cite key |
-| `create_snapshot`  | write            | Checkpoint the whole project (do this before sweeping edits)            |
-| `list_snapshots`   | read             | Existing checkpoints                                                    |
+| Tool                | Scope            | What it does                                                                                                               |
+| ------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `list_projects`     | read             | Your projects with your role in each                                                                                       |
+| `get_project`       | read             | Files (path, size, version) and the main file of one project                                                               |
+| `read_file`         | read             | A text file's content and version (binary files are refused)                                                               |
+| `write_file`        | write            | Upsert a file. Existing files need the `baseVersion` you got from `read_file`; on conflict the current version is returned |
+| `compile`           | compile          | Compile in the sandbox; returns ok/seconds/errors(file,line,message) — never PDF bytes                                     |
+| `search_literature` | literature       | OpenAlex search: title, authors, year, DOI, citations, paper id                                                            |
+| `add_reference`     | literature+write | Add a retrieved paper to the project's first `.bib`; returns the cite key                                                  |
+| `create_snapshot`   | write            | Checkpoint the whole project (do this before sweeping edits)                                                               |
+| `list_snapshots`    | read             | Existing checkpoints                                                                                                       |
 
 Results are JSON, stringified as MCP text content. Errors come back as
 `isError: true` with a message an agent can act on ("read the file first",

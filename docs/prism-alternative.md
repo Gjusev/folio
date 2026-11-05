@@ -58,27 +58,28 @@ Legend: ✓ available · ◐ partial · — not offered · "n/s" not stated in t
 sources below. "Branch" = implemented on `feat/ai-writing-pack` (this note's
 companion work), verified but not yet merged.
 
-| Capability                                   | Prism                       | Overleaf AI                         | Folio                                                               |
-| -------------------------------------------- | --------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
-| Assistant with whole-paper context           | ✓ [^p]                      | ✓ assistant                         | ✓ assistant + retrieval over your own files                         |
-| Rewrite a selection in place                 | ✓ [^p]                      | ✓ rewrite tools                     | ✓ — **branch:** word-level diff before applying, rewrite presets    |
-| Fix compile errors                           | n/s                         | ✓ Error Assist: diff, apply, recompile | ◐ explanation + snippet — **branch:** patch on the failing lines, diff, apply and recompile |
-| Whiteboard / handwriting / image → LaTeX     | ✓ [^p]                      | ◐ text generators for tables and equations | **branch:** any vision model, result compiled in the sandbox first |
-| Literature search inside the workspace       | ✓ [^p]                      | n/s                                 | ✓ three engines, explorer graph, Zotero                             |
-| Drafting with citations                      | ✓ [^p]                      | ◐ generators                        | ✓ only real keys; verified against a throwaway compile              |
-| Pre-submission review                        | n/s                         | ◐ Citation Reviewer (institutional) | ✓ review mode with verified quotes and locations                    |
-| Real-time co-authoring                       | ✓ unlimited [^p]            | ✓                                   | ◐ experimental (Yjs) + anchored comments                            |
-| Voice editing                                | ✓ optional [^p]             | n/s                                 | — (planned, see below)                                              |
-| AI autocomplete                              | n/s                         | ✓ Supercomplete                     | — (planned)                                                         |
-| Grammar and language suggestions             | ◐ proofreading              | ✓ Writefull                         | ◐ rewrite presets; LanguageTool without AI planned                  |
-| Choose the model, bring your own key         | — OpenAI only               | — OpenAI                            | ✓ any OpenAI-compatible endpoint or Anthropic; per-user keys        |
-| Local models (nothing leaves the server)     | —                           | —                                   | ✓ Ollama, vLLM, SGLang…                                             |
-| Per-project AI policy binding collaborators  | —                           | ◐ organisation-wide opt-out         | **branch:** any / local models only / off                           |
-| AI-use disclosure from a recorded log        | —                           | —                                   | **branch:** generated from the project's ledger                     |
-| Self-hosting                                 | —                           | ◐ Community Edition; AI is in hosted plans | ✓ Docker Compose, Dokploy                                     |
-| Your data after the vendor changes course    | deleted on 2027-01-01       | hosted                              | your Postgres; Apache-2.0                                           |
+| Capability                                  | Prism                 | Overleaf AI                                | Folio                                                                                       |
+| ------------------------------------------- | --------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Assistant with whole-paper context          | ✓ [^p]                | ✓ assistant                                | ✓ assistant + retrieval over your own files                                                 |
+| Rewrite a selection in place                | ✓ [^p]                | ✓ rewrite tools                            | ✓ — **branch:** word-level diff before applying, rewrite presets                            |
+| Fix compile errors                          | n/s                   | ✓ Error Assist: diff, apply, recompile     | ◐ explanation + snippet — **branch:** patch on the failing lines, diff, apply and recompile |
+| Whiteboard / handwriting / image → LaTeX    | ✓ [^p]                | ◐ text generators for tables and equations | **branch:** any vision model, result compiled in the sandbox first                          |
+| Literature search inside the workspace      | ✓ [^p]                | n/s                                        | ✓ three engines, explorer graph, Zotero                                                     |
+| Drafting with citations                     | ✓ [^p]                | ◐ generators                               | ✓ only real keys; verified against a throwaway compile                                      |
+| Pre-submission review                       | n/s                   | ◐ Citation Reviewer (institutional)        | ✓ review mode with verified quotes and locations                                            |
+| Real-time co-authoring                      | ✓ unlimited [^p]      | ✓                                          | ◐ experimental (Yjs) + anchored comments                                                    |
+| Voice editing                               | ✓ optional [^p]       | n/s                                        | — (planned, see below)                                                                      |
+| AI autocomplete                             | n/s                   | ✓ Supercomplete                            | — (planned)                                                                                 |
+| Grammar and language suggestions            | ◐ proofreading        | ✓ Writefull                                | ◐ rewrite presets; LanguageTool without AI planned                                          |
+| Choose the model, bring your own key        | — OpenAI only         | — OpenAI                                   | ✓ any OpenAI-compatible endpoint or Anthropic; per-user keys                                |
+| Local models (nothing leaves the server)    | —                     | —                                          | ✓ Ollama, vLLM, SGLang…                                                                     |
+| Per-project AI policy binding collaborators | —                     | ◐ organisation-wide opt-out                | **branch:** any / local models only / off                                                   |
+| AI-use disclosure from a recorded log       | —                     | —                                          | **branch:** generated from the project's ledger                                             |
+| Self-hosting                                | —                     | ◐ Community Edition; AI is in hosted plans | ✓ Docker Compose, Dokploy                                                                   |
+| Your data after the vendor changes course   | deleted on 2027-01-01 | hosted                                     | your Postgres; Apache-2.0                                                                   |
 
-[^p]: Capabilities as announced at launch, summarised in [this write-up][devto];
+[^p]:
+    Capabilities as announced at launch, summarised in [this write-up][devto];
     OpenAI's own page answers 403 to automated fetches.
 
 ## What only an open workspace can promise
@@ -86,7 +87,7 @@ companion work), verified but not yet merged.
 - **Model freedom, including none.** Cloud, local or no AI — per user, and per
   project when the owner restricts it.
 - **Confidential manuscripts.** Embargoed results, grant proposals, clinical
-  data: the owner sets the project to *local models only* (or *off*), and the
+  data: the owner sets the project to _local models only_ (or _off_), and the
   server refuses any collaborator's cloud key for that project — including for
   retrieval embeddings, which send manuscript chunks to a provider.
 - **Verifiability over persuasion.** Citations that cannot be invented, quotes
@@ -106,7 +107,7 @@ companion work), verified but not yet merged.
    author; undo works as for any edit.
 2. **Error fixes as patches.** "Fix" locates the first error with a file and a
    line, asks for a minimal patch inside a window of numbered lines, verifies the
-   range, shows the diff and offers *Apply and recompile*.
+   range, shows the diff and offers _Apply and recompile_.
 3. **Image → LaTeX.** Paste or drop a photo or screenshot (equation, table,
    diagram, notes); the model returns LaTeX through either protocol, and Folio
    compiles it in the sandbox before showing whether it builds. Images are never
@@ -118,7 +119,7 @@ companion work), verified but not yet merged.
 
 ### Next — proposed "AI writing pack 2"
 
-6. **Bring your own agent (MCP + personal access tokens)** — *shipped*:
+6. **Bring your own agent (MCP + personal access tokens)** — _shipped_:
    [`docs/mcp.md`](mcp.md). Let Claude Code,
    Codex or any MCP client work on a Folio project: read files, compile, search
    literature, propose edits that arrive as reviewable suggestions. OpenAI sends
@@ -165,15 +166,15 @@ co-authors have to be invited again ([LetX][letx-migrate]).
 
 ## Sources
 
-- [prism-shutdown]: <https://community.openai.com/t/prism-will-shut-down-on-january-1-2027/1411150>
-- [automater]: <https://automater.ai/news/openai-prism-shutdown-january-2027-export-codex/>
-- [cellcog]: <https://cellcog.ai/blog/openai-prism-shutdown/>
-- [devto]: <https://dev.to/alifar/openai-prism-launches-a-gpt-52-workspace-for-scientific-and-latex-writing-1o5j>
-- [overleaf-ai]: <https://docs.overleaf.com/integrations-and-add-ons/ai-features>
-- [overleaf-error-assist]: <https://docs.overleaf.com/integrations-and-add-ons/ai-features/error-assist>
-- [elsevier-ai]: <https://www.elsevier.com/about/policies-and-standards/generative-ai-policies-for-journals>
-- [letx]: <https://letx.app/vs/prism/>
-- [letx-migrate]: <https://letx.app/blog/prism-shutting-down/>
+- [prism-shutdown]: https://community.openai.com/t/prism-will-shut-down-on-january-1-2027/1411150
+- [automater]: https://automater.ai/news/openai-prism-shutdown-january-2027-export-codex/
+- [cellcog]: https://cellcog.ai/blog/openai-prism-shutdown/
+- [devto]: https://dev.to/alifar/openai-prism-launches-a-gpt-52-workspace-for-scientific-and-latex-writing-1o5j
+- [overleaf-ai]: https://docs.overleaf.com/integrations-and-add-ons/ai-features
+- [overleaf-error-assist]: https://docs.overleaf.com/integrations-and-add-ons/ai-features/error-assist
+- [elsevier-ai]: https://www.elsevier.com/about/policies-and-standards/generative-ai-policies-for-journals
+- [letx]: https://letx.app/vs/prism/
+- [letx-migrate]: https://letx.app/blog/prism-shutting-down/
 
 [prism-shutdown]: https://community.openai.com/t/prism-will-shut-down-on-january-1-2027/1411150
 [automater]: https://automater.ai/news/openai-prism-shutdown-january-2027-export-codex/

@@ -32,28 +32,28 @@ Settings offers presets for each.
 - **Collaboration.** The assistant always runs with the key of whoever invokes
   it; the collaboration relay only carries text and cursors.
 - **Agent keys.** Personal access tokens ([MCP](mcp.md)) are a separate thing
-  from AI providers: they authenticate *your tools* to Folio, carry their own
+  from AI providers: they authenticate _your tools_ to Folio, carry their own
   scopes, and never reach an AI provider.
 
 ## Features
 
-| Feature        | Where         | What it does                                                                                                                                              |
-| -------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Assistant      | Assistant tab | Improve, explain, continue, fix the last compile error, or ask about the document; conversations are persisted                                            |
-| Rewrites       | Assistant tab | Improve, shorten, academic tone, simplify, fix grammar or translate a selection; every proposal is shown as a word-level diff and applied by you          |
-| Error patches  | Assistant tab | "Fix" turns the first locatable compile error into a minimal patch on the failing lines: diff, *Apply and recompile*; a free-form explanation when the log has no file and line |
-| Image to LaTeX | Assistant tab | A photo of a whiteboard, equation, table or sketch becomes LaTeX (through any vision model); the snippet is compiled in the sandbox before it is shown, and the image is never stored |
-| RAG            | Assistant tab | Indexes your `.tex`/`.bib` with your provider's embedding model; answers use the relevant fragments                                                       |
-| Drafting agent | Assistant tab | Retrieves real literature, shows it as evidence and streams a section; new references enter your `.bib` only when you accept                              |
-| Section plan   | Assistant tab | Plans the paper section by section (persisted); each row drafts with a word budget, a critique pass and citation verification against a throwaway compile |
-| Review mode    | Review tab    | A structured critique of the manuscript, described below                                                                                                  |
-| AI-use record  | Assistant tab | Every successful AI call is logged (action, model, date — never content) and Folio writes the journal declaration from it                                 |
-| Your own agent | MCP `/api/mcp`| Claude Code, Codex or any MCP client work on your projects with a scoped personal token — [`docs/mcp.md`](mcp.md)                                        |
+| Feature        | Where          | What it does                                                                                                                                                                          |
+| -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Assistant      | Assistant tab  | Improve, explain, continue, fix the last compile error, or ask about the document; conversations are persisted                                                                        |
+| Rewrites       | Assistant tab  | Improve, shorten, academic tone, simplify, fix grammar or translate a selection; every proposal is shown as a word-level diff and applied by you                                      |
+| Error patches  | Assistant tab  | "Fix" turns the first locatable compile error into a minimal patch on the failing lines: diff, _Apply and recompile_; a free-form explanation when the log has no file and line       |
+| Image to LaTeX | Assistant tab  | A photo of a whiteboard, equation, table or sketch becomes LaTeX (through any vision model); the snippet is compiled in the sandbox before it is shown, and the image is never stored |
+| RAG            | Assistant tab  | Indexes your `.tex`/`.bib` with your provider's embedding model; answers use the relevant fragments                                                                                   |
+| Drafting agent | Assistant tab  | Retrieves real literature, shows it as evidence and streams a section; new references enter your `.bib` only when you accept                                                          |
+| Section plan   | Assistant tab  | Plans the paper section by section (persisted); each row drafts with a word budget, a critique pass and citation verification against a throwaway compile                             |
+| Review mode    | Review tab     | A structured critique of the manuscript, described below                                                                                                                              |
+| AI-use record  | Assistant tab  | Every successful AI call is logged (action, model, date — never content) and Folio writes the journal declaration from it                                                             |
+| Your own agent | MCP `/api/mcp` | Claude Code, Codex or any MCP client work on your projects with a scoped personal token — [`docs/mcp.md`](mcp.md)                                                                     |
 
 ## Per-project AI policy
 
 The manuscript belongs to the project, so its **owner** decides whether AI may
-touch it at all: *any provider* (default), *local models only*, or *off*. The
+touch it at all: _any provider_ (default), _local models only_, or _off_. The
 rule is enforced on the server for every collaborator's own key — assistant,
 agent, review, image conversion and retrieval indexing included. "Local only"
 accepts endpoints whose host resolves exclusively to loopback or private

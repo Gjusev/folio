@@ -1,10 +1,5 @@
 import { z } from "zod";
-import {
-  createApiToken,
-  listApiTokens,
-  requireSessionUser,
-  TOKEN_SCOPES,
-} from "@/lib/api-tokens";
+import { createApiToken, listApiTokens, requireSessionUser, TOKEN_SCOPES } from "@/lib/api-tokens";
 import { enforceRateLimit, parseJson, route } from "@/lib/http";
 
 export const GET = route(async (req) => {
