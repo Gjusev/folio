@@ -1,22 +1,11 @@
 import { z } from "zod";
-import type { NextRequest } from "next/server";
 import {
-  authenticateApiRequest,
   createApiToken,
   listApiTokens,
+  requireSessionUser,
   TOKEN_SCOPES,
 } from "@/lib/api-tokens";
-import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
-
-/** Tokens cannot manage tokens: Bearer callers get 403, only the session may act. */
-async function requireSessionUser(req: NextRequest) {
-  if (req.headers.get("authorization")?.startsWith("Bearer ")) {
-    const identity = await authenticateApiRequest(req);
-    if (identity?.via === "token")
-      throw new HttpError(403, "Los tokens no pueden gestionar tokens");
-  }
-  return requireUser(req);
-}
+import { enforceRateLimit, parseJson, route } from "@/lib/http";
 
 export const GET = route(async (req) => {
   const user = await requireSessionUser(req);

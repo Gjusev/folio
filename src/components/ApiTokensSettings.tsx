@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
-import { useI18n } from "@/lib/i18n/client";
-import type { Lang, MsgKey } from "@/lib/i18n/dictionaries";
+import { ago, useI18n } from "@/lib/i18n/client";
+import type { MsgKey } from "@/lib/i18n/dictionaries";
 
 // api-tokens.ts is server-only; the client hardcodes its scope list.
 const SCOPES = ["read", "write", "compile", "literature"] as const;
@@ -17,29 +17,6 @@ type TokenRow = {
   lastUsedAt: string | null;
   createdAt: string;
 };
-
-const RTF: Record<Lang, Intl.RelativeTimeFormat> = {
-  es: new Intl.RelativeTimeFormat("es"),
-  en: new Intl.RelativeTimeFormat("en"),
-  de: new Intl.RelativeTimeFormat("de"),
-};
-
-function ago(iso: string, lang: Lang) {
-  let v = (new Date(iso).getTime() - Date.now()) / 1000;
-  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["second", 60],
-    ["minute", 60],
-    ["hour", 24],
-    ["day", 30],
-    ["month", 12],
-    ["year", Infinity],
-  ];
-  for (const [unit, size] of steps) {
-    if (Math.abs(v) < size) return RTF[lang].format(Math.round(v), unit);
-    v /= size;
-  }
-  return "";
-}
 
 const scopeLabel: Record<Scope, MsgKey> = {
   read: "settings.tokens.scope.read",

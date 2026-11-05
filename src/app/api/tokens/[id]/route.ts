@@ -1,16 +1,5 @@
-import type { NextRequest } from "next/server";
-import { authenticateApiRequest, deleteApiToken } from "@/lib/api-tokens";
-import { HttpError, requireUser, route } from "@/lib/http";
-
-/** Tokens cannot manage tokens: Bearer callers get 403, only the session may act. */
-async function requireSessionUser(req: NextRequest) {
-  if (req.headers.get("authorization")?.startsWith("Bearer ")) {
-    const identity = await authenticateApiRequest(req);
-    if (identity?.via === "token")
-      throw new HttpError(403, "Los tokens no pueden gestionar tokens");
-  }
-  return requireUser(req);
-}
+import { deleteApiToken, requireSessionUser } from "@/lib/api-tokens";
+import { route } from "@/lib/http";
 
 type Ctx = { params: Promise<{ id: string }> };
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { api } from "@/lib/client/api";
-import { useI18n } from "@/lib/i18n/client";
+import { ago, useI18n } from "@/lib/i18n/client";
 
 /** One comment as served by GET /api/projects/[id]/comments. */
 export type CommentDto = {
@@ -47,30 +47,6 @@ type Props = {
   onDraftDone: () => void;
   onFocusHandled: () => void;
 };
-
-const RTF = {
-  es: new Intl.RelativeTimeFormat("es"),
-  en: new Intl.RelativeTimeFormat("en"),
-  de: new Intl.RelativeTimeFormat("de"),
-};
-
-/** "hace 3 min" style timestamps, stepping up from seconds to years. */
-function ago(iso: string, lang: keyof typeof RTF) {
-  let v = (new Date(iso).getTime() - Date.now()) / 1000;
-  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["second", 60],
-    ["minute", 60],
-    ["hour", 24],
-    ["day", 30],
-    ["month", 12],
-    ["year", Infinity],
-  ];
-  for (const [unit, size] of steps) {
-    if (Math.abs(v) < size) return RTF[lang].format(Math.round(v), unit);
-    v /= size;
-  }
-  return "";
-}
 
 /**
  * Side drawer with every comment thread of the project, grouped open and
