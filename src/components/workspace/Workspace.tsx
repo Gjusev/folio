@@ -806,6 +806,11 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
               <a
                 className="block rounded-md px-3 py-2 text-sm hover:bg-raised"
                 href={`/api/projects/${project.id}/export`}
+                download={`${(name || "project")
+                  .normalize("NFKD")
+                  .replace(/\p{M}/gu, "")
+                  .replace(/[^\w.-]+/g, "-")
+                  .replace(/^-+|-+$/g, "") || "project"}.zip`}
               >
                 {t("ws.export.zip")}
               </a>
