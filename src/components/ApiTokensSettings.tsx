@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { ago, useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
 
 // api-tokens.ts is server-only; the client hardcodes its scope list.
@@ -77,6 +78,7 @@ export function ApiTokensSettings() {
       setCreated(row);
       setCopied(false);
       setName("");
+      tourEvent("share-or-token");
       await refresh();
     } catch (err) {
       setError((err as Error).message);

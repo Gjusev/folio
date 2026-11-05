@@ -16,8 +16,17 @@ import {
 import { recordAiUsage } from "@/lib/ai-usage";
 import { bibKeys, citeKey } from "@/lib/bibtex";
 import { compileProject } from "@/lib/compiler";
-import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
-import { streamChat } from "@/lib/llm";
+import {
+  enforceRateLimit,
+  fail,
+  HttpError,
+  parseJson,
+  reqDict,
+  requireUser,
+  route,
+} from "@/lib/http";
+import { format } from "@/lib/i18n/dictionaries";
+import { streamText } from "@/lib/llm";
 import { searchPapers } from "@/lib/papers";
 import {
   addAiMessage,
@@ -125,10 +134,12 @@ export const POST = route(async (req, { params }: Ctx) => {
   enforceRateLimit(`ai:${user.id}`, 30, 10 * 60_000);
   enforceRateLimit(`agent:${user.id}`, 6, 10 * 60_000);
   const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
-  if (!endpoint)
-    throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
+  if (!endpoint) throw fail(503, "api.ai.notConfigured");
 
   const encoder = new TextEncoder();
+  // The stream reports errors itself (NDJSON events, not the HTTP status), so it
+  // needs the request's dict to say them in the caller's language.
+  const dict = reqDict(req);
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: AgentEvent) =>
@@ -148,7 +159,7 @@ export const POST = route(async (req, { params }: Ctx) => {
             .map((m) => m[0]);
           send({ type: "status", stage: "planning" });
           let raw = "";
-          for await (const piece of streamChat(
+          for await (const piece of streamText(
             buildPlanMessages({
               instruction: input.instruction,
               outline,
@@ -162,7 +173,7 @@ export const POST = route(async (req, { params }: Ctx) => {
             send({ type: "token", text: piece });
           }
           const plan = parsePlan(raw, keys);
-          if (!plan) throw new HttpError(502, "La IA no devolvió un plan válido; prueba de nuevo");
+          if (!plan) throw fail(502, "api.agent.badPlan");
           await setAiPlan(project.id, plan);
           await addAiMessage(project.id, "user", "plan", input.instruction).catch(() => {});
           await addAiMessage(project.id, "assistant", "plan", JSON.stringify(plan)).catch(() => {});
@@ -251,7 +262,7 @@ export const POST = route(async (req, { params }: Ctx) => {
           budget: { words: budget },
         });
         let raw = "";
-        for await (const piece of streamChat(messages, req.signal, endpoint)) {
+        for await (const piece of streamText(messages, req.signal, endpoint)) {
           raw += piece;
           send({ type: "token", text: piece });
         }
@@ -273,7 +284,7 @@ export const POST = route(async (req, { params }: Ctx) => {
         try {
           send({ type: "status", stage: "critiquing" });
           let rawCritique = "";
-          for await (const piece of streamChat(
+          for await (const piece of streamText(
             buildCritiqueMessages({
               instruction: input.instruction,
               goal: input.section?.goal,
@@ -321,15 +332,12 @@ export const POST = route(async (req, { params }: Ctx) => {
             );
           const merged =
             mainContent == null || unreachable ? null : insertDraftBeforeEnd(mainContent, latex);
-          if (mainContent == null) skipVerify(`«${file.path}» ya no está en el proyecto`);
+          if (mainContent == null)
+            skipVerify(format(dict, "api.agent.fileGone", { path: file.path }));
           else if (unreachable)
-            skipVerify(
-              `«${file.path}» no se incluye (\\input/\\include) desde el archivo principal: verificaría citas sin compilarlas`,
-            );
+            skipVerify(format(dict, "api.agent.fileNotIncluded", { path: file.path }));
           else if (merged == null)
-            skipVerify(
-              `«${file.path}» no tiene \\end{document}: no se puede verificar insertando el borrador`,
-            );
+            skipVerify(format(dict, "api.agent.noEndDocument", { path: file.path }));
           else {
             const out = await compileProject(
               project.mainFile,
@@ -358,7 +366,7 @@ export const POST = route(async (req, { params }: Ctx) => {
           }
         } catch (err) {
           const reason =
-            err instanceof HttpError ? err.message : "la compilación de verificación falló";
+            err instanceof HttpError ? err.message : format(dict, "api.agent.verifyCompileFailed");
           send({
             type: "verify",
             resolved: [],
@@ -373,7 +381,8 @@ export const POST = route(async (req, { params }: Ctx) => {
         send({ type: "done", latex, usedKeys: used, newPapers, wordCount, wordBudget: budget });
         await recordAiUsage(project.id, "draft", endpoint.model).catch(() => {});
       } catch (err) {
-        const message = err instanceof HttpError ? err.message : "La redacción se interrumpió";
+        const message =
+          err instanceof HttpError ? err.message : format(dict, "api.agent.interrupted");
         if (!(err instanceof HttpError)) console.error("agent error", err);
         send({ type: "error", message });
       } finally {

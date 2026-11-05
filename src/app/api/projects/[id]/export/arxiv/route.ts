@@ -1,19 +1,19 @@
 import { strToU8, zipSync } from "fflate";
 import { arxivProject } from "@/lib/compiler";
-import { HttpError, enforceRateLimit, requireUser, route } from "@/lib/http";
+import { enforceRateLimit, fail, HttpError, requireUser, route } from "@/lib/http";
 import { getViewableProject, listFilesWithData } from "@/lib/projects";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 /** The first line of a TeX log that looks like an error (./main.tex:3: … or "! …"). */
-function firstErrorLine(log: string): string {
+function firstErrorLine(log: string): string | null {
   return (
     log
       .split("\n")
       .find((l) => /^! |:\d+: /.test(l))
-      ?.trim() ||
-    log.split("\n").find((l) => l.trim()) ||
-    "La compilación falló"
+      ?.trim() ??
+    log.split("\n").find((l) => l.trim()) ??
+    null
   );
 }
 
@@ -37,11 +37,15 @@ export const POST = route(async (req, { params }: Ctx) => {
         : { path: f.path, content: f.content },
     ),
   );
-  if (!result.ok || !result.package) throw new HttpError(422, firstErrorLine(result.log));
+  // The log line is compiler data (raw LaTeX log); only the no-line fallback is ours.
+  if (!result.ok || !result.package) {
+    const line = firstErrorLine(result.log);
+    throw line ? new HttpError(422, line) : fail(422, "api.export.compileFailed");
+  }
   // The service validated every path, but the ZIP is opened on the user's
   // machine: never let a ".." segment ride along (zip-slip).
   if (result.package.files.some((f) => f.path.split("/").some((s) => !s || s.includes(".."))))
-    throw new HttpError(502, "El compilador devolvió rutas no válidas");
+    throw fail(502, "api.export.badPaths");
   const zip = zipSync(
     Object.fromEntries(
       result.package.files.map((f) => [

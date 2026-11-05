@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Share2, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import { useOutsideClose } from "./useOutsideClose";
 
 type Member = {
@@ -48,6 +49,7 @@ export function ShareMenu({ projectId }: Props) {
     setNote(null);
     try {
       await api("POST", `/api/projects/${projectId}/members`, { email: email.trim(), role });
+      tourEvent("share-or-token");
       setMembers(null); // reload on next open/effect run
       setEmail("");
       setNote(t("share.invited"));

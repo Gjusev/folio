@@ -12,6 +12,7 @@ import { useI18n } from "@/lib/i18n/client";
 import type { GraphSeed } from "@/lib/graph-types";
 import type { Paper } from "@/lib/papers";
 import { seedKey } from "@/components/graph/graph-model";
+import { tourEvent } from "@/components/onboarding/tasks";
 import type { FileDoc } from "@/components/workspace/document-store";
 import { CheckView } from "./CheckView";
 import { LibraryView } from "./LibraryView";
@@ -33,6 +34,8 @@ type Props = {
   flush: () => Promise<void>;
   /** Reveal a file position in the editor. */
   onOpenAt: (path: string, line: number) => void;
+  /** Sub-view the workspace wants on top (the tour's «Show me»); null = leave it. */
+  revealView?: View | null;
 };
 
 export function PapersPanel({
@@ -44,9 +47,17 @@ export function PapersPanel({
   onFilesUpdated,
   flush,
   onOpenAt,
+  revealView,
 }: Props) {
   const { t } = useI18n();
   const [view, setView] = useState<View>("search");
+  // The tour's «Show me» names a sub-view; state adjusts during render (the
+  // React pattern for prop-driven changes) rather than through an effect.
+  const [revealed, setRevealed] = useState(revealView);
+  if (revealView && revealView !== revealed) {
+    setRevealed(revealView);
+    setView(revealView);
+  }
   const [explorer, setExplorer] = useState<{ seed: GraphSeed | null } | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
@@ -114,12 +125,14 @@ export function PapersPanel({
     if (known) {
       if (canCite) onCite(known);
       setMessage({ text: t("papers.cited.existing", { file: "references.bib", key: known }) });
+      tourEvent("cite-paper");
       return;
     }
     setAdding(p.id);
     setMessage(null);
     try {
       const r = await citeById(p.source, p.id, true);
+      tourEvent("cite-paper");
       setMessage({
         text: r.added
           ? t("papers.cited.inserted", { file: r.path, key: r.key })
@@ -163,7 +176,10 @@ export function PapersPanel({
             id={`papers-tab-${tab.id}`}
             aria-selected={view === tab.id}
             aria-controls={`papers-view-${tab.id}`}
-            onClick={() => setView(tab.id)}
+            onClick={() => {
+              setView(tab.id);
+              if (tab.id === "library") tourEvent("library");
+            }}
             className={`flex h-7 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors ${
               view === tab.id ? "bg-active text-ink" : "text-muted hover:bg-raised hover:text-ink"
             }`}
@@ -174,6 +190,12 @@ export function PapersPanel({
             ) : null}
           </button>
         ))}
+        <a
+          href="/library"
+          className="ml-auto flex h-7 items-center gap-1 px-2 text-xs text-muted hover:text-ink"
+        >
+          {t("lb.link")}
+        </a>
       </div>
 
       {message && (

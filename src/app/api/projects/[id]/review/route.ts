@@ -4,8 +4,8 @@ import { resolveProjectEndpoint } from "@/lib/ai-policy";
 import { recordAiUsage } from "@/lib/ai-usage";
 import { bibKeys } from "@/lib/bibtex";
 import { LANGS } from "@/lib/i18n/dictionaries";
-import { HttpError, enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
-import { streamChat } from "@/lib/llm";
+import { enforceRateLimit, fail, parseJson, requireUser, route } from "@/lib/http";
+import { streamText } from "@/lib/llm";
 import { getViewableProject, listFiles } from "@/lib/projects";
 import { ASPECTS, RIGORS, buildExcerpt, buildReviewMessages, parseReview } from "@/lib/review";
 import { saveReview } from "@/lib/reviews-store";
@@ -31,14 +31,13 @@ export const POST = route(async (req, { params }: Ctx) => {
   const project = await getViewableProject(user.id, (await params).id);
   const input = await parseJson(req, body);
   const endpoint = await resolveProjectEndpoint(user.id, project, "draft");
-  if (!endpoint)
-    throw new HttpError(503, "La IA no está configurada (añade un proveedor en Ajustes)");
+  if (!endpoint) throw fail(503, "api.ai.notConfigured");
   enforceRateLimit(`review:${user.id}`, 6, 10 * 60_000);
 
   const files = (await listFiles(project.id)).map((f) => ({ path: f.path, content: f.content }));
   const aspects = [...new Set(input.aspects)];
   const excerpt = buildExcerpt(files, input.scope);
-  if (!excerpt.ranges.length) throw new HttpError(400, "Nada que revisar en esa selección");
+  if (!excerpt.ranges.length) throw fail(400, "api.review.nothingToReview");
 
   const messages = buildReviewMessages({
     excerpt: excerpt.text,
@@ -51,13 +50,12 @@ export const POST = route(async (req, { params }: Ctx) => {
   });
 
   let raw = "";
-  for await (const piece of streamChat(messages, req.signal, endpoint)) {
+  for await (const piece of streamText(messages, req.signal, endpoint)) {
     raw += piece;
     if (raw.length > 40_000) break; // a review is a few KB; this is a runaway guard
   }
   const review = parseReview(raw, excerpt.ranges, aspects, files);
-  if (!review)
-    throw new HttpError(502, "La IA no devolvió una revisión válida. Inténtalo de nuevo");
+  if (!review) throw fail(502, "api.review.badReview");
   await recordAiUsage(project.id, "review", endpoint.model).catch(() => {});
 
   const savedId = await saveReview({

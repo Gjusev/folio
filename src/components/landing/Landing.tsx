@@ -53,17 +53,17 @@ export function Landing({
           <h1 id="hero-title" className="lp-sentence">
             <span className="lp-line">
               <span>{t("landing.hero.a")}</span>
-              <span className="lp-strip" aria-hidden>
+              <span className="lp-strip" aria-hidden data-reveal style={rise(2)}>
                 <Image
-                  src="/landing/page-strip.jpg"
+                  src="/landing/page-mini.svg"
                   alt=""
-                  width={1920}
-                  height={220}
+                  width={520}
+                  height={104}
                   priority
                   unoptimized
                 />
               </span>
-              <span className="lp-strip lp-strip-m" aria-hidden>
+              <span className="lp-strip lp-strip-m" aria-hidden data-reveal style={rise(3)}>
                 <Image
                   src="/landing/page-mobile.jpg"
                   alt=""
@@ -79,11 +79,13 @@ export function Landing({
               {t("landing.hero.b")}
             </span>
           </h1>
+          {/* The supporting sentence says plainly what the rebus means, the
+              action sits with it — the poster asks, not just explains. */}
           <div className="lp-hero-foot">
-            <p className="lp-lead lp-rise" style={rise(0)}>
-              {t("landing.hero.sub")}
+            <p className="lp-cat lp-rise" style={rise(1)}>
+              {t("landing.hero.cat")}
             </p>
-            <div className="lp-actions lp-rise" style={rise(1)}>
+            <div className="lp-actions lp-rise" style={rise(2)}>
               <Link href={registrationOpen ? "/register" : SELF_HOST_URL} className="btn-lp">
                 {t(registrationOpen ? "landing.cta.main" : "landing.cta.selfhost")}
               </Link>
@@ -91,6 +93,9 @@ export function Landing({
                 {t("landing.cta.more")}
               </a>
             </div>
+            <p className="lp-lead lp-rise" style={rise(3)}>
+              {t("landing.hero.sub")}
+            </p>
           </div>
         </section>
 
@@ -170,7 +175,9 @@ export function Landing({
                 loading="lazy"
                 unoptimized
               />
-              <figcaption>{t("landing.folio.cap")}</figcaption>
+              <figcaption data-reveal style={rise(3)}>
+                {t("landing.folio.cap")}
+              </figcaption>
             </figure>
           </div>
           <figure className="lp-reel" data-reveal>
@@ -180,7 +187,9 @@ export function Landing({
               width={854}
               height={480}
             />
-            <figcaption>{t("landing.folio.reel")}</figcaption>
+            <figcaption data-reveal style={rise(1)}>
+              {t("landing.folio.reel")}
+            </figcaption>
           </figure>
         </section>
 

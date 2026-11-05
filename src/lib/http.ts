@@ -3,16 +3,50 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { SESSION_COOKIE, getSessionUser, type SessionUser } from "@/lib/auth/session";
 import { env } from "@/lib/env";
+import {
+  DICTS,
+  LANG_COOKIE,
+  format,
+  isLang,
+  type Dict,
+  type MsgKey,
+} from "@/lib/i18n/dictionaries";
 import { rateLimit } from "@/lib/rate-limit";
 
 export class HttpError extends Error {
+  /** Dictionary key: when set, route() renders the message in the caller's language. */
   constructor(
     readonly status: number,
     message: string,
     readonly extra?: Record<string, unknown>,
+    readonly key?: string,
+    readonly vars?: Record<string, string | number>,
   ) {
     super(message);
   }
+}
+
+/** HttpError whose message comes from the dictionaries (es text, key attached). */
+export function fail(
+  status: number,
+  key: MsgKey,
+  vars?: Record<string, string | number>,
+  extra?: Record<string, unknown>,
+): HttpError {
+  return new HttpError(status, format(DICTS.es, key, vars), extra, key, vars);
+}
+
+/** Dict for this request's language: the folio_lang cookie, else Spanish. */
+export function reqDict(req: NextRequest): Dict {
+  const lang = req.cookies.get(LANG_COOKIE)?.value;
+  return isLang(lang) ? DICTS[lang] : DICTS.es;
+}
+
+/** err.message in the request's language; unknown key keeps the Spanish text. */
+function localized(req: NextRequest, err: HttpError): string {
+  if (!err.key) return err.message;
+  const dict = reqDict(req);
+  return err.key in dict ? format(dict, err.key as MsgKey, err.vars) : err.message;
 }
 
 type Handler<C> = (req: NextRequest, ctx: C) => Promise<Response>;
@@ -30,7 +64,7 @@ export function route<C>(fn: Handler<C>): Handler<C> {
           headers["Retry-After"] = String(err.extra.retryAfter);
         }
         return NextResponse.json(
-          { error: err.message, ...err.extra },
+          { error: localized(req, err), ...err.extra },
           { status: err.status, headers },
         );
       }
@@ -44,7 +78,12 @@ export function route<C>(fn: Handler<C>): Handler<C> {
         );
       }
       console.error(`[${req.method} ${req.nextUrl.pathname}]`, err);
-      return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+      return NextResponse.json(
+        { error: localized(req, fail(500, "api.common.internal")) },
+        {
+          status: 500,
+        },
+      );
     }
   };
 }
@@ -58,27 +97,27 @@ function assertSameOrigin(req: NextRequest) {
   try {
     originHost = new URL(origin).host;
   } catch {
-    throw new HttpError(403, "Origen no permitido");
+    throw fail(403, "api.common.badOrigin");
   }
-  if (originHost !== host) throw new HttpError(403, "Origen no permitido");
+  if (originHost !== host) throw fail(403, "api.common.badOrigin");
 }
 
 export async function parseJson<T>(req: NextRequest, schema: ZodType<T>): Promise<T> {
   if (!req.headers.get("content-type")?.includes("application/json")) {
-    throw new HttpError(415, "Se esperaba application/json");
+    throw fail(415, "api.common.expectedJson");
   }
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    throw new HttpError(400, "JSON mal formado");
+    throw fail(400, "api.common.malformedJson");
   }
   return schema.parse(body);
 }
 
 export async function requireUser(req: NextRequest): Promise<SessionUser> {
   const user = await getSessionUser(req.cookies.get(SESSION_COOKIE)?.value);
-  if (!user) throw new HttpError(401, "Inicia sesión para continuar");
+  if (!user) throw fail(401, "api.common.signInRequired");
   return user;
 }
 
@@ -86,9 +125,12 @@ export function enforceRateLimit(key: string, limit: number, windowMs: number) {
   const factor = env().RATE_LIMIT_MULTIPLIER;
   const wait = rateLimit(key, factor === 1 ? limit : Math.ceil(limit * factor), windowMs);
   if (wait > 0) {
-    throw new HttpError(429, "Demasiadas peticiones, inténtalo de nuevo en unos segundos", {
-      retryAfter: wait,
-    });
+    throw new HttpError(
+      429,
+      format(DICTS.es, "api.common.rateLimited"),
+      { retryAfter: wait },
+      "api.common.rateLimited",
+    );
   }
 }
 

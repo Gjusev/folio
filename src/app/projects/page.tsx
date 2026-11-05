@@ -23,6 +23,9 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/project
         <Wordmark />
         <div className="flex items-center gap-3 text-sm text-muted">
           <LangSwitcherWrapper />
+          <a href="/library" className="hover:text-ink">
+            {dict["lb.link"]}
+          </a>
           <a href="/settings" className="hover:text-ink">
             {dict["settings.title"]}
           </a>

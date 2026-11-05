@@ -250,11 +250,14 @@ describe("request builders", () => {
   });
 
   it("deltaText parses both wire formats and surfaces provider errors", () => {
-    expect(deltaText("openai", '{"choices":[{"delta":{"content":"hola"}}]}')).toBe("hola");
+    expect(deltaText("openai", '{"choices":[{"delta":{"content":"hola"}}]}')).toEqual({
+      kind: "text",
+      text: "hola",
+    });
     expect(deltaText("openai", '{"choices":[{"delta":{}}]}')).toBeNull();
-    expect(deltaText("anthropic", '{"type":"content_block_delta","delta":{"text":"welt"}}')).toBe(
-      "welt",
-    );
+    expect(
+      deltaText("anthropic", '{"type":"content_block_delta","delta":{"text":"welt"}}'),
+    ).toEqual({ kind: "text", text: "welt" });
     expect(deltaText("anthropic", '{"type":"message_start"}')).toBeNull();
     expect(() => deltaText("anthropic", '{"type":"error","error":{"message":"bad key"}}')).toThrow(
       /bad key/,

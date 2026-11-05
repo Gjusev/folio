@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ChevronDown, Plus, Send, Settings, Square, X } from "lucide-react";
 import type { AiAction, AgentPlan, EvidenceItem } from "@/lib/ai-prompts";
 import { ApiError, api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
+import { parseMarkdown, type MdInline } from "@/lib/markdown";
 import type { EditorHandle } from "./CodeEditor";
 import { useOutsideClose } from "./useOutsideClose";
 import { AiPolicyControl, DisclosureCard, type AiPolicy } from "./ai/AiProjectSettings";
@@ -118,6 +119,15 @@ type Turn = {
   error?: string;
   /** Selection captured when the request was made, for "Replace". */
   range?: { fileId: string; from: number; to: number; text: string };
+  /** Model reasoning ("thinking"): streamed live, never persisted server-side. */
+  thinking?: string;
+  /** Total thinking time in ms, frozen when the answer tokens start. */
+  thinkingMs?: number;
+  /** Epoch ms of the first thinking token, for the live elapsed label. */
+  thinkStart?: number;
+  /** What "Regenerate" replays for run()-based actions. */
+  instruction?: string;
+  labelKey?: MsgKey;
   /** Drafting agent extras. */
   stage?: "searching" | "drafting" | "planning" | "critiquing" | "verifying";
   evidence?: EvidenceItem[];
@@ -178,6 +188,9 @@ const STAGE_KEY: Partial<Record<NonNullable<Turn["stage"]>, MsgKey>> = {
 
 const firstCodeBlock = (s: string) =>
   /```(?:latex|tex)?\n([\s\S]*?)```/.exec(s)?.[1]?.trimEnd() ?? null;
+
+/** Actions served by run() — the ones "Regenerate" can replay. */
+const RUN_ACTIONS: ReadonlySet<string> = new Set(["improve", "explain", "continue", "ask"]);
 
 export function AiPanel({
   projectId,
@@ -277,6 +290,15 @@ export function AiPanel({
   }, [projectId, seeded]);
   const nextId = useRef(1);
   const busy = turns.some((t) => t.streaming);
+  // Live "Thinking · Ns" label: one shared 1s tick, running only while some
+  // turn is streaming reasoning that has not produced answer tokens yet.
+  const thinkingLive = turns.some((t) => t.streaming && t.thinking && !t.answer);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!thinkingLive) return;
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [thinkingLive]);
   const [steerOpen, setSteerOpen] = useState(false); // settings popover (steering/policy/record/RAG)
   const [instructions, setInstructions] = useState(initialSteering.instructions);
   const [sample, setSample] = useState(initialSteering.sample);
@@ -351,10 +373,22 @@ export function AiPanel({
   const patch = (id: number, p: Partial<Turn>) =>
     setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...p } : t)));
 
-  async function run(action: AiAction, instruction = "", labelKey?: MsgKey) {
+  /**
+   * One chat action against POST /ai. `again` replays a previous turn's
+   * capture (Regenerate): same action/instruction, same selection and file,
+   * instead of whatever the editor holds right now.
+   */
+  async function run(
+    action: AiAction,
+    instruction = "",
+    labelKey?: MsgKey,
+    again?: { fileId: string; sel: { from: number; to: number; text: string } },
+  ) {
     const ed = editor.current;
-    if (!ed || !activeFile || busy) return;
-    const sel = ed.selection();
+    const fresh = ed && activeFile ? { fileId: activeFile.id, sel: ed.selection() } : null;
+    const target = again ?? fresh;
+    if (!target || busy) return;
+    const sel = target.sel;
     if ((action === "improve" || action === "explain") && !sel.text.trim()) {
       setHint(t("ai.selectFirst"));
       return;
@@ -386,7 +420,9 @@ export function AiPanel({
         prompt,
         answer: "",
         streaming: true,
-        range: sel.text ? { fileId: activeFile.id, ...sel } : undefined,
+        range: sel.text ? { fileId: target.fileId, ...sel } : undefined,
+        instruction,
+        labelKey,
       },
     ]);
 
@@ -400,9 +436,9 @@ export function AiPanel({
         signal: ctrl.signal,
         body: JSON.stringify({
           action,
-          fileId: activeFile.id,
+          fileId: target.fileId,
           selection: sel.text,
-          beforeCursor: ed.beforeCursor(4000),
+          beforeCursor: again ? "" : ed ? ed.beforeCursor(4000) : "",
           instruction,
           log: action === "fix" ? (lastLog ?? "").slice(-20_000) : "",
           history,
@@ -412,13 +448,41 @@ export function AiPanel({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.issues?.[0]?.message ?? data.error ?? `Error ${res.status}`);
       }
+      // NDJSON frames: {t:"think"|"text", s:"…"}. Thinking streams live into a
+      // collapsible trace; text streams into the answer with a caret.
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
       let answer = "";
+      let thinking = "";
+      let thinkStart = 0;
+      let thinkEnd = 0;
+      let buffer = "";
+      const handle = (ev: { t: string; s: string }) => {
+        if (ev.t === "think") {
+          if (!thinkStart) {
+            thinkStart = Date.now();
+            patch(id, { thinkStart });
+          }
+          thinking += ev.s;
+          patch(id, { thinking });
+        } else {
+          if (thinkStart && !thinkEnd) {
+            thinkEnd = Date.now();
+            patch(id, { thinkingMs: thinkEnd - thinkStart });
+          }
+          answer += ev.s;
+          patch(id, { answer });
+        }
+      };
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
-        answer += value;
-        patch(id, { answer });
+        buffer += value;
+        let nl: number;
+        while ((nl = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, nl);
+          buffer = buffer.slice(nl + 1);
+          if (line.trim()) handle(JSON.parse(line) as { t: string; s: string });
+        }
       }
       patch(id, { streaming: false });
     } catch (err) {
@@ -667,6 +731,8 @@ export function AiPanel({
   }
 
   const isTex = activeFile?.path.endsWith(".tex") ?? false;
+  // The last completed run()-based turn — the only one that offers Regenerate.
+  const lastRunnable = [...turns].reverse().find((x) => !x.streaming && RUN_ACTIONS.has(x.action));
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -831,7 +897,29 @@ export function AiPanel({
                 </ul>
               </details>
             )}
-            <div className="rounded-lg border border-line bg-surface p-3 text-sm">
+            <div className="space-y-2 rounded-lg border border-line bg-surface p-3 text-sm">
+              {turn.thinking && (
+                <details
+                  open={!turn.answer && turn.streaming}
+                  className="text-xs"
+                  data-testid="ai-thinking"
+                >
+                  <summary className="cursor-pointer text-muted">
+                    {t("ai.think.title")} ·{" "}
+                    {t("ai.think.for", {
+                      s:
+                        turn.streaming && !turn.answer
+                          ? // Live count while the model reasons; frozen once text starts.
+                            Math.max(
+                              1,
+                              Math.round((Date.now() - (turn.thinkStart ?? Date.now())) / 1000),
+                            )
+                          : Math.max(1, Math.round((turn.thinkingMs ?? 0) / 1000)),
+                    })}
+                  </summary>
+                  <p className="mt-1 whitespace-pre-wrap text-muted">{turn.thinking}</p>
+                </details>
+              )}
               {turn.fix ? (
                 <FixBody fix={turn.fix} />
               ) : turn.image ? (
@@ -846,8 +934,8 @@ export function AiPanel({
                   after={keepEdges(turn.range.text, turn.answer)}
                 />
               ) : turn.answer ? (
-                <div className="whitespace-pre-wrap">{turn.answer}</div>
-              ) : turn.streaming ? (
+                <MarkdownView text={turn.answer} caret={turn.streaming} />
+              ) : turn.streaming && !turn.thinking ? (
                 <span className="text-muted">{t("ai.thinking")}</span>
               ) : null}
               {turn.error && <p className="mt-1 text-sm text-danger">{turn.error}</p>}
@@ -861,6 +949,31 @@ export function AiPanel({
                 addReferences={addReferences}
                 applyPatch={applyPatch}
                 onRecompile={onRecompile}
+                onRegenerate={
+                  lastRunnable?.id === turn.id
+                    ? () => {
+                        const again = turn.range
+                          ? {
+                              fileId: turn.range.fileId,
+                              sel: {
+                                from: turn.range.from,
+                                to: turn.range.to,
+                                text: turn.range.text,
+                              },
+                            }
+                          : activeFile
+                            ? { fileId: activeFile.id, sel: { from: 0, to: 0, text: "" } }
+                            : undefined;
+                        void run(
+                          turn.action as AiAction,
+                          turn.instruction ?? "",
+                          turn.labelKey,
+                          again,
+                        );
+                      }
+                    : undefined
+                }
+                regenDisabled={busy}
               />
             )}
           </article>
@@ -1168,6 +1281,8 @@ function TurnActions({
   addReferences,
   applyPatch,
   onRecompile,
+  onRegenerate,
+  regenDisabled = false,
 }: {
   turn: Turn;
   editor: React.RefObject<EditorHandle | null>;
@@ -1175,6 +1290,9 @@ function TurnActions({
   addReferences: (turn: Turn) => Promise<void>;
   applyPatch?: ApplyPatch;
   onRecompile?: () => void;
+  /** Set only on the last completed chat turn: replays the same request. */
+  onRegenerate?: () => void;
+  regenDisabled?: boolean;
 }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
@@ -1312,6 +1430,16 @@ function TurnActions({
       >
         {copied ? t("figure.copied") : t("ai.copy")}
       </button>
+      {onRegenerate && (
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={onRegenerate}
+          disabled={regenDisabled}
+        >
+          {t("ai.regenerate")}
+        </button>
+      )}
     </div>
   );
 }
@@ -1328,6 +1456,64 @@ function keepEdges(before: string, after: string): string {
   if (lead && !out.startsWith(lead)) out = lead + out.trimStart();
   if (tail && !out.endsWith(tail)) out = out.trimEnd() + tail;
   return out;
+}
+
+/** One inline node of markdown-lite; React escapes every string here. */
+function MdInlineView({ node }: { node: MdInline }) {
+  if ("text" in node) return node.text;
+  if ("code" in node)
+    return <code className="rounded bg-raised px-1 font-mono text-[0.85em]">{node.code}</code>;
+  if ("bold" in node) return <strong>{node.bold}</strong>;
+  if ("italic" in node) return <em>{node.italic}</em>;
+  if ("br" in node) return <br />;
+  return (
+    <a
+      href={node.link.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-accent underline"
+    >
+      {node.link.text}
+    </a>
+  );
+}
+
+/** Answer body: markdown-lite (code fences, inline marks, http(s) links). */
+function MarkdownView({ text, caret }: { text: string; caret?: boolean }) {
+  const blocks = useMemo(() => parseMarkdown(text), [text]);
+  // The caret sits inline at the end of the last paragraph — "still typing
+  // here" — or alone when the answer so far is only a code block.
+  const lastP = caret ? blocks.map((b) => "p" in b).lastIndexOf(true) : -1;
+  return (
+    <div className="leading-relaxed">
+      {blocks.map((b, i) =>
+        "pre" in b ? (
+          <pre
+            key={i}
+            className="mt-2 overflow-x-auto rounded-md bg-raised p-2 font-mono text-xs whitespace-pre"
+          >
+            {b.pre.code}
+          </pre>
+        ) : (
+          <p key={i} className="mt-2 first:mt-0">
+            {b.p.map((node, j) => (
+              <MdInlineView key={j} node={node} />
+            ))}
+            {i === lastP && (
+              <span className="ai-caret" aria-hidden>
+                ▌
+              </span>
+            )}
+          </p>
+        ),
+      )}
+      {caret && lastP === -1 && (
+        <span className="ai-caret" aria-hidden>
+          ▌
+        </span>
+      )}
+    </div>
+  );
 }
 
 /** Rewrite presets behind one menu button (selection required). */

@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { AiPolicy } from "@/lib/ai-policy";
 import { db, schema } from "@/lib/db";
-import { HttpError } from "@/lib/http";
+import { fail, HttpError } from "@/lib/http";
 import {
   MAX_BINARY_BYTES,
   MAX_FILE_BYTES,
@@ -67,28 +67,29 @@ export async function listProjects(userId: string) {
 
 /** Checks a set of files before they are written: paths, sizes, formats. */
 export function checkFiles(files: NewFile[]) {
-  if (files.length === 0) throw new HttpError(400, "El proyecto no tiene archivos");
+  if (files.length === 0) throw fail(400, "api.projects.noFiles");
   if (files.length > MAX_FILES_PER_PROJECT) {
-    throw new HttpError(400, `Máximo ${MAX_FILES_PER_PROJECT} archivos por proyecto`);
+    throw fail(400, "api.projects.tooManyFiles", { n: MAX_FILES_PER_PROJECT });
   }
   let total = 0;
   for (const f of files) {
     const problem = validateFilePath(f.path);
     if (problem) throw new HttpError(400, `${f.path}: ${problem}`);
     if (isBinaryPath(f.path)) {
-      if (!f.data) throw new HttpError(400, `${f.path}: falta el contenido`);
-      if (f.data.length > MAX_BINARY_BYTES) throw new HttpError(413, `${f.path} supera 10 MB`);
+      if (!f.data) throw fail(400, "api.files.missingContent", { path: f.path });
+      if (f.data.length > MAX_BINARY_BYTES)
+        throw fail(413, "api.files.tooLargeBinary", { path: f.path });
       if (!matchesMagic(f.path, f.data)) {
-        throw new HttpError(400, `${f.path} no es un archivo de ese formato`);
+        throw fail(400, "api.files.badFormat", { path: f.path });
       }
       total += f.data.length;
     } else {
       const size = Buffer.byteLength(f.content ?? "");
-      if (size > MAX_FILE_BYTES) throw new HttpError(413, f.path + " supera 1 MB");
+      if (size > MAX_FILE_BYTES) throw fail(413, "api.files.tooLarge", { path: f.path });
       total += size;
     }
   }
-  if (total > MAX_PROJECT_BYTES) throw new HttpError(413, "El proyecto supera 50 MB");
+  if (total > MAX_PROJECT_BYTES) throw fail(413, "api.projects.tooLarge");
 }
 
 function row(projectId: string, f: NewFile) {
@@ -109,8 +110,7 @@ export async function createProject(
   mainFile = "main.tex",
 ) {
   checkFiles(files);
-  if (!files.some((f) => f.path === mainFile))
-    throw new HttpError(400, "Falta el archivo principal");
+  if (!files.some((f) => f.path === mainFile)) throw fail(400, "api.projects.missingMain");
   return db().transaction(async (tx) => {
     const [project] = await tx
       .insert(schema.projects)
@@ -135,7 +135,7 @@ export async function duplicateProject(userId: string, projectId: string) {
     .from(schema.files)
     .where(eq(schema.files.projectId, source.id));
   const total = files.reduce((n, f) => n + (f.size ?? 0), 0);
-  if (total > MAX_PROJECT_BYTES) throw new HttpError(413, "El proyecto supera 50 MB");
+  if (total > MAX_PROJECT_BYTES) throw fail(413, "api.projects.tooLarge");
   return db().transaction(async (tx) => {
     const [copy] = await tx
       .insert(schema.projects)
@@ -162,13 +162,13 @@ export async function duplicateProject(userId: string, projectId: string) {
 }
 
 export async function getOwnedProject(userId: string, projectId: string) {
-  if (!isUuid(projectId)) throw new HttpError(404, "Proyecto no encontrado");
+  if (!isUuid(projectId)) throw fail(404, "api.projects.notFound");
   const [project] = await db()
     .select()
     .from(schema.projects)
     .where(and(eq(schema.projects.id, projectId), eq(schema.projects.ownerId, userId)))
     .limit(1);
-  if (!project) throw new HttpError(404, "Proyecto no encontrado");
+  if (!project) throw fail(404, "api.projects.notFound");
   return project;
 }
 
@@ -182,7 +182,7 @@ export async function getAccessibleProject(
   userId: string,
   projectId: string,
 ): Promise<{ project: typeof schema.projects.$inferSelect; role: ProjectRole }> {
-  if (!isUuid(projectId)) throw new HttpError(404, "Proyecto no encontrado");
+  if (!isUuid(projectId)) throw fail(404, "api.projects.notFound");
   const [row] = await db()
     .select({ project: schema.projects, role: schema.projectMembers.role })
     .from(schema.projects)
@@ -195,11 +195,11 @@ export async function getAccessibleProject(
     )
     .where(eq(schema.projects.id, projectId))
     .limit(1);
-  if (!row) throw new HttpError(404, "Proyecto no encontrado");
+  if (!row) throw fail(404, "api.projects.notFound");
   if (row.project.ownerId === userId) return { project: row.project, role: "owner" };
   if (row.role === "editor" || row.role === "viewer")
     return { project: row.project, role: row.role };
-  throw new HttpError(404, "Proyecto no encontrado");
+  throw fail(404, "api.projects.notFound");
 }
 
 /** Read access: owner, editor or viewer (compile, export, read files and diffs). */
@@ -211,8 +211,7 @@ export async function getViewableProject(userId: string, projectId: string) {
  *  can see the project exists, they just cannot change it. */
 export async function getEditableProject(userId: string, projectId: string) {
   const { project, role } = await getAccessibleProject(userId, projectId);
-  if (role === "viewer")
-    throw new HttpError(403, "Te han compartido este proyecto como lector (solo lectura)");
+  if (role === "viewer") throw fail(403, "api.projects.readOnly");
   return project;
 }
 
@@ -266,7 +265,7 @@ export async function addMember(projectId: string, email: string, role: "editor"
     .from(schema.users)
     .where(eq(schema.users.email, email.toLowerCase()))
     .limit(1);
-  if (!user) throw new HttpError(404, "No hay ninguna cuenta con ese email");
+  if (!user) throw fail(404, "api.members.noAccount");
   await db()
     .insert(schema.projectMembers)
     .values({ projectId, userId: user.id, role })
@@ -293,12 +292,12 @@ export async function renameProject(projectId: string, name: string) {
 }
 
 export async function setMainFile(projectId: string, path: string) {
-  if (!path.endsWith(".tex")) throw new HttpError(400, "El archivo principal debe ser .tex");
+  if (!path.endsWith(".tex")) throw fail(400, "api.files.mainMustBeTex");
   const [file] = await db()
     .select({ id: schema.files.id })
     .from(schema.files)
     .where(and(eq(schema.files.projectId, projectId), eq(schema.files.path, path)));
-  if (!file) throw new HttpError(404, "Archivo no encontrado");
+  if (!file) throw fail(404, "api.files.notFound");
   await db()
     .update(schema.projects)
     .set({ mainFile: path })
@@ -368,13 +367,13 @@ export async function getSnapshotFiles(
   projectId: string,
   snapshotId: string,
 ): Promise<Record<string, string>> {
-  if (!isUuid(snapshotId)) throw new HttpError(404, "Snapshot no encontrado");
+  if (!isUuid(snapshotId)) throw fail(404, "api.snapshots.notFound");
   const [row] = await db()
     .select({ files: schema.snapshots.files })
     .from(schema.snapshots)
     .where(and(eq(schema.snapshots.id, snapshotId), eq(schema.snapshots.projectId, projectId)))
     .limit(1);
-  if (!row) throw new HttpError(404, "Snapshot no encontrado");
+  if (!row) throw fail(404, "api.snapshots.notFound");
   return row.files as Record<string, string>;
 }
 
@@ -421,17 +420,17 @@ export async function createFile(projectId: string, file: NewFile): Promise<File
       .from(schema.files)
       .where(eq(schema.files.projectId, projectId));
     if (usage.n >= MAX_FILES_PER_PROJECT) {
-      throw new HttpError(400, `Máximo ${MAX_FILES_PER_PROJECT} archivos por proyecto`);
+      throw fail(400, "api.projects.tooManyFiles", { n: MAX_FILES_PER_PROJECT });
     }
     if (usage.bytes + values.size > MAX_PROJECT_BYTES) {
-      throw new HttpError(413, "El proyecto supera 50 MB");
+      throw fail(413, "api.projects.tooLarge");
     }
     const [created] = await tx
       .insert(schema.files)
       .values(values)
       .onConflictDoNothing()
       .returning(fileMeta);
-    if (!created) throw new HttpError(409, "Ya existe un archivo con esa ruta");
+    if (!created) throw fail(409, "api.files.pathTaken");
     await tx
       .update(schema.projects)
       .set({ updatedAt: new Date() })
@@ -441,13 +440,13 @@ export async function createFile(projectId: string, file: NewFile): Promise<File
 }
 
 export async function getFile(projectId: string, fileId: string): Promise<FileMeta> {
-  if (!isUuid(fileId)) throw new HttpError(404, "Archivo no encontrado");
+  if (!isUuid(fileId)) throw fail(404, "api.files.notFound");
   const [file] = await db()
     .select(fileMeta)
     .from(schema.files)
     .where(and(eq(schema.files.id, fileId), eq(schema.files.projectId, projectId)))
     .limit(1);
-  if (!file) throw new HttpError(404, "Archivo no encontrado");
+  if (!file) throw fail(404, "api.files.notFound");
   return file;
 }
 
@@ -468,7 +467,7 @@ export async function saveFile(
   baseVersion: number,
 ) {
   const current = await getFile(projectId, fileId);
-  if (current.binary) throw new HttpError(400, "Los archivos binarios no se editan como texto");
+  if (current.binary) throw fail(400, "api.files.binaryNotText");
   const nextBytes = Buffer.byteLength(content);
   const [saved] = await db().transaction(async (tx) => {
     // Keep the 50 MB project cap on the save path too, not just on creation.
@@ -478,7 +477,7 @@ export async function saveFile(
       .from(schema.files)
       .where(eq(schema.files.projectId, projectId));
     if (bytes - current.size + nextBytes > MAX_PROJECT_BYTES) {
-      throw new HttpError(413, "El proyecto supera 50 MB");
+      throw fail(413, "api.projects.tooLarge");
     }
     return tx
       .update(schema.files)
@@ -493,7 +492,7 @@ export async function saveFile(
   });
   if (!saved) {
     const latest = await getFile(projectId, fileId);
-    throw new HttpError(409, "El archivo se modificó en otra sesión", {
+    throw fail(409, "api.files.conflict", undefined, {
       current: { content: latest.content, version: latest.version },
     });
   }
@@ -511,13 +510,13 @@ export async function renameFile(
   if (pathError) throw new HttpError(400, pathError);
   const file = await getFile(projectId, fileId);
   if (isBinaryPath(path) !== file.binary) {
-    throw new HttpError(400, "No se puede cambiar un archivo de texto a binario o al revés");
+    throw fail(400, "api.files.noTextBinarySwitch");
   }
   const [clash] = await db()
     .select({ id: schema.files.id })
     .from(schema.files)
     .where(and(eq(schema.files.projectId, projectId), eq(schema.files.path, path)));
-  if (clash && clash.id !== file.id) throw new HttpError(409, "Ya existe un archivo con esa ruta");
+  if (clash && clash.id !== file.id) throw fail(409, "api.files.pathTaken");
   if (file.binary && extensionOf(file.path) !== extensionOf(path)) {
     // Renaming between binary formats must keep the bytes-format invariant.
     const [{ data }] = await db()
@@ -525,7 +524,7 @@ export async function renameFile(
       .from(schema.files)
       .where(eq(schema.files.id, file.id));
     if (data && !matchesMagic(path, new Uint8Array(data))) {
-      throw new HttpError(400, `${path}: el contenido no coincide con ese formato`);
+      throw fail(400, "api.files.magicMismatch", { path });
     }
   }
   await db().transaction(async (tx) => {
@@ -544,7 +543,7 @@ export async function renameFile(
 
 export async function deleteFile(projectId: string, mainFile: string, fileId: string) {
   const file = await getFile(projectId, fileId);
-  if (file.path === mainFile) throw new HttpError(400, "No se puede borrar el archivo principal");
+  if (file.path === mainFile) throw fail(400, "api.files.cannotDeleteMain");
   await db().delete(schema.files).where(eq(schema.files.id, file.id));
   await touchProject(projectId);
 }

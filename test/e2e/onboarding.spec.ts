@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { login, seed } from "./helpers";
 
 const PASSWORD = "correct horse battery";
 const unique = (tag: string) => `${tag}-${Date.now()}-${Math.floor(Math.random() * 1e4)}@t.dev`;
@@ -76,4 +77,67 @@ test("registrarse sin demo muestra las tres vías de arranque", async ({ page })
   await page.getByRole("button", { name: "Cargar proyecto demo" }).click();
   await page.waitForURL(/\/projects\/[0-9a-f-]+$/, { timeout: 30_000 });
   await expect(page.locator(".cm-content")).toContainText("Bienvenido a Folio");
+});
+
+/** The tour count once the mount-time server truths have landed. */
+async function settledCount(page: Page): Promise<string> {
+  let prev = "";
+  for (let i = 0; i < 20; i++) {
+    const now = (await page.getByTestId("onboarding-count").innerText()).trim();
+    if (now && now === prev) return now;
+    prev = now;
+    await page.waitForTimeout(700);
+  }
+  throw new Error(`tour count never settled: ${prev}`);
+}
+
+test.describe("tarjeta de recorrido", () => {
+  // Uses the persistent account (no registration quota). The tour state is
+  // user-wide, so each run resets it through the same API the provider uses.
+  test.beforeEach(async ({ page }) => {
+    const ctx = await seed();
+    await login(page, ctx);
+    await page.request.put("/api/preferences", {
+      data: { onboarding: { done: [], dismissed: false } },
+    });
+    await page.goto(`/projects/${ctx.projectId}`);
+  });
+
+  test("cuenta un éxito real, se cierra y sigue cerrada tras recargar", async ({ page }) => {
+    const card = page.getByTestId("onboarding-card");
+    await expect(card).toBeVisible();
+
+    // A fresh template project: the server truths settle at 1/10 (created).
+    const start = await settledCount(page);
+    const [done, total] = start.split("/").map(Number);
+    expect(done).toBeGreaterThanOrEqual(1);
+
+    // One workspace event (compile) moves the ring by exactly one.
+    await page.evaluate(() =>
+      window.dispatchEvent(new CustomEvent("folio:onboarding", { detail: "compile" })),
+    );
+    await expect(page.getByTestId("onboarding-count")).toHaveText(`${done + 1}/${total}`);
+
+    // «Show me» navigates through the workspace's own handlers: with
+    // cite-paper current, the button switches the sidebar to the Papers tab.
+    await page.evaluate(() =>
+      window.dispatchEvent(new CustomEvent("folio:onboarding", { detail: "pdf-click" })),
+    );
+    await page.getByRole("button", { name: /Recorrido/ }).click(); // expand the card
+    await expect(card.getByTestId("onboarding-task-cite-paper")).toContainText("Cita un artículo");
+    await card.getByRole("button", { name: "Muéstrame" }).click();
+    await expect(page.getByRole("tab", { name: "Artículos" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // The card lives in the Files sidebar: «Show me» left it hidden behind
+    // the Papers tab — come back before dismissing.
+    await page.getByRole("tab", { name: "Archivos" }).click();
+    await page.getByTestId("onboarding-dismiss").click();
+    await expect(card).toBeHidden();
+    await page.reload();
+    await expect(card).toBeHidden();
+    await expect(page.getByRole("button", { name: "Recorrido", exact: true })).toBeVisible();
+  });
 });

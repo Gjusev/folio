@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ArrowUpRight, CheckCircle2, ClipboardCheck, XCircle } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { tourEvent } from "@/components/onboarding/tasks";
 import type { FileDoc } from "@/components/workspace/document-store";
 
 type Health = {
@@ -74,6 +75,7 @@ export function CheckView({
       ]);
       setReport({ health, submission });
       setState("idle");
+      tourEvent("check");
     } catch (err) {
       setState("error");
       setError(err instanceof TypeError ? t("offline") : (err as Error).message);

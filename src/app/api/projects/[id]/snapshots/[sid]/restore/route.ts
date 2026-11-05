@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { HttpError, enforceRateLimit, requireUser, route } from "@/lib/http";
+import { enforceRateLimit, fail, HttpError, requireUser, route } from "@/lib/http";
 import {
   createFile,
   createSnapshot,
@@ -40,7 +40,7 @@ export const POST = route(async (req, { params }: Ctx) => {
       restored++;
     } catch (err) {
       if (err instanceof HttpError && err.status === 409)
-        throw new HttpError(409, "El archivo cambió mientras se restauraba; reintenta");
+        throw fail(409, "api.snapshots.restoreConflict");
       throw err;
     }
   }

@@ -1,4 +1,4 @@
-import { HttpError, requireUser, route } from "@/lib/http";
+import { fail, requireUser, route } from "@/lib/http";
 import { MIME, extensionOf } from "@/lib/paths";
 import { getFileData, getViewableProject } from "@/lib/projects";
 
@@ -11,7 +11,7 @@ export const GET = route(async (req, { params }: Ctx) => {
   const project = await getViewableProject(user.id, id);
   const file = await getFileData(project.id, fileId);
   const type = MIME[extensionOf(file.path)];
-  if (!file.data || !type) throw new HttpError(404, "Archivo no encontrado");
+  if (!file.data || !type) throw fail(404, "api.files.notFound");
   return new Response(new Blob([new Uint8Array(file.data)]), {
     headers: {
       "content-type": type,

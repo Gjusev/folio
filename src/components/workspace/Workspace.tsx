@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { MessageSquare, Pencil } from "lucide-react";
 import { Group, Panel, Separator, type PanelImperativeHandle } from "react-resizable-panels";
@@ -12,6 +13,9 @@ import { bibKeys } from "@/lib/bibtex";
 import { relocateAnchor } from "@/lib/anchors";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { usePreferences } from "@/components/PreferencesProvider";
+import { OnboardingCard } from "@/components/onboarding/OnboardingCard";
+import { tourEvent, type TaskId } from "@/components/onboarding/tasks";
 import type { AgentPlan } from "@/lib/ai-prompts";
 import type { LogIssue } from "@/lib/latex-log";
 import { AiPanel } from "./AiPanel";
@@ -104,6 +108,56 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
   useEffect(() => {
     sidePanel.current?.resize(side === "assistant" || side === "review" ? "32%" : "22%");
   }, [side]);
+
+  // The product tour: its card sits at the top of the Files sidebar, and
+  // «Show me» navigates through the same handlers the workspace uses.
+  const router = useRouter();
+  const prefs = usePreferences();
+  const tourDismissed = Boolean(prefs.onboarding?.dismissedAt);
+  const [papersReveal, setPapersReveal] = useState<"search" | "library" | "check" | null>(null);
+  const [snapshotsRequest, setSnapshotsRequest] = useState(0);
+  function showTourTask(id: TaskId) {
+    switch (id) {
+      case "compile":
+        void runCompile();
+        break;
+      case "pdf-click":
+        setMobile("pdf");
+        break;
+      case "cite-paper":
+        setSide("papers");
+        setMobile("papers");
+        setPapersReveal("search");
+        break;
+      case "library":
+      case "graph":
+        setSide("papers");
+        setMobile("papers");
+        setPapersReveal("library");
+        break;
+      case "check":
+        setSide("papers");
+        setMobile("papers");
+        setPapersReveal("check");
+        break;
+      case "snapshot":
+        setSnapshotsRequest((n) => n + 1);
+        break;
+      case "review":
+        setSide("review");
+        setMobile("review");
+        break;
+      case "share-or-token":
+        router.push("/settings");
+        break;
+    }
+  }
+  /** Clears the dismissal server-side (progress is kept); a reload repaints. */
+  function reopenTour() {
+    void api("PUT", "/api/preferences", { onboarding: { dismissed: false } }).then(() =>
+      window.location.reload(),
+    );
+  }
   const [mobile, setMobile] = useState<MobileView>("editor");
   const [compile, setCompile] = useState<CompileState>({
     status: "idle",
@@ -293,6 +347,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       }));
       setLint(null);
       if (r.ok) {
+        tourEvent("compile");
         api<{ words: number }>("GET", `/api/projects/${project.id}/count`)
           .then((c) => setWords(c.words))
           .catch(() => setWords(null));
@@ -419,6 +474,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
           docs.files.find((f) => f.path === name || f.path.endsWith(`/${name}`)) ?? active;
         if (target) {
           open(target.id, r.result.line);
+          tourEvent("pdf-click");
           return;
         }
       }
@@ -436,8 +492,10 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
       .sort((a, b) => (a.path === mainFile ? -1 : b.path === mainFile ? 1 : 0))
       .map((f) => ({ ...f, content: docs.store.getDoc(f.id) }));
     const hit = locate(text, texs);
-    if (hit) open(hit.id, hit.line);
-    else
+    if (hit) {
+      open(hit.id, hit.line);
+      tourEvent("pdf-click");
+    } else
       setNotice(
         lang === "en"
           ? `“${text.slice(0, 40)}” was not found in the source.`
@@ -472,24 +530,45 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
 
   /* ---------- panes ---------- */
 
+  // Mount-time truths for the tour: a project with more than its main file
+  // exists, and a bibliography beyond the template's single sample entry means
+  // papers were cited (or pasted) — either way the user has one.
+  const tourTruths = useMemo<Partial<Record<TaskId, boolean>>>(
+    () => ({
+      "create-project": docs.files.length > 1,
+      "cite-paper": keys.length >= 2,
+    }),
+    [docs.files.length, keys.length],
+  );
+
   const files = (
-    <FileTree
-      projectId={project.id}
-      files={docs.files}
-      activeId={activeId}
-      mainFile={mainFile}
-      onOpen={(id) => open(id)}
-      onAdded={(f) => {
-        docs.store.add(f);
-        if (!f.binary) open(f.id);
-      }}
-      onRenamed={docs.store.rename}
-      onRemoved={(id) => {
-        docs.store.remove(id);
-        if (activeId === id) setActiveId(docs.files.find((f) => f.path === mainFile)?.id);
-      }}
-      onMainChanged={setMainFile}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      <OnboardingCard
+        projectId={project.id}
+        aiEnabled={aiEnabled}
+        truths={tourTruths}
+        showMe={showTourTask}
+      />
+      <div className="min-h-0 flex-1">
+        <FileTree
+          projectId={project.id}
+          files={docs.files}
+          activeId={activeId}
+          mainFile={mainFile}
+          onOpen={(id) => open(id)}
+          onAdded={(f) => {
+            docs.store.add(f);
+            if (!f.binary) open(f.id);
+          }}
+          onRenamed={docs.store.rename}
+          onRemoved={(id) => {
+            docs.store.remove(id);
+            if (activeId === id) setActiveId(docs.files.find((f) => f.path === mainFile)?.id);
+          }}
+          onMainChanged={setMainFile}
+        />
+      </div>
+    </div>
   );
 
   const syncServerFiles = (files: FileDoc | FileDoc[]) => {
@@ -504,6 +583,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
   const papers = (
     <PapersPanel
       projectId={project.id}
+      revealView={papersReveal}
       getSources={() => docs.files.map((f) => ({ path: f.path, content: docs.store.getDoc(f.id) }))}
       canCite={canCite}
       onCite={(k) => editor.current?.insertAtCursor(`~\\cite{${k}}`)}
@@ -703,6 +783,11 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
             {label}
           </button>
         ))}
+        {tourDismissed && (
+          <button type="button" className="tab ml-auto" onClick={reopenTour}>
+            {t("onb.reopen")}
+          </button>
+        )}
       </div>
       <div className="min-h-0 flex-1" role="tabpanel">
         {/* Kept mounted so searches and the conversation survive tab switches. */}
@@ -806,11 +891,13 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
               <a
                 className="block rounded-md px-3 py-2 text-sm hover:bg-raised"
                 href={`/api/projects/${project.id}/export`}
-                download={`${(name || "project")
-                  .normalize("NFKD")
-                  .replace(/\p{M}/gu, "")
-                  .replace(/[^\w.-]+/g, "-")
-                  .replace(/^-+|-+$/g, "") || "project"}.zip`}
+                download={`${
+                  (name || "project")
+                    .normalize("NFKD")
+                    .replace(/\p{M}/gu, "")
+                    .replace(/[^\w.-]+/g, "-")
+                    .replace(/^-+|-+$/g, "") || "project"
+                }.zip`}
               >
                 {t("ws.export.zip")}
               </a>
@@ -828,6 +915,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
           </details>
           <SnapshotsMenu
             projectId={project.id}
+            openRequest={snapshotsRequest}
             onDiff={(partial) => {
               if (partial.pdf) {
                 if (pdfUrl.current) URL.revokeObjectURL(pdfUrl.current);

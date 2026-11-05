@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { HttpError } from "@/lib/http";
+import { fail } from "@/lib/http";
 import { getViewableProject } from "@/lib/projects";
 import type { Review } from "@/lib/review";
 
@@ -101,12 +101,11 @@ export async function setStates(
 ) {
   const project = await getViewableProject(userId, projectId);
   const row = await findReview(project.id, reviewId);
-  if (row.userId !== userId)
-    throw new HttpError(403, "Solo el autor puede cambiar el estado de los comentarios");
+  if (row.userId !== userId) throw fail(403, "api.reviews.statesForbidden");
   const n = (row.result as Review).comments.length;
   for (const key of Object.keys(states)) {
     if (!/^\d+$/.test(key) || Number(key) >= n)
-      throw new HttpError(400, `No hay ningún comentario número ${key} en esa revisión`);
+      throw fail(400, "api.reviews.noSuchComment", { n: key });
   }
   await db().update(schema.reviews).set({ states }).where(eq(schema.reviews.id, row.id));
   return states;
@@ -116,20 +115,20 @@ export async function setStates(
 export async function deleteReview(userId: string, projectId: string, reviewId: string) {
   const project = await getViewableProject(userId, projectId);
   const row = await findReview(project.id, reviewId);
-  if (row.userId !== userId) throw new HttpError(403, "Solo el autor puede borrar la revisión");
+  if (row.userId !== userId) throw fail(403, "api.reviews.deleteForbidden");
   await db().delete(schema.reviews).where(eq(schema.reviews.id, row.id));
 }
 
 /** Saved review of this project or a uniform 404 (no probing other projects). */
 async function findReview(projectId: string, reviewId: string): Promise<ReviewRow> {
-  if (!isUuid(reviewId)) throw new HttpError(404, "Revisión no encontrada");
+  if (!isUuid(reviewId)) throw fail(404, "api.reviews.notFound");
   const [row] = await db()
     .select({ review: schema.reviews, userName: schema.users.name })
     .from(schema.reviews)
     .innerJoin(schema.users, eq(schema.users.id, schema.reviews.userId))
     .where(and(eq(schema.reviews.id, reviewId), eq(schema.reviews.projectId, projectId)))
     .limit(1);
-  if (!row) throw new HttpError(404, "Revisión no encontrada");
+  if (!row) throw fail(404, "api.reviews.notFound");
   return { ...row.review, userName: row.userName };
 }
 

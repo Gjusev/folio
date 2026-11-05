@@ -160,7 +160,15 @@ describe("AI-use ledger and disclosure", () => {
       }),
       ctx({ id }),
     );
-    expect(await res.text()).toBe("Improved text.");
+    // NDJSON frames now; the rejoined text answer must match the old shape.
+    const streamed = (await res.text())
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l) as { t: string; s: string })
+      .filter((e) => e.t === "text")
+      .map((e) => e.s)
+      .join("");
+    expect(streamed).toBe("Improved text.");
     expect(llmRequests[0].auth).toBe("Bearer sk-editor");
     // The ledger is written right after the stream closes.
     await vi.waitFor(async () => expect(await listAiUsage(id)).toHaveLength(1));
