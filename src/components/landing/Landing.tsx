@@ -10,8 +10,6 @@ import { Logo } from "@/components/Logo";
 import { LangSwitcher } from "@/lib/i18n/client";
 import { format, type Dict, type MsgKey } from "@/lib/i18n/dictionaries";
 import { LandingMotion } from "./LandingMotion";
-import { LoopVideo } from "./LoopVideo";
-import { ShowcaseBoard } from "./FeatureBands";
 import { Stages } from "./Stages";
 import "./landing.css";
 
@@ -186,51 +184,34 @@ export function Landing({
           </ul>
         </section>
 
-        {/* The demo library as a departure board */}
-        <section aria-labelledby="board-title">
-          <h2 id="board-title" className="sr">
-            {t("landing.board.h")}
-          </h2>
-          <ShowcaseBoard />
-        </section>
-
-        {/* The name */}
-        <section className="lp-sec" aria-labelledby="folio-title">
-          <div className="lp-folio">
+        {/* Writing with AI — the headline appeal, with its exact rules */}
+        <section className="lp-sec" aria-labelledby="ai-title">
+          <div className="lp-split">
             <div>
-              <h2 id="folio-title" className="lp-head" data-reveal>
-                {t("landing.folio.h")}
+              <h2 id="ai-title" className="lp-head" data-reveal>
+                {t("landing.ai.h")}
               </h2>
               <p className="lp-p" data-reveal style={rise(1)}>
-                {t("landing.folio.p")}
+                {t("landing.ai.p")}
               </p>
             </div>
-            <figure data-reveal style={rise(2)}>
-              <Image
-                src="/landing/first-folio.jpg"
-                alt={t("landing.folio.alt")}
-                width={900}
-                height={1450}
-                sizes="(min-width: 900px) 36vw, 90vw"
-                loading="lazy"
-                unoptimized
-              />
-              <figcaption data-reveal style={rise(3)}>
-                {t("landing.folio.cap")}
-              </figcaption>
-            </figure>
+            <div className="lp-ai-frag" data-reveal style={rise(2)} data-ui>
+              <p className="lp-ai-you">
+                <span className="lp-ai-tag">{t("landing.ai.you")}</span>
+                {t("landing.ai.instr")}
+              </p>
+              <ul className="lp-ai-ev">
+                <li>Attention Is All You Need · 2017</li>
+                <li>BERT · 2019</li>
+                <li>Deep Residual Learning · 2016</li>
+              </ul>
+              <p className="lp-ai-draft">
+                <span className="lp-ai-tag">{t("landing.ai.agent")}</span>
+                {t("landing.ai.draft")}
+                <span className="lp-ai-caret" aria-hidden />
+              </p>
+            </div>
           </div>
-          <figure className="lp-reel" data-reveal>
-            <LoopVideo
-              webm="/landing/letterpress.webm"
-              poster="/landing/letterpress-poster.jpg"
-              width={854}
-              height={480}
-            />
-            <figcaption data-reveal style={rise(1)}>
-              {t("landing.folio.reel")}
-            </figcaption>
-          </figure>
         </section>
 
         {/* How it works: tinted accordion of the four stages */}
@@ -295,10 +276,6 @@ export function Landing({
               ) : null}
               <li>Apache-2.0</li>
             </ul>
-          </div>
-          <div className="lp-foot-col" data-reveal style={rise(3)}>
-            <h2 className="lp-foot-colh">{t("landing.foot.col.credit")}</h2>
-            <p>{t("landing.foot.credit")}</p>
           </div>
         </div>
         <div className="lp-foot-end" data-reveal>

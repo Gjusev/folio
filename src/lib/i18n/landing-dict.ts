@@ -13,6 +13,14 @@ const es = {
   "landing.hero.cat": "El editor LaTeX autoalojado con IA.",
   "landing.hero.sub":
     "Folio es el espacio abierto para escribir artículos científicos con IA: tu modelo, tu servidor, citas que no se pueden inventar y cada cambio a la vista antes de aplicarlo.",
+  "landing.ai.h": "Escribe con IA. O sin ella.",
+  "landing.ai.p":
+    "Describe la sección y Folio busca literatura real, la muestra como evidencia y redacta el LaTeX: solo cita claves de tu .bib y nada se aplica sin tu confirmación. Sin proveedor configurado, todo lo demás funciona igual.",
+  "landing.ai.you": "Tú:",
+  "landing.ai.instr": "Escribe un párrafo sobre atención eficiente.",
+  "landing.ai.agent": "Folio:",
+  "landing.ai.draft":
+    "La atención recortó el coste de las secuencias largas \cite{vaswani2017attention}",
   "landing.window.h": "El producto",
   "landing.cta.main": "Probar el proyecto demo",
   "landing.cta.more": "Ver qué incluye",
@@ -44,11 +52,7 @@ const es = {
   "landing.cap.5.d":
     "Cualquier API compatible con OpenAI, Anthropic o modelos locales. El propietario decide si un manuscrito puede salir del servidor, y Folio redacta la declaración de uso de IA que piden las revistas.",
   // landing: the name
-  "landing.folio.h": "Un folio es una hoja plegada una vez.",
-  "landing.folio.p":
-    "Dos hojas, cuatro páginas: tu fuente a un lado, el resultado al otro. El libro más conocido de su clase es el Primer Folio de Shakespeare, de 1623. Este compila.",
-  "landing.folio.alt": "Portada del Primer Folio de Shakespeare, 1623, con el retrato grabado.",
-  "landing.folio.cap": "Portada del Primer Folio, 1623 (British Library).",
+
   // landing: how it works (tinted accordion) + the demo library as a board
   "landing.stages.h": "Cómo funciona",
   "landing.stages.p":
@@ -66,13 +70,7 @@ const es = {
   "landing.stage.3.alt": "Explorador de grafo de citas de Folio con la lista, el grafo y la ficha.",
   "landing.stage.4.d": "Postgres, el compilador y la app en un solo archivo compose.",
   "landing.stage.4.n": "Aloja",
-  "landing.board.h": "La biblioteca del demo",
-  "landing.board.aria": "Bibliografía del proyecto demo",
-  "landing.board.detail":
-    "La nota de lectura del demo cita este artículo: abre la demo, pulsa el PDF y SyncTeX salta a la línea exacta.",
-  "landing.board.st.read": "Leído",
-  "landing.board.st.cited": "Citado",
-  "landing.board.st.queued": "En cola",
+
   // landing: close (one word is the button) + footer
   "landing.close.p":
     "Crea tu cuenta y Folio abre un proyecto demo que ya compila: pulsa el PDF, cita un paper, guarda una versión.",
@@ -85,9 +83,7 @@ const es = {
   "landing.foot.col.credit": "Créditos",
   "landing.foot.source": "Código fuente",
   "landing.foot.legal": "© 2026 Folio. Publicado bajo Apache-2.0.",
-  "landing.foot.credit":
-    "Imagen: portada del Primer Folio, British Library, CC0. Vídeo: «Printing in a letterpress», Subhashish Panigrahi, CC BY-SA 4.0. Vía Wikimedia Commons.",
-  "landing.folio.reel": "Imprenta tipográfica en Cuttack, India.",
+
   // register page pitch
   "auth.register.lead": "Tu primer artículo compilando en un minuto.",
   "auth.register.b1.t": "Escribe con IA que puedes auditar",
@@ -136,6 +132,13 @@ const en: Record<keyof typeof es, string> = {
   "landing.hero.cat": "The self-hosted LaTeX editor with AI.",
   "landing.hero.sub":
     "Folio is the open workspace for writing scientific papers with AI: your model, your server, citations that cannot be invented, and every change in view before it lands.",
+  "landing.ai.h": "Write with AI. Or without it.",
+  "landing.ai.p":
+    "Describe the section and Folio retrieves real literature, shows it as evidence and drafts the LaTeX: it only cites keys from your .bib and nothing is applied without your confirmation. With no provider configured, everything else works the same.",
+  "landing.ai.you": "You:",
+  "landing.ai.instr": "Draft a paragraph on efficient attention.",
+  "landing.ai.agent": "Folio:",
+  "landing.ai.draft": "Attention cut the cost of long sequences \cite{vaswani2017attention}",
   "landing.window.h": "The product",
   "landing.cta.main": "Try the demo project",
   "landing.cta.more": "See what is inside",
@@ -164,11 +167,7 @@ const en: Record<keyof typeof es, string> = {
   "landing.cap.5.s": "Your server",
   "landing.cap.5.d":
     "Any OpenAI-compatible API, Anthropic or local models. The owner decides whether a manuscript may leave the server, and Folio writes the AI-use declaration journals ask for.",
-  "landing.folio.h": "A folio is a sheet folded once.",
-  "landing.folio.p":
-    "Two leaves, four pages: your source on one side, the result on the other. The best-known book of the kind is Shakespeare's First Folio of 1623. This one compiles.",
-  "landing.folio.alt": "Title page of Shakespeare's First Folio, 1623, with the engraved portrait.",
-  "landing.folio.cap": "Title page of the First Folio, 1623 (British Library).",
+
   "landing.stages.h": "How it works",
   "landing.stages.p":
     "From the first note to the compiled PDF without leaving Folio: four moves already in the demo.",
@@ -186,13 +185,7 @@ const en: Record<keyof typeof es, string> = {
     "Folio citation graph explorer with the list, the graph and the paper card.",
   "landing.stage.4.d": "Postgres, the compiler and the app in a single compose file.",
   "landing.stage.4.n": "Host",
-  "landing.board.h": "The demo library",
-  "landing.board.aria": "The demo project's bibliography",
-  "landing.board.detail":
-    "The demo's reading note cites this paper: open the demo, click the PDF and SyncTeX jumps to the exact line.",
-  "landing.board.st.read": "Read",
-  "landing.board.st.cited": "Cited",
-  "landing.board.st.queued": "Queued",
+
   "landing.close.p":
     "Create your account and Folio opens a demo project that already compiles: click the PDF, cite a paper, save a version.",
   "landing.cta.word": "Try it",
@@ -204,9 +197,7 @@ const en: Record<keyof typeof es, string> = {
   "landing.foot.col.credit": "Credits",
   "landing.foot.source": "Source code",
   "landing.foot.legal": "© 2026 Folio. Released under Apache-2.0.",
-  "landing.foot.credit":
-    'Image: First Folio title page, British Library, CC0. Video: "Printing in a letterpress", Subhashish Panigrahi, CC BY-SA 4.0. Via Wikimedia Commons.',
-  "landing.folio.reel": "A letterpress at work in Cuttack, India.",
+
   "auth.register.lead": "Your first paper, compiling in a minute.",
   "auth.register.b1.t": "Write with AI you can audit",
   "auth.register.b1.d":
@@ -250,6 +241,13 @@ const de: Record<keyof typeof es, string> = {
   "landing.hero.cat": "Der selbst gehostete LaTeX-Editor mit KI.",
   "landing.hero.sub":
     "Folio ist der offene Arbeitsplatz für wissenschaftliches Schreiben mit KI: dein Modell, dein Server, Zitate, die sich nicht erfinden lassen, und jede Änderung sichtbar, bevor sie übernommen wird.",
+  "landing.ai.h": "Mit KI schreiben. Oder ohne.",
+  "landing.ai.p":
+    "Beschreibe den Abschnitt, und Folio holt echte Literatur, zeigt sie als Belege und entwirft das LaTeX: zitiert werden nur Schlüssel aus deiner .bib, und nichts wird ohne deine Bestätigung übernommen. Ohne konfigurierten Anbieter funktioniert alles andere genauso.",
+  "landing.ai.you": "Du:",
+  "landing.ai.instr": "Entwirf einen Absatz über effiziente Attention.",
+  "landing.ai.agent": "Folio:",
+  "landing.ai.draft": "Attention senkte die Kosten langer Sequenzen \cite{vaswani2017attention}",
   "landing.window.h": "Das Produkt",
   "landing.cta.main": "Demo-Projekt ausprobieren",
   "landing.cta.more": "Ansehen, was drinsteckt",
@@ -278,12 +276,7 @@ const de: Record<keyof typeof es, string> = {
   "landing.cap.5.s": "Dein Server",
   "landing.cap.5.d":
     "Jede OpenAI-kompatible API, Anthropic oder lokale Modelle. Der Eigentümer entscheidet, ob ein Manuskript den Server verlassen darf, und Folio schreibt die KI-Erklärung, die Zeitschriften verlangen.",
-  "landing.folio.h": "Ein Folio ist ein einmal gefaltetes Blatt.",
-  "landing.folio.p":
-    "Zwei Blätter, vier Seiten: der Quelltext auf der einen Seite, das Ergebnis auf der anderen. Das bekannteste Buch dieser Art ist Shakespeares First Folio von 1623. Dieses hier kompiliert.",
-  "landing.folio.alt":
-    "Titelblatt von Shakespeares First Folio, 1623, mit dem gestochenen Porträt.",
-  "landing.folio.cap": "Titelblatt des First Folio, 1623 (British Library).",
+
   "landing.stages.h": "So funktioniert es",
   "landing.stages.p":
     "Von der ersten Notiz zum kompilierten PDF, ohne Folio zu verlassen: vier Schritte, die schon in der Demo stecken.",
@@ -301,13 +294,7 @@ const de: Record<keyof typeof es, string> = {
   "landing.stage.3.alt": "Zitiergraph-Explorer von Folio mit Liste, Graph und Karte.",
   "landing.stage.4.d": "Postgres, Compiler und App in einer einzigen Compose-Datei.",
   "landing.stage.4.n": "Hosten",
-  "landing.board.h": "Die Demo-Bibliothek",
-  "landing.board.aria": "Bibliografie des Demo-Projekts",
-  "landing.board.detail":
-    "Die Lesenotiz der Demo zitiert diese Arbeit: Öffne die Demo, klicke ins PDF, und SyncTeX springt zur exakten Zeile.",
-  "landing.board.st.read": "Gelesen",
-  "landing.board.st.cited": "Zitiert",
-  "landing.board.st.queued": "Offen",
+
   "landing.close.p":
     "Erstelle dein Konto und Folio öffnet ein Demo-Projekt, das schon kompiliert: ins PDF klicken, eine Arbeit zitieren, eine Version speichern.",
   "landing.cta.word": "Testen",
@@ -319,9 +306,7 @@ const de: Record<keyof typeof es, string> = {
   "landing.foot.col.credit": "Credits",
   "landing.foot.source": "Quellcode",
   "landing.foot.legal": "© 2026 Folio. Unter Apache-2.0 veröffentlicht.",
-  "landing.foot.credit":
-    "Bild: Titelblatt des First Folio, British Library, CC0. Video: „Printing in a letterpress“, Subhashish Panigrahi, CC BY-SA 4.0. Über Wikimedia Commons.",
-  "landing.folio.reel": "Eine Buchdruckpresse in Cuttack, Indien.",
+
   "auth.register.lead": "Deine erste Arbeit, in einer Minute kompiliert.",
   "auth.register.b1.t": "Schreibe mit KI, die du prüfen kannst",
   "auth.register.b1.d":
