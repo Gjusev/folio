@@ -227,6 +227,32 @@ export const integrations = pgTable(
   (t) => [uniqueIndex("integrations_user_kind_uq").on(t.userId, t.kind)],
 );
 
+/** A saved AI review run, so critiques persist and can be compared over time.
+ *  `result` is the Review JSON the model produced; `states` maps a comment
+ *  index (as string) to what the author did with it. */
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lang: text().notNull(),
+    // Aspect[] as JSON: the set the author picked for this run.
+    aspects: jsonb().notNull(),
+    rigor: text().notNull(),
+    focus: text().notNull().default(""),
+    result: jsonb().notNull(),
+    // { [commentIndex]: "dismissed" | "resolved" }
+    states: jsonb().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("reviews_project_idx").on(t.projectId, t.createdAt)],
+);
+
 /** Threaded review comments, optionally anchored to a span of a file. Replies
  *  reference a root comment (parentId null); deleting a root cascades. */
 export const comments = pgTable(

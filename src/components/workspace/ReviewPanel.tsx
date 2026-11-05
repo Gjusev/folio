@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { ClipboardCheck, ClipboardCopy, Eye, EyeOff, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Check, ClipboardCheck, ClipboardCopy, Eye, EyeOff, Wand2, X } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
+import { compareReviews, type CompareResult } from "@/lib/review-compare";
+import type { CommentState, ReviewStates, SavedReview, SavedReviewMeta } from "@/lib/reviews-store";
 import {
   ASPECTS,
   RIGORS,
@@ -14,12 +16,13 @@ import {
   reviewToMarkdown,
   type Aspect,
   type Review,
+  type ReviewComment,
   type Rigor,
   type Severity,
   type SourceFile,
 } from "@/lib/review";
 
-type Saved = { review: Review; sections: number; truncated: boolean };
+type Saved = { review: Review; sections: number; truncated: boolean; savedId?: string };
 
 // The last result is kept per project in this browser (a review costs tokens;
 // losing it on reload would be a poor trade). useSyncExternalStore keeps SSR
@@ -81,6 +84,9 @@ const toggle = <T,>(set: Set<T>, v: T) => {
   return next;
 };
 
+// No-op subscription: the value is read once per render from localStorage.
+const subscribeNone = () => () => {};
+
 export function ReviewPanel({
   projectId,
   enabled,
@@ -88,6 +94,7 @@ export function ReviewPanel({
   getFiles,
   flush,
   onOpenAt,
+  onRequestFix,
 }: {
   projectId: string;
   enabled: boolean;
@@ -96,6 +103,8 @@ export function ReviewPanel({
   getFiles: () => SourceFile[];
   flush: () => Promise<void>;
   onOpenAt: (path: string, line: number) => void;
+  /** Hands an instruction to the assistant tab ("Fix with the assistant"). */
+  onRequestFix: (instruction: string) => void;
 }) {
   const { t, lang } = useI18n();
   const raw = useSyncExternalStore(
@@ -122,9 +131,49 @@ export function ReviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [sevOff, setSevOff] = useState<Set<Severity>>(new Set());
   const [aspectOff, setAspectOff] = useState<Set<Aspect>>(new Set());
-  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // v2: saved history + per-comment states. `states` is the map the server
+  // persists (key = comment index); without a savedId it stays local.
+  const [hist, setHist] = useState<SavedReviewMeta[] | null>(null);
+  const [loaded, setLoaded] = useState<SavedReview | null>(null);
+  const [states, setStates] = useState<ReviewStates>({});
+  const [compareId, setCompareId] = useState("");
+  const [compare, setCompare] = useState<{ id: string; counts: CompareResult } | null>(null);
+  // Best-effort own-user id (the comments drawer caches it after posting one):
+  // decides whether history rows offer a delete button. The server enforces
+  // authorship anyway; useSyncExternalStore keeps the read SSR-safe.
+  const uid = useSyncExternalStore(
+    subscribeNone,
+    () => localStorage.getItem("folio:uid"),
+    () => null,
+  );
+
+  const refreshHist = useCallback(() => {
+    api<{ reviews: SavedReviewMeta[] }>("GET", `/api/projects/${projectId}/reviews`)
+      .then((r) => setHist(r.reviews ?? []))
+      .catch(() => setHist([])); // no history (or route) yet: honest empty state
+  }, [projectId]);
+  useEffect(() => {
+    refreshHist();
+  }, [refreshHist]);
+
+  // The displayed review: a saved one opened from the history wins over the
+  // localStorage copy, which stays as the offline fallback.
+  const review = loaded?.result ?? saved?.review ?? null;
+  const savedId = loaded?.id ?? saved?.savedId ?? null;
+  const dismissed = useMemo(
+    () =>
+      new Set(
+        Object.entries(states)
+          .filter(([, v]) => v === "dismissed")
+          .map(([k]) => Number(k)),
+      ),
+    [states],
+  );
+  const ownUid =
+    uid ?? (saved?.savedId ? hist?.find((h) => h.id === saved.savedId)?.userId : undefined);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- re-read when the tab becomes visible
   const sections = useMemo(() => projectSections(getFiles()), [getFiles, active]);
@@ -133,6 +182,18 @@ export function ReviewPanel({
   const sectionLabel = (title: string) => title || t("rv.scope.start");
 
   const files = useMemo(() => [...new Set(sections.map((s) => s.file))], [sections]);
+
+  const fmtDate = (iso: string) =>
+    new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+
+  /** One saved review with its result and states (flat, or wrapped in {review}). */
+  async function fetchDetail(id: string): Promise<SavedReview> {
+    const r = await api<SavedReview & { review?: SavedReview }>(
+      "GET",
+      `/api/projects/${projectId}/reviews/${id}`,
+    );
+    return r.result ? r : (r.review as SavedReview);
+  }
 
   async function run() {
     setError(null);
@@ -144,6 +205,7 @@ export function ReviewPanel({
       const res = await api<{
         review: Review;
         meta: { sections: number; truncated: boolean };
+        savedId?: string;
       }>("POST", `/api/projects/${projectId}/review`, {
         lang,
         aspects: ASPECTS.filter((a) => aspects.has(a)),
@@ -155,10 +217,13 @@ export function ReviewPanel({
         review: res.review,
         sections: res.meta.sections,
         truncated: res.meta.truncated,
+        savedId: res.savedId,
       });
-      setDismissed(new Set());
+      setLoaded(null);
+      setStates({});
       setSevOff(new Set());
       setAspectOff(new Set());
+      refreshHist();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -166,7 +231,61 @@ export function ReviewPanel({
     }
   }
 
-  const review = saved?.review ?? null;
+  /** Sets/toggles one comment's state; persists it when the review is saved. */
+  function markState(i: number, value: CommentState) {
+    const k = String(i);
+    const next = { ...states };
+    if (next[k] === value) delete next[k];
+    else next[k] = value;
+    setStates(next);
+    if (!savedId) return; // local-only until the review lives on the server
+    void api("PATCH", `/api/projects/${projectId}/reviews/${savedId}/states`, {
+      states: next,
+    }).catch((err) => setError((err as Error).message));
+  }
+
+  async function loadReview(id: string) {
+    setError(null);
+    try {
+      const detail = await fetchDetail(id);
+      setLoaded(detail);
+      setStates(detail.states ?? {});
+      setSevOff(new Set());
+      setAspectOff(new Set());
+      setShowDismissed(false);
+      setCompareId("");
+      setCompare(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function removeReview(id: string) {
+    try {
+      await api("DELETE", `/api/projects/${projectId}/reviews/${id}`);
+      setHist((h) => (h ? h.filter((x) => x.id !== id) : h));
+      if (loaded?.id === id) {
+        setLoaded(null);
+        setStates({});
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  /** Chips "X resueltos, Y nuevos, Z abiertos" against an older saved review. */
+  async function runCompare(id: string) {
+    setCompareId(id);
+    setCompare(null);
+    if (!id || !review) return;
+    try {
+      const detail = await fetchDetail(id);
+      setCompare({ id, counts: compareReviews(detail.result, review) });
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   const present = review ? ASPECTS.filter((a) => review.comments.some((c) => c.aspect === a)) : [];
   const visible = review
     ? review.comments
@@ -184,6 +303,14 @@ export function ReviewPanel({
     await navigator.clipboard.writeText(reviewToMarkdown(review, t("rv.report")));
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
+  }
+
+  /** The instruction handed to the assistant tab; nothing is applied automatically. */
+  function fixInstruction(c: ReviewComment) {
+    const lines = [c.comment];
+    if (c.suggestion) lines.push(t("rv.fix.suggestion", { s: c.suggestion }));
+    if (c.quote) lines.push(t("rv.fix.quote", { q: c.quote }));
+    return lines.join("\n");
   }
 
   return (
@@ -314,6 +441,7 @@ export function ReviewPanel({
       {error && (
         <p
           role="alert"
+          data-testid="review-error"
           className="mt-3 rounded-md bg-[var(--pill-negative-bg)] px-3 py-2 text-xs text-[var(--pill-negative-ink)]"
         >
           {error}
@@ -329,16 +457,20 @@ export function ReviewPanel({
         {busy ? t("rv.run.busy") : review ? t("rv.again") : t("rv.run")}
       </button>
 
-      {review && saved && (
+      {review && (
         <section className="mt-6" aria-label={t("rv.report")} data-testid="review-result">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold">{t("rv.summary")}</h2>
             <span className="text-xs text-muted">
-              {t("rv.sections.reviewed", { n: saved.sections })}
+              {loaded
+                ? `${loaded.userName} · ${fmtDate(loaded.createdAt)}`
+                : saved
+                  ? t("rv.sections.reviewed", { n: saved.sections })
+                  : ""}
             </span>
           </div>
           <p className="mt-1 leading-6">{review.summary}</p>
-          {saved.truncated && (
+          {saved?.truncated && (
             <p className="mt-2 text-xs text-[var(--warning)]">{t("rv.truncated")}</p>
           )}
 
@@ -416,7 +548,11 @@ export function ReviewPanel({
               <button
                 type="button"
                 className="hover:text-ink"
-                onClick={() => write(projectId, null)}
+                onClick={() => {
+                  write(projectId, null);
+                  setLoaded(null);
+                  setStates({});
+                }}
               >
                 {t("rv.clear")}
               </button>
@@ -431,13 +567,20 @@ export function ReviewPanel({
                 <li
                   key={i}
                   data-testid="review-comment"
-                  className={`rounded-lg border border-line bg-surface p-3 ${dismissed.has(i) ? "opacity-50" : ""}`}
+                  className={`rounded-lg border border-line bg-surface p-3 ${
+                    states[String(i)] ? "opacity-60" : ""
+                  }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
                     <span className={`rounded-full px-2 py-0.5 ${SEV_PILL[c.severity]}`}>
                       {t(`rv.sev.${c.severity}` as MsgKey)}
                     </span>
                     <span className="text-muted">{t(`rv.a.${c.aspect}` as MsgKey)}</span>
+                    {states[String(i)] === "resolved" && (
+                      <span className="rounded-full bg-[var(--pill-neutral-bg)] px-2 py-0.5 text-[var(--pill-neutral-ink)]">
+                        {t("rv.state.resolved")}
+                      </span>
+                    )}
                     {c.file && c.line ? (
                       <button
                         type="button"
@@ -452,10 +595,25 @@ export function ReviewPanel({
                     )}
                     <button
                       type="button"
+                      className={`rounded p-0.5 hover:bg-raised hover:text-ink ${
+                        states[String(i)] === "resolved" ? "text-ok" : "text-muted"
+                      }`}
+                      aria-label={t("rv.state.resolve")}
+                      title={
+                        states[String(i)] === "resolved"
+                          ? t("rv.state.resolved")
+                          : t("rv.state.resolve")
+                      }
+                      onClick={() => markState(i, "resolved")}
+                    >
+                      <Check aria-hidden className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       className="rounded p-0.5 text-muted hover:bg-raised hover:text-ink"
                       aria-label={dismissed.has(i) ? t("rv.restore") : t("rv.dismiss")}
                       title={dismissed.has(i) ? t("rv.restore") : t("rv.dismiss")}
-                      onClick={() => setDismissed(toggle(dismissed, i))}
+                      onClick={() => markState(i, "dismissed")}
                     >
                       <X aria-hidden className="h-3.5 w-3.5" />
                     </button>
@@ -472,9 +630,102 @@ export function ReviewPanel({
                       {c.suggestion}
                     </p>
                   )}
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() => onRequestFix(fixInstruction(c))}
+                    >
+                      <Wand2 aria-hidden className="h-3.5 w-3.5" />
+                      {t("rv.fix.button")}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+      )}
+
+      {review && (
+        <section className="mt-6" aria-label={t("rv.history.title")} data-testid="review-history">
+          <h2 className="text-sm font-semibold">{t("rv.history.title")}</h2>
+          {hist === null ? null : hist.length === 0 ? (
+            <p className="mt-2 text-xs text-muted">{t("rv.history.empty")}</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {hist.map((h) => (
+                <li
+                  key={h.id}
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface p-2 text-xs"
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 truncate text-left hover:text-ink"
+                    aria-label={t("rv.history.load")}
+                    aria-current={loaded?.id === h.id || undefined}
+                    onClick={() => void loadReview(h.id)}
+                  >
+                    <span className="font-medium">{h.userName}</span>
+                    <span className="text-muted">
+                      {" "}
+                      · {fmtDate(h.createdAt)} · {t("rv.history.aspects", { n: h.aspects.length })}
+                    </span>
+                  </button>
+                  {ownUid === h.userId && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-0.5 text-muted hover:bg-raised hover:text-ink"
+                      aria-label={t("rv.history.delete")}
+                      title={t("rv.history.delete")}
+                      onClick={() => void removeReview(h.id)}
+                    >
+                      <X aria-hidden className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {hist && hist.filter((h) => h.id !== savedId).length > 0 && (
+            <div className="mt-3">
+              <label htmlFor="rv-compare" className="label">
+                {t("rv.compare.title")}
+              </label>
+              <select
+                id="rv-compare"
+                className="select h-7 text-xs"
+                value={compareId}
+                onChange={(e) => void runCompare(e.target.value)}
+              >
+                <option value="">{t("rv.compare.pick")}</option>
+                {hist
+                  .filter((h) => h.id !== savedId)
+                  .map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.userName} · {fmtDate(h.createdAt)}
+                    </option>
+                  ))}
+              </select>
+              {compare && (
+                <p
+                  className="mt-2 flex flex-wrap gap-1.5 text-xs"
+                  data-testid="review-compare"
+                  aria-live="polite"
+                >
+                  <span className="rounded-full bg-[var(--pill-neutral-bg)] px-2.5 py-1 text-[var(--pill-neutral-ink)]">
+                    {t("rv.compare.resolved", { n: compare.counts.resolved })}
+                  </span>
+                  <span className="rounded-full bg-[var(--pill-neutral-bg)] px-2.5 py-1 text-[var(--pill-neutral-ink)]">
+                    {t("rv.compare.added", { n: compare.counts.added })}
+                  </span>
+                  <span className="rounded-full bg-[var(--pill-neutral-bg)] px-2.5 py-1 text-[var(--pill-neutral-ink)]">
+                    {t("rv.compare.open", { n: compare.counts.open })}
+                  </span>
+                </p>
+              )}
+            </div>
           )}
         </section>
       )}

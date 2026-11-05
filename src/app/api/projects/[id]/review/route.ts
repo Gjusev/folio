@@ -7,6 +7,7 @@ import { streamChat } from "@/lib/llm";
 import { resolveEndpoint } from "@/lib/llm-profiles";
 import { getViewableProject, listFiles } from "@/lib/projects";
 import { ASPECTS, RIGORS, buildExcerpt, buildReviewMessages, parseReview } from "@/lib/review";
+import { saveReview } from "@/lib/reviews-store";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,8 +20,9 @@ const body = z.object({
   scope: z.union([z.literal("all"), z.array(z.string().max(300)).min(1).max(300)]),
 });
 
-// An AI critique of the manuscript. Read-only: it returns comments tied to
-// verified lines and never changes a file. The text sent to the model comes
+// An AI critique of the manuscript. It never changes a file: it returns
+// comments tied to verified lines and saves the run (review + the author's
+// chosen filters) to the history. The text sent to the model comes
 // from the database (the client flushes pending saves first), so it only ever
 // sees this user's own project.
 export const POST = route(async (req, { params }: Ctx) => {
@@ -56,8 +58,19 @@ export const POST = route(async (req, { params }: Ctx) => {
   if (!review)
     throw new HttpError(502, "La IA no devolvió una revisión válida. Inténtalo de nuevo");
 
+  const savedId = await saveReview({
+    projectId: project.id,
+    userId: user.id,
+    lang: input.lang,
+    aspects,
+    rigor: input.rigor,
+    focus: input.focus,
+    result: review,
+  });
+
   return NextResponse.json({
     review,
     meta: { sections: excerpt.ranges.length, truncated: excerpt.truncated, aspects },
+    savedId,
   });
 });
