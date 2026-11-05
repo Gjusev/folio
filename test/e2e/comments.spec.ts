@@ -15,21 +15,29 @@ const VIEWER_BODY = "Visto, me parece bien así.";
  *  cannot run and the caller skips. */
 async function secondUser(owner: Ctx): Promise<(Ctx & { email: string }) | null> {
   const api = await request.newContext({ baseURL: BASE() });
-  const email = `e2e-coviewer-${Date.now()}@t.dev`;
-  const reg = await api.post("/api/auth/register", {
-    data: { email, name: "Coauthor", password: "correct horse battery" },
-  });
-  let who = email;
-  let cookie: string;
-  if (reg.status() === 201) {
-    cookie = (reg.headers()["set-cookie"] ?? "").split(";")[0];
+  // A dedicated second persistent account: seed() reuses the primary one, so
+  // a per-run registration here would collide with the owner and the
+  // distinctness probe below would silently skip the test. Register once,
+  // log in forever after; only a fresh instance pays a quota unit.
+  const who = process.env.E2E_USER2 ?? "e2e-coviewer@t.dev";
+  const password = process.env.E2E_PASS ?? "correct horse battery";
+  let cookie: string | undefined;
+  const login = await api.post("/api/auth/login", { data: { email: who, password } });
+  if (login.status() === 200) {
+    cookie = (login.headers()["set-cookie"] ?? "").split(";")[0];
   } else {
-    who = process.env.E2E_USER ?? "e2e-persistent@t.dev";
-    const r = await api.post("/api/auth/login", {
-      data: { email: who, password: process.env.E2E_PASS ?? "correct horse battery" },
+    const reg = await api.post("/api/auth/register", {
+      data: { email: who, name: "Coauthor", password },
     });
-    if (r.status() !== 200) return null;
-    cookie = (r.headers()["set-cookie"] ?? "").split(";")[0];
+    if (reg.status() === 201) {
+      cookie = (reg.headers()["set-cookie"] ?? "").split(";")[0];
+    } else if (reg.status() === 409) {
+      const retry = await api.post("/api/auth/login", { data: { email: who, password } });
+      if (retry.status() !== 200) return null;
+      cookie = (retry.headers()["set-cookie"] ?? "").split(";")[0];
+    } else {
+      return null; // register closed AND no such account: skip honestly
+    }
   }
   const authed = await request.newContext({ baseURL: BASE(), extraHTTPHeaders: { cookie } });
   // Distinctness probe: a different account cannot see the owner's project.

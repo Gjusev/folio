@@ -17,6 +17,11 @@ const schema = z.object({
   // 1/true (default) keeps self-registration open for dev; production operators
   // set 0 to close it. Accepts booleans and the usual string spellings.
   ALLOW_REGISTRATION: z.stringbool().or(z.boolean()).default(true),
+  // Multiplies every rate-limit ceiling (1 = production default, unchanged).
+  // For test stacks that hammer one instance from one IP, e.g. the e2e suite
+  // needing more than 10 log-ins per 15 minutes. Not a security knob: raising
+  // it lowers your own protection.
+  RATE_LIMIT_MULTIPLIER: z.coerce.number().int().min(1).max(10_000).default(1),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
