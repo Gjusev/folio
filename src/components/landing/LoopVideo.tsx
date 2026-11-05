@@ -3,17 +3,22 @@
 import { useEffect, useRef } from "react";
 
 // A muted decorative loop: it only plays while on screen and stays on its
-// poster frame under prefers-reduced-motion.
+// poster frame under prefers-reduced-motion. With a label it describes
+// itself; without one it is aria-hidden chrome.
 export function LoopVideo({
-  webm,
+  src,
+  mime,
   poster,
   width,
   height,
+  label,
 }: {
-  webm: string;
-  poster: string;
+  src: string;
+  mime: string;
+  poster?: string;
   width: number;
   height: number;
+  label?: string;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -41,10 +46,11 @@ export function LoopVideo({
       poster={poster}
       width={width}
       height={height}
-      aria-hidden
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
       tabIndex={-1}
     >
-      <source src={webm} type="video/webm" />
+      <source src={src} type={mime} />
     </video>
   );
 }

@@ -9,7 +9,9 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { LangSwitcher } from "@/lib/i18n/client";
 import { format, type Dict, type MsgKey } from "@/lib/i18n/dictionaries";
+import { AiFilm } from "./AiFilm";
 import { LandingMotion } from "./LandingMotion";
+import { LoopVideo } from "./LoopVideo";
 import { Stages } from "./Stages";
 import "./landing.css";
 
@@ -21,6 +23,14 @@ const SELF_HOST_URL = REPO_URL ? `${REPO_URL}#quick-start-docker` : "/login";
 const rise = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
 const CAPS = [1, 2, 3, 4, 5] as const;
+
+// The four-scene film strip before the close: real clips, honest captions.
+const STRIP = [
+  { v: "reviewer", k: "landing.sheet.1" },
+  { v: "error-fix", k: "landing.sheet.2" },
+  { v: "versions-latexdiff", k: "landing.sheet.3" },
+  { v: "own-agent-mcp", k: "landing.sheet.4" },
+] as const;
 
 export function Landing({
   dict,
@@ -117,13 +127,13 @@ export function Landing({
             {t("landing.window.h")}
           </h2>
           <div className="lp-window-frame" data-reveal>
-            <Image
-              src="/landing/editor.jpg"
-              alt={t("landing.stage.1.alt")}
+            <LoopVideo
+              src="/landing/videos/ai-diffs.mp4"
+              mime="video/mp4"
+              poster="/landing/videos/ai-diffs-poster.jpg"
               width={1920}
               height={1080}
-              sizes="100vw"
-              unoptimized
+              label={t("landing.window.alt")}
             />
           </div>
           <p className="lp-window-cap" data-reveal style={rise(1)}>
@@ -162,6 +172,17 @@ export function Landing({
                   {t("landing.prism.step3")}
                 </li>
               </ol>
+              <figure className="lp-prism-film" data-reveal style={rise(5)}>
+                <LoopVideo
+                  src="/landing/videos/prism-import.mp4"
+                  mime="video/mp4"
+                  poster="/landing/videos/prism-import-poster.jpg"
+                  width={1280}
+                  height={720}
+                  label={t("landing.prism.film")}
+                />
+                <figcaption>{t("landing.prism.film")}</figcaption>
+              </figure>
             </div>
           </div>
         </section>
@@ -195,27 +216,50 @@ export function Landing({
                 {t("landing.ai.p")}
               </p>
             </div>
-            <div className="lp-ai-frag" data-reveal style={rise(2)} data-ui>
-              <p className="lp-ai-you">
-                <span className="lp-ai-tag">{t("landing.ai.you")}</span>
-                {t("landing.ai.instr")}
-              </p>
-              <ul className="lp-ai-ev">
-                <li>Attention Is All You Need · 2017</li>
-                <li>BERT · 2019</li>
-                <li>Deep Residual Learning · 2016</li>
-              </ul>
-              <p className="lp-ai-draft">
-                <span className="lp-ai-tag">{t("landing.ai.agent")}</span>
-                {t("landing.ai.draft")}
-                <span className="lp-ai-caret" aria-hidden />
-              </p>
+            <div className="lp-ai-slot" data-reveal style={rise(2)}>
+              <div className="lp-ai-frag" data-ui>
+                <p className="lp-ai-you">
+                  <span className="lp-ai-tag">{t("landing.ai.you")}</span>
+                  {t("landing.ai.instr")}
+                </p>
+                <ul className="lp-ai-ev">
+                  <li>Attention Is All You Need · 2017</li>
+                  <li>BERT · 2019</li>
+                  <li>Deep Residual Learning · 2016</li>
+                </ul>
+                <p className="lp-ai-draft">
+                  <span className="lp-ai-tag">{t("landing.ai.agent")}</span>
+                  {t("landing.ai.draft")}
+                  <span className="lp-ai-caret" aria-hidden />
+                </p>
+              </div>
+              <AiFilm src="/landing/videos/launch.mp4" label={t("landing.ai.film")} />
             </div>
           </div>
         </section>
 
         {/* How it works: tinted accordion of the four stages */}
         <Stages />
+
+        {/* Four more scenes, in motion: the strip of real clips before the close */}
+        <section className="lp-strip" aria-labelledby="strip-title">
+          <h2 id="strip-title" className="sr">
+            {t("landing.sheet.h")}
+          </h2>
+          {STRIP.map((s, j) => (
+            <figure key={s.v} data-reveal style={rise(j)}>
+              <LoopVideo
+                src={`/landing/videos/${s.v}.mp4`}
+                mime="video/mp4"
+                poster={`/landing/videos/${s.v}-poster.jpg`}
+                width={1280}
+                height={720}
+                label={t(s.k as MsgKey)}
+              />
+              <figcaption>{t(s.k as MsgKey)}</figcaption>
+            </figure>
+          ))}
+        </section>
 
         {/* Close: the whole band is the button, one word on the accent */}
         <section className="lp-cta" aria-labelledby="cta-title">

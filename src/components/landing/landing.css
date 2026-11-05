@@ -1014,3 +1014,54 @@
     transform: none;
   }
 }
+
+/* ---- the films: real clips as lazy, muted, poster-first loops ---- */
+.lp-window-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--lp-surface);
+}
+.lp-ai-slot {
+  position: relative;
+}
+.lp-ai-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--lp-surface);
+}
+.lp-prism-film {
+  max-width: 46ch;
+  margin: 36px 0 0;
+}
+.lp-prism-film video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--lp-surface);
+}
+.lp-prism-film figcaption,
+.lp-strip figcaption {
+  margin-top: 8px;
+  font-size: var(--lp-small);
+  color: var(--lp-muted);
+}
+.lp-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: clamp(16px, 2.5vw, 32px);
+  padding: var(--lp-gap) var(--lp-m) 0;
+}
+.lp-strip figure {
+  margin: 0;
+  min-width: 0;
+}
+.lp-strip video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--lp-surface);
+}
