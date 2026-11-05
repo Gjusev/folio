@@ -52,6 +52,7 @@ export async function listProjects(userId: string) {
     .select({
       id: schema.projects.id,
       name: schema.projects.name,
+      mainFile: schema.projects.mainFile,
       updatedAt: schema.projects.updatedAt,
       // "owner" | "editor" | "viewer"; null means the owner row (not a member).
       role: sql<

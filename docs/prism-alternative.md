@@ -118,7 +118,8 @@ companion work), verified but not yet merged.
 
 ### Next — proposed "AI writing pack 2"
 
-6. **Bring your own agent (MCP + personal access tokens).** Let Claude Code,
+6. **Bring your own agent (MCP + personal access tokens)** — *shipped*:
+   [`docs/mcp.md`](mcp.md). Let Claude Code,
    Codex or any MCP client work on a Folio project: read files, compile, search
    literature, propose edits that arrive as reviewable suggestions. OpenAI sends
    Prism users to Codex, which has no shared editor — Folio can be that shared
