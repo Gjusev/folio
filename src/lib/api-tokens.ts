@@ -24,7 +24,6 @@ export type ApiIdentity = {
 
 const TOKEN_PREFIX = "folio_";
 const TOKEN_BODY_LEN = 32;
-const ALPHABET = "A-Za-z0-9";
 
 export function isTokenScope(value: unknown): value is TokenScope {
   return TOKEN_SCOPES.includes(value as TokenScope);
@@ -36,22 +35,14 @@ export function parseScopes(csv: string): Set<TokenScope> {
 }
 
 /** folio_ + 32 base62 characters; enough entropy to be unguessable. */
+const B62 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 export function generateToken(): { token: string; hash: string; prefix: string } {
-  const bytes = randomBytes(TOKEN_BODY_LEN + 8); // extra for rejection sampling
+  // byte % 62 over 256 values biases the first 8 alphabet chars by ~3% —
+  // irrelevant for a 190-bit random secret (and one line, not a sampler).
+  const bytes = randomBytes(TOKEN_BODY_LEN);
   let body = "";
-  const re = new RegExp(`^[${ALPHABET}]$`);
-  for (const byte of bytes) {
-    const c = byte.toString(62).replace(/[^A-Za-z0-9]/g, "");
-    for (const ch of c) {
-      if (re.test(ch)) body += ch;
-      if (body.length === TOKEN_BODY_LEN) break;
-    }
-    if (body.length === TOKEN_BODY_LEN) break;
-  }
-  // Practically always filled by now; pad deterministically if rejection
-  // sampling came up short (still uniform enough for a random secret).
-  while (body.length < TOKEN_BODY_LEN) body += randomBytes(1)[0].toString(62).padStart(2, "0");
-  const token = TOKEN_PREFIX + body.slice(0, TOKEN_BODY_LEN);
+  for (let i = 0; i < TOKEN_BODY_LEN; i++) body += B62[bytes[i]! % B62.length];
+  const token = TOKEN_PREFIX + body;
   return { token, hash: hashToken(token), prefix: token.slice(0, 12) };
 }
 
@@ -110,7 +101,13 @@ export async function createApiToken(userId: string, name: string, scopes: Token
   const { token, hash, prefix } = generateToken();
   const [row] = await db()
     .insert(schema.apiTokens)
-    .values({ userId, name: name.trim().slice(0, 60), tokenHash: hash, prefix, scopes: clean.join(",") })
+    .values({
+      userId,
+      name: name.trim().slice(0, 60),
+      tokenHash: hash,
+      prefix,
+      scopes: clean.join(","),
+    })
     .returning({ id: schema.apiTokens.id });
   return { id: row.id, token, prefix, name: name.trim().slice(0, 60), scopes: clean };
 }
