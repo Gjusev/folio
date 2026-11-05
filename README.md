@@ -277,6 +277,4 @@ docs/                      documentation, brand assets and images
 packages and is not redistributed in this repository. The continuous PDF viewer
 pattern is adapted from [assistant-ui/open-prism](https://github.com/assistant-ui/open-prism)
 (MIT). The Switzer typeface is by the Indian Type Foundry, used under the
-[ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl). The landing
-page uses the First Folio title page (British Library, CC0) and "Printing in a
-letterpress" by Subhashish Panigrahi (CC BY-SA 4.0), both via Wikimedia Commons.
+[ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl).

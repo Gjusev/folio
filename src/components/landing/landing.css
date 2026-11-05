@@ -521,153 +521,6 @@
   color: var(--lp-muted);
 }
 
-/* ---- the demo library as a departure board (an interface fragment) ---- */
-.lp-board {
-  margin: var(--lp-gap) var(--lp-m) 0;
-}
-.lp-board-rows {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.lp-board-row {
-  background: var(--lp-surface);
-}
-.lp-board-btn {
-  display: grid;
-  width: 100%;
-  align-items: baseline;
-  grid-template-columns: minmax(0, 1fr) 5ch 10ch auto;
-  gap: 8px clamp(16px, 3vw, 48px);
-  padding: 18px clamp(16px, 2.4vw, 28px);
-  font: inherit;
-  color: var(--lp-muted);
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  cursor: pointer;
-  transition:
-    color 200ms ease-out,
-    background-color 200ms ease-out;
-}
-.lp-board-btn:hover {
-  background: var(--lp-surface-2);
-}
-.lp-board-btn:active {
-  color: var(--lp-ink);
-}
-.lp-board-name {
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-}
-.lp-board-fact {
-  font-size: var(--lp-small);
-  font-variant-numeric: tabular-nums;
-}
-.lp-board-st {
-  font-size: var(--lp-small);
-  white-space: nowrap;
-}
-.lp-board-st::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 10px;
-  vertical-align: baseline;
-  background: var(--lp-control);
-}
-.lp-board-row[data-open="true"] .lp-board-btn {
-  color: var(--lp-ink);
-}
-.lp-board-row[data-open="true"] .lp-board-st::before {
-  background: var(--lp-ink);
-}
-.lp-board-open {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition:
-    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 320ms ease-out;
-}
-.lp-board-open > p {
-  min-height: 0;
-  overflow: clip;
-  max-width: 68ch;
-  margin: 0;
-  padding-inline: clamp(16px, 2.4vw, 28px);
-  color: var(--lp-muted);
-}
-.lp-board-row[data-open="true"] .lp-board-open {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-.lp-board-row[data-open="true"] .lp-board-open > p {
-  padding-bottom: 22px;
-}
-@media (max-width: 700px) {
-  .lp-board-fact {
-    display: none;
-  }
-  .lp-board-btn {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-}
-
-/* ---- the name: a folio is a sheet folded once ---- */
-.lp-folio {
-  display: grid;
-  gap: clamp(32px, 5vw, 80px);
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-}
-@media (min-width: 900px) {
-  .lp-folio {
-    grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
-  }
-}
-.lp-folio figure {
-  margin: 0;
-  max-width: 400px;
-  justify-self: end;
-}
-.lp-folio figure img {
-  display: block;
-  width: 100%;
-  height: auto;
-  animation: lp-drift linear both;
-  animation-timeline: view();
-  animation-range: entry 0% exit 100%;
-}
-.lp-folio figcaption {
-  margin-top: 12px;
-  font-size: var(--lp-small);
-  color: var(--lp-muted);
-}
-
-/* ---- letterpress reel: the one moving picture that is not a screenshot ---- */
-.lp-reel {
-  margin: clamp(56px, 8vw, 112px) 0 0;
-}
-.lp-reel video {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 21 / 9;
-  object-fit: cover;
-  background: var(--lp-surface);
-}
-.lp-reel figcaption {
-  margin-top: 12px;
-  font-size: var(--lp-small);
-  color: var(--lp-muted);
-}
-
 /* ---- how it works: the horizontal accordion of the four stages ---- */
 .lp-acc {
   margin-top: var(--lp-gap);
@@ -1005,6 +858,70 @@
   margin: 0;
   font-size: var(--lp-small);
   color: var(--lp-muted);
+}
+
+/* ---- writing with AI: a real fragment of the drafting contract ---- */
+.lp-ai-frag {
+  align-self: start;
+  width: min(100%, 560px);
+  padding: 22px 24px;
+  background: var(--lp-surface);
+  display: grid;
+  gap: 14px;
+}
+.lp-ai-tag {
+  margin-right: 10px;
+  font-size: var(--lp-small);
+  color: var(--lp-muted);
+}
+.lp-ai-you {
+  margin: 0;
+  font-size: var(--lp-body);
+  font-weight: 500;
+  line-height: 1.45;
+}
+.lp-ai-ev {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: var(--lp-small);
+  color: var(--lp-muted);
+}
+.lp-ai-ev li::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 10px;
+  background: var(--lp-accent);
+}
+.lp-ai-draft {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--lp-surface-2);
+  font-size: var(--lp-body);
+  line-height: 1.5;
+}
+.lp-ai-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--lp-accent);
+  animation: lp-blink 1.1s steps(1) infinite;
+}
+@keyframes lp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-ai-caret {
+    animation: none;
+  }
 }
 
 /* ---- motion ----
