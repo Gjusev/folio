@@ -3,22 +3,22 @@
 Los nueve vídeos renderizados (HyperFrames, `C:\Code Main\Folio-videos\`, fuera del
 repo) en versión web: H.264 + `faststart`, sin pista de audio (mudos por diseño),
 bucle a 30 fps, recodificados al tamaño de su hueco. Origen: capturas reales del
-producto y del proyecto demo (*Attention in Neural Networks: a Reading Note*);
+producto y del proyecto demo (_Attention in Neural Networks: a Reading Note_);
 los textos de botones y nombres de herramientas salen del código.
 
 ## Inventario (`public/landing/videos/`)
 
-| archivo | dura | resolución | peso | póster | qué muestra |
-|---|---|---|---|---|---|
-| `launch.mp4` | 20 s | 1600×900 | 3,5 MB | `launch-poster.jpg` | Se teclea «Folio.», «Prism» se vuelve bloque de tinta, la prensa imprime el LaTeX como paper, las referencias salen en abanico y se abren en el grafo real, «Write with … you can audit», cierre con logo. |
-| `ai-diffs.mp4` | 10 s | 1600×900 | 0,5 MB | `ai-diffs-poster.jpg` | Diff propuesto por la IA; una cita inventada se tacha con «not in your .bib · removed»; «Apply changes». |
-| `pdf-source.mp4` | 10 s | 1280×720 | 0,9 MB | reutilizar `landing/editor-source.jpg` | Clic en el PDF y el editor salta a la línea del fuente (SyncTeX). |
-| `literature-graph.mp4` | 10 s | 1280×720 | 0,7 MB | reutilizar `landing/graph-explorer.jpg` | Grafo de círculos numerados que se abre en el explorador de literatura real. |
-| `prism-import.mp4` | 10 s | 1280×720 | 0,4 MB | `prism-import-poster.jpg` | El ZIP de Prism se abre, se descartan los artefactos de compilación y los archivos llegan al árbol real. |
-| `reviewer.mp4` | 10 s | 1280×720 | 0,4 MB | `reviewer-poster.jpg` | Panel de revisión real; la cita se despeja del texto y acaba en el comentario. |
-| `error-fix.mp4` | 10 s | 1280×720 | 0,3 MB | `error-fix-poster.jpg` | Error en la línea 12, «Fix error», el parche y «Apply and recompile». |
-| `versions-latexdiff.mp4` | 10 s | 1280×720 | 0,4 MB | `versions-poster.jpg` | Mazo de versiones, «Compare with» y la página marcada al estilo latexdiff. |
-| `own-agent-mcp.mp4` | 10 s | 1280×720 | 0,3 MB | `own-agent-mcp-poster.jpg` | Claude Code usando las herramientas MCP reales de Folio y la edición llegando al editor. |
+| archivo                  | dura | resolución | peso   | póster                                  | qué muestra                                                                                                                                                                                                |
+| ------------------------ | ---- | ---------- | ------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `launch.mp4`             | 20 s | 1600×900   | 3,5 MB | `launch-poster.jpg`                     | Se teclea «Folio.», «Prism» se vuelve bloque de tinta, la prensa imprime el LaTeX como paper, las referencias salen en abanico y se abren en el grafo real, «Write with … you can audit», cierre con logo. |
+| `ai-diffs.mp4`           | 10 s | 1600×900   | 0,5 MB | `ai-diffs-poster.jpg`                   | Diff propuesto por la IA; una cita inventada se tacha con «not in your .bib · removed»; «Apply changes».                                                                                                   |
+| `pdf-source.mp4`         | 10 s | 1280×720   | 0,9 MB | reutilizar `landing/editor-source.jpg`  | Clic en el PDF y el editor salta a la línea del fuente (SyncTeX).                                                                                                                                          |
+| `literature-graph.mp4`   | 10 s | 1280×720   | 0,7 MB | reutilizar `landing/graph-explorer.jpg` | Grafo de círculos numerados que se abre en el explorador de literatura real.                                                                                                                               |
+| `prism-import.mp4`       | 10 s | 1280×720   | 0,4 MB | `prism-import-poster.jpg`               | El ZIP de Prism se abre, se descartan los artefactos de compilación y los archivos llegan al árbol real.                                                                                                   |
+| `reviewer.mp4`           | 10 s | 1280×720   | 0,4 MB | `reviewer-poster.jpg`                   | Panel de revisión real; la cita se despeja del texto y acaba en el comentario.                                                                                                                             |
+| `error-fix.mp4`          | 10 s | 1280×720   | 0,3 MB | `error-fix-poster.jpg`                  | Error en la línea 12, «Fix error», el parche y «Apply and recompile».                                                                                                                                      |
+| `versions-latexdiff.mp4` | 10 s | 1280×720   | 0,4 MB | `versions-poster.jpg`                   | Mazo de versiones, «Compare with» y la página marcada al estilo latexdiff.                                                                                                                                 |
+| `own-agent-mcp.mp4`      | 10 s | 1280×720   | 0,3 MB | `own-agent-mcp-poster.jpg`              | Claude Code usando las herramientas MCP reales de Folio y la edición llegando al editor.                                                                                                                   |
 
 Total: **≈ 7,5 MB de vídeo + 0,4 MB de pósters** (los originales a 1080p pesaban 45 MB).
 El reel de 80 s (`folio-features-reel.mp4`, 20 MB) queda fuera a propósito: los ocho
@@ -53,16 +53,16 @@ si se quieren clips con UI oscura nativa, hay que volver a renderizar en HyperFr
 
 ## Títulos y captions (es / en / de)
 
-| clave propuesta | es | en | de |
-|---|---|---|---|
-| sección 5 | En movimiento | In motion | In Bewegung |
-| reviewer | La revisión cita tu .bib | The review cites your .bib | Das Review zitiert dein .bib |
-| error-fix | El error, con su arreglo | The error, with its fix | Der Fehler, mit seiner Lösung |
-| versions-latexdiff | Versiones marcadas con latexdiff | Versions marked with latexdiff | Versionen mit latexdiff markiert |
-| own-agent-mcp | Tu agente edita por MCP | Your agent edits over MCP | Dein Agent bearbeitet über MCP |
-| launch (caption) | Folio en veinte segundos | Folio in twenty seconds | Folio in zwanzig Sekunden |
-| ai-diffs (aria) | El asistente propone un cambio como diff y rechaza una cita que no está en el .bib | The assistant proposes a change as a diff and rejects a citation that is not in the .bib | Der Assistent schlägt eine Änderung als Diff vor und verwirft ein Zitat, das nicht im .bib ist |
-| prism (caption) | El ZIP de Prism llega al árbol de archivos | The Prism ZIP lands in the file tree | Das Prism-ZIP landet im Dateibaum |
+| clave propuesta    | es                                                                                 | en                                                                                       | de                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| sección 5          | En movimiento                                                                      | In motion                                                                                | In Bewegung                                                                                    |
+| reviewer           | La revisión cita tu .bib                                                           | The review cites your .bib                                                               | Das Review zitiert dein .bib                                                                   |
+| error-fix          | El error, con su arreglo                                                           | The error, with its fix                                                                  | Der Fehler, mit seiner Lösung                                                                  |
+| versions-latexdiff | Versiones marcadas con latexdiff                                                   | Versions marked with latexdiff                                                           | Versionen mit latexdiff markiert                                                               |
+| own-agent-mcp      | Tu agente edita por MCP                                                            | Your agent edits over MCP                                                                | Dein Agent bearbeitet über MCP                                                                 |
+| launch (caption)   | Folio en veinte segundos                                                           | Folio in twenty seconds                                                                  | Folio in zwanzig Sekunden                                                                      |
+| ai-diffs (aria)    | El asistente propone un cambio como diff y rechaza una cita que no está en el .bib | The assistant proposes a change as a diff and rejects a citation that is not in the .bib | Der Assistent schlägt eine Änderung als Diff vor und verwirft ein Zitat, das nicht im .bib ist |
+| prism (caption)    | El ZIP de Prism llega al árbol de archivos                                         | The Prism ZIP lands in the file tree                                                     | Das Prism-ZIP landet im Dateibaum                                                              |
 
 ## Notas técnicas
 

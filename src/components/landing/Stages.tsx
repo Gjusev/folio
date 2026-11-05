@@ -4,17 +4,31 @@ import Image from "next/image";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/client";
 import type { MsgKey } from "@/lib/i18n/dictionaries";
+import { LoopVideo } from "./LoopVideo";
 
 // How it works as one horizontal accordion of tinted panels: the open stage
 // takes most of the strip and shows name, paragraph and a real fragment of
 // the product; the rest wait as slivers carrying their name rotated. Order is
 // carried by colour (dark to light, in CSS via data-k). Clicking a sliver
-// opens it; the whole panel is the button.
+// opens it; the whole panel is the button. Stages with a clip play it in
+// place of the still; the still remains the poster and the no-JS view.
 const STAGES = [
-  { n: 1, src: "/landing/editor-source.jpg", w: 1600, h: 1636 },
-  { n: 2, src: "/landing/library.jpg", w: 1920, h: 1080 },
-  { n: 3, src: "/landing/graph-explorer.jpg", w: 1600, h: 900 },
-  { n: 4, src: null, w: 0, h: 0 },
+  {
+    n: 1,
+    src: "/landing/videos/pdf-source-poster.jpg",
+    w: 1280,
+    h: 720,
+    clip: "/landing/videos/pdf-source.mp4",
+  },
+  { n: 2, src: "/landing/library.jpg", w: 1920, h: 1080, clip: null },
+  {
+    n: 3,
+    src: "/landing/videos/literature-graph-poster.jpg",
+    w: 1280,
+    h: 720,
+    clip: "/landing/videos/literature-graph.mp4",
+  },
+  { n: 4, src: null, w: 0, h: 0, clip: null },
 ] as const;
 
 const COMMANDS = `cp .env.example .env
@@ -56,7 +70,16 @@ export function Stages() {
               <div className="lp-acc-body" aria-hidden={!isOpen}>
                 <p className="lp-acc-d">{t(`landing.stage.${s.n}.d` as MsgKey)}</p>
                 <div className="lp-acc-media">
-                  {s.src ? (
+                  {s.clip && isOpen ? (
+                    <LoopVideo
+                      src={s.clip}
+                      mime="video/mp4"
+                      poster={s.src ?? undefined}
+                      width={1280}
+                      height={720}
+                      label={t(`landing.stage.${s.n}.alt` as MsgKey)}
+                    />
+                  ) : s.src ? (
                     <Image
                       src={s.src}
                       alt={t(`landing.stage.${s.n}.alt` as MsgKey)}
