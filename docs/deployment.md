@@ -58,6 +58,7 @@ something on your host.
 | `LLM_ALLOW_LOCAL`, `LLM_ALLOWED_LOCAL_PORTS` | no          | off, `11434`            | Let user profiles point at loopback/private hosts (e.g. Ollama)                              |
 | `OPENALEX_MAILTO`                            | no          | empty                   | Contact e-mail for OpenAlex's polite pool                                                    |
 | `OPENALEX_API_KEY`                           | no          | empty                   | A free OpenAlex key so the instance has its own daily budget                                 |
+| `RATE_LIMIT_MULTIPLIER`                      | no          | `1`                     | Multiplies every rate-limit ceiling. For test stacks only; raising it lowers your protection |
 | `NEXT_PUBLIC_REPO_URL`                       | no          | empty                   | Link to the source shown in the landing footer (build-time)                                  |
 
 Generate secrets with:

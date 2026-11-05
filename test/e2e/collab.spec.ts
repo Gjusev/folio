@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { login, seed, type Ctx } from "./helpers";
+import { login, seed, seedAs, type Ctx } from "./helpers";
 
 let ctx: Ctx;
 
@@ -61,10 +61,9 @@ test("dos usuarios de proyectos distintos no pueden entrar a la sala del otro", 
   test.skip(!a?.url, "collab desactivado (COLLAB_URL vacía)");
   expect(a.token, "A recibe token firmado para SU main").toBeTruthy();
 
-  const b = await seed();
-  // Premise: two DISTINCT accounts. seed() falls back to one shared persistent
-  // account when the register rate-limit kicks in — then B legitimately sees
-  // A's project and the cross-project rejections below would be meaningless.
+  const b = await seedAs();
+  // Premise: two DISTINCT accounts (a dedicated persistent second account;
+  // the probe below is the safety net if it ever collapses into one).
   const seen = await b.api.get(`/api/projects/${ctx.projectId}`);
   test.skip(seen.ok(), "seed compartió cuenta persistente (rate-limit de registro)");
 

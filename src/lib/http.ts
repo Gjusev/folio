@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { SESSION_COOKIE, getSessionUser, type SessionUser } from "@/lib/auth/session";
+import { env } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
 
 export class HttpError extends Error {
@@ -82,7 +83,8 @@ export async function requireUser(req: NextRequest): Promise<SessionUser> {
 }
 
 export function enforceRateLimit(key: string, limit: number, windowMs: number) {
-  const wait = rateLimit(key, limit, windowMs);
+  const factor = env().RATE_LIMIT_MULTIPLIER;
+  const wait = rateLimit(key, factor === 1 ? limit : Math.ceil(limit * factor), windowMs);
   if (wait > 0) {
     throw new HttpError(429, "Demasiadas peticiones, inténtalo de nuevo en unos segundos", {
       retryAfter: wait,
