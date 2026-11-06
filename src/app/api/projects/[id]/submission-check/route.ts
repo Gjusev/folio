@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { citationHealth } from "@/lib/citation-health";
-import { countProject } from "@/lib/compiler";
+import { compileProject, countProject } from "@/lib/compiler";
 import { enforceRateLimit, requireUser, route } from "@/lib/http";
 import { getViewableProject, listFiles, listFilesWithData } from "@/lib/projects";
+import {
+  bibStyleMismatch,
+  blindSignals,
+  getVenue,
+  missingRequiredSections,
+  pagesFromLog,
+} from "@/lib/venues";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,7 +24,8 @@ type Check = {
 /**
  * Honest pre-submission checks over the project as it is stored: citation
  * health, leftover TODOs, referenced figures, abstract/keywords, word count.
- * No venue database — nothing here is invented.
+ * With ?venue=<id> (src/lib/venues.ts, every rule sourced) extra checks are
+ * appended: page count, blind-review signals, required sections, bib style.
  */
 export const GET = route(async (req, { params }: Ctx) => {
   const user = await requireUser(req);
@@ -116,6 +124,103 @@ export const GET = route(async (req, { params }: Ctx) => {
     words = r.words ?? null;
   } catch {
     // The compiler may be busy or restarting; the checklist stays useful.
+  }
+
+  // 6. Venue-specific checks (phase 4a). No ?venue (or an unknown id) leaves
+  // the response exactly as it has always been — neutral by default.
+  const venue = getVenue(new URL(req.url).searchParams.get("venue"));
+  if (venue) {
+    const texFiles = files.map((f) => ({ path: f.path, content: f.content }));
+
+    // 6a. Page count from the compiled PDF (one best-effort compile, sharing
+    // the /compile rate-limit bucket; any failure stays neutral).
+    if (venue.pageLimit.value === null) {
+      checks.push({ id: "pages", ok: true, detail: { code: "check.pages.nolimit" } });
+    } else {
+      let pages: number | null = null;
+      try {
+        enforceRateLimit(`compile:${user.id}`, 20, 60_000);
+        const r = await compileProject(
+          project.mainFile,
+          // Binary files travel base64, exactly like /compile sends them.
+          files.map((f) =>
+            f.data
+              ? { path: f.path, content: f.data.toString("base64"), encoding: "base64" as const }
+              : { path: f.path, content: f.content },
+          ),
+        );
+        pages = pagesFromLog(r.log);
+      } catch {
+        // Compiler busy, rate-limited or a log without a page count: unknown.
+      }
+      if (pages === null) {
+        checks.push({ id: "pages", ok: true, detail: { code: "check.pages.unknown" } });
+      } else {
+        const limit = venue.pageLimit.value;
+        const within = pages <= limit;
+        checks.push({
+          id: "pages",
+          ok: within,
+          detail: {
+            code: within ? "check.pages.ok" : "check.pages.bad",
+            vars: { pages, limit, scope: venue.pageLimit.scope },
+          },
+        });
+      }
+    }
+
+    // 6b. De-anonymisation signals, only where review is double-blind.
+    if (venue.anonymisation === "double") {
+      const signals = blindSignals(texFiles, venue);
+      checks.push({
+        id: "blind",
+        ok: signals.length === 0,
+        detail:
+          signals.length === 0
+            ? { code: "check.blind.ok" }
+            : {
+                code: "check.blind.bad",
+                vars: {
+                  n: signals.length,
+                  list: signals
+                    .slice(0, 3)
+                    .map((s) => `${s.file} (${s.kind})`)
+                    .join(", "),
+                },
+              },
+      });
+    }
+
+    // 6c. Required sections (e.g. ACL's Limitations).
+    if (venue.requiredSections.length > 0) {
+      const missing = missingRequiredSections(texFiles, venue);
+      checks.push({
+        id: "sections",
+        ok: missing.length === 0,
+        detail:
+          missing.length === 0
+            ? { code: "check.sections.ok" }
+            : { code: "check.sections.bad", vars: { list: missing.join(", ") } },
+      });
+    }
+
+    // 6d. Bibliography style expected by the venue (free venues skip it).
+    if (venue.bibStyle !== null) {
+      const mismatch = bibStyleMismatch(main, venue);
+      checks.push({
+        id: "bibstyle",
+        ok: mismatch === null,
+        detail:
+          mismatch === null
+            ? { code: "check.bibstyle.ok" }
+            : mismatch.found === "missing"
+              ? { code: "check.bibstyle.missing", vars: { expected: mismatch.expected } }
+              : {
+                  code: "check.bibstyle.bad",
+                  vars: { expected: mismatch.expected, found: mismatch.found },
+                },
+      });
+    }
   }
 
   return NextResponse.json({ checks, words });

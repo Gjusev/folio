@@ -67,6 +67,15 @@ Generate secrets with:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
+## Venue profiles
+
+The submission checklist's venue profiles (NeurIPS, ICML, ACL, IEEE, Elsevier,
+LNCS, arXiv) are **versioned local data** (`VENUES_VERSION` in
+`src/lib/venues.ts`), not a service: there are no network calls at runtime, and
+every rule (page limit, review model, bib style, required sections) carries its
+official `sourceUrl` and `verifiedAt` in the same file. Re-verify those URLs
+when updating a value and bump `VENUES_VERSION`; nothing else needs deploying.
+
 ## Operations
 
 - **Public instance checklist.** Set `ALLOW_REGISTRATION=0` once your accounts

@@ -4,9 +4,10 @@
 // checklist, fetched in parallel, reported together. Nothing runs until asked.
 
 import { useState } from "react";
-import { ArrowUpRight, CheckCircle2, ClipboardCheck, XCircle } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, ClipboardCheck, Info, XCircle } from "lucide-react";
 import { api } from "@/lib/client/api";
 import { useI18n } from "@/lib/i18n/client";
+import { VENUES } from "@/lib/venues";
 import { tourEvent } from "@/components/onboarding/tasks";
 import type { FileDoc } from "@/components/workspace/document-store";
 
@@ -47,6 +48,26 @@ const SUBMISSION_LABEL: Record<string, Parameters<ReturnType<typeof useI18n>["t"
   figures: "papers.submission.figures",
   abstract: "papers.submission.abstract",
   keywords: "papers.submission.keywords",
+  pages: "papers.submission.pages",
+  blind: "papers.submission.blind",
+  sections: "papers.submission.sections",
+  bibstyle: "papers.submission.bibstyle",
+};
+
+// Localized venue names for the select (ids are not user-facing).
+const VENUE_LABEL: Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]> = {
+  neurips: "papers.venue.neurips",
+  icml: "papers.venue.icml",
+  acl: "papers.venue.acl",
+  "ieee-conf": "papers.venue.ieee-conf",
+  elsevier: "papers.venue.elsevier",
+  lncs: "papers.venue.lncs",
+  arxiv: "papers.venue.arxiv",
+};
+
+const SCOPE_LABEL: Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]> = {
+  "excl-refs": "papers.submission.scope.excl",
+  incl: "papers.submission.scope.incl",
 };
 
 export function CheckView({
@@ -63,7 +84,11 @@ export function CheckView({
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [venue, setVenue] = useState("");
   const nf = new Intl.NumberFormat(lang);
+
+  const submissionUrl = (v: string) =>
+    `/api/projects/${projectId}/submission-check${v ? `?venue=${encodeURIComponent(v)}` : ""}`;
 
   async function run() {
     setState("loading");
@@ -71,13 +96,25 @@ export function CheckView({
     try {
       const [health, submission] = await Promise.all([
         api<Health>("GET", `/api/projects/${projectId}/citations/health`),
-        api<Submission>("GET", `/api/projects/${projectId}/submission-check`),
+        api<Submission>("GET", submissionUrl(venue)),
       ]);
       setReport({ health, submission });
       setState("idle");
       tourEvent("check");
     } catch (err) {
       setState("error");
+      setError(err instanceof TypeError ? t("offline") : (err as Error).message);
+    }
+  }
+
+  /** Venue switch: re-fetch only the submission checklist with ?venue=. */
+  async function onVenueChange(v: string) {
+    setVenue(v);
+    if (!report) return; // nothing shown yet: the next run picks it up
+    try {
+      const submission = await api<Submission>("GET", submissionUrl(v));
+      setReport((r) => (r ? { ...r, submission } : r));
+    } catch (err) {
       setError(err instanceof TypeError ? t("offline") : (err as Error).message);
     }
   }
@@ -234,20 +271,78 @@ export function CheckView({
               <h3 id="check-submission" className="label">
                 {t("check.submission")}
               </h3>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                <label htmlFor="check-venue" className="text-muted">
+                  {t("papers.submission.venue.label")}
+                </label>
+                <select
+                  id="check-venue"
+                  className="min-h-7 rounded-md border border-line bg-transparent px-1.5 py-0.5 text-xs"
+                  value={venue}
+                  onChange={(e) => void onVenueChange(e.target.value)}
+                  data-testid="check-venue"
+                >
+                  <option value="">{t("papers.submission.venue.none")}</option>
+                  {VENUES.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {t(VENUE_LABEL[v.id] ?? "papers.submission.venue.label")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {venue && (
+                <p className="mt-1 text-[11px] text-muted">
+                  <a
+                    href={VENUES.find((v) => v.id === venue)?.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    {t("papers.submission.venue.guide")} ↗
+                  </a>{" "}
+                  ·{" "}
+                  {t("papers.submission.venue.verified", {
+                    date: VENUES.find((v) => v.id === venue)?.verifiedAt ?? "",
+                  })}
+                </p>
+              )}
               <ul className="mt-1 space-y-1">
-                {report.submission.checks.map((c) => (
-                  <li key={c.id} className="flex items-start gap-1.5 text-xs">
-                    <span aria-hidden className={c.ok ? "text-ok" : "text-danger"}>
-                      {c.ok ? "✓" : "✗"}
-                    </span>
-                    <span className="min-w-0">
-                      {t(SUBMISSION_LABEL[c.id] ?? "papers.submission.title")}{" "}
-                      <span className="text-muted">
-                        — {t(c.detail.code as Parameters<typeof t>[0], c.detail.vars)}
+                {report.submission.checks.map((c) => {
+                  // "pages.unknown" is neutral by design: an info icon, not a X.
+                  const neutral = c.detail.code === "check.pages.unknown";
+                  const vars =
+                    c.detail.vars && c.detail.vars.scope !== undefined
+                      ? {
+                          ...c.detail.vars,
+                          scope: t(
+                            SCOPE_LABEL[String(c.detail.vars.scope)] ??
+                              "papers.submission.scope.incl",
+                          ),
+                        }
+                      : c.detail.vars;
+                  return (
+                    <li key={c.id} className="flex items-start gap-1.5 text-xs">
+                      <span
+                        aria-hidden
+                        className={neutral ? "text-muted" : c.ok ? "text-ok" : "text-danger"}
+                      >
+                        {neutral ? (
+                          <Info size={12} className="mt-0.5" aria-hidden />
+                        ) : c.ok ? (
+                          "✓"
+                        ) : (
+                          "✗"
+                        )}
                       </span>
-                    </span>
-                  </li>
-                ))}
+                      <span className="min-w-0">
+                        {t(SUBMISSION_LABEL[c.id] ?? "papers.submission.title")}{" "}
+                        <span className="text-muted">
+                          — {t(c.detail.code as Parameters<typeof t>[0], vars)}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
                 {report.submission.words !== null && (
                   <li className="num text-xs text-muted">
                     {t("papers.submission.words")}: {nf.format(report.submission.words)}

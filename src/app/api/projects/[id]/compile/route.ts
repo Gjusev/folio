@@ -4,6 +4,7 @@ import { compileProject } from "@/lib/compiler";
 import { enforceRateLimit, fail, requireUser, route } from "@/lib/http";
 import { parseLatexLog } from "@/lib/latex-log";
 import { getViewableProject, listFilesWithData } from "@/lib/projects";
+import { pagesFromLog } from "@/lib/venues";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -44,10 +45,10 @@ export const POST = route(async (req, { params }: Ctx) => {
   );
   // "Output written on main.pdf (3 pages, 12345 bytes)." — the page count the
   // UI shows next to a finished compile.
-  const pages = /Output written on \S+ \((\d+) pages?/.exec(result.log);
+  const pages = pagesFromLog(result.log);
   return NextResponse.json({
     ...result,
     ...parseLatexLog(result.log),
-    pages: result.ok && pages ? Number(pages[1]) : undefined,
+    pages: result.ok && pages !== null ? pages : undefined,
   });
 });

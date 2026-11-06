@@ -48,6 +48,17 @@ const es = {
   "check.abstract.bad": "Falta el resumen",
   "check.keywords.ok": "Palabras clave presentes",
   "check.keywords.bad": "Sin palabras clave (algunas revistas las piden)",
+  "check.pages.ok": "{pages} páginas de {limit} ({scope})",
+  "check.pages.bad": "{pages} páginas; el límite son {limit} ({scope})",
+  "check.pages.unknown": "Recuento de páginas no disponible ahora (el compilador no respondió)",
+  "check.pages.nolimit": "Este venue no fija límite de páginas",
+  "check.blind.ok": "Sin señales de des-anonimización",
+  "check.blind.bad": "Posibles señales de des-anonimización ({n}): {list}",
+  "check.sections.ok": "Secciones requeridas presentes",
+  "check.sections.bad": "Faltan secciones: {list}",
+  "check.bibstyle.ok": "Estilo de bibliografía esperado",
+  "check.bibstyle.missing": "Falta \\bibliographystyle (esperado {expected})",
+  "check.bibstyle.bad": "Estilo {found}; el venue espera {expected}",
 };
 
 const en: Record<keyof typeof es, string> = {
@@ -94,6 +105,17 @@ const en: Record<keyof typeof es, string> = {
   "check.abstract.bad": "Abstract missing",
   "check.keywords.ok": "Keywords present",
   "check.keywords.bad": "No keywords (some journals require them)",
+  "check.pages.ok": "{pages} of {limit} pages ({scope})",
+  "check.pages.bad": "{pages} pages; the limit is {limit} ({scope})",
+  "check.pages.unknown": "Page count unavailable right now (the compiler did not answer)",
+  "check.pages.nolimit": "This venue sets no page limit",
+  "check.blind.ok": "No de-anonymisation signals",
+  "check.blind.bad": "Possible de-anonymisation signals ({n}): {list}",
+  "check.sections.ok": "Required sections present",
+  "check.sections.bad": "Missing sections: {list}",
+  "check.bibstyle.ok": "Expected bibliography style in use",
+  "check.bibstyle.missing": "\\bibliographystyle missing (expected {expected})",
+  "check.bibstyle.bad": "Style {found}; the venue expects {expected}",
 };
 
 const de: Record<keyof typeof es, string> = {
@@ -140,6 +162,17 @@ const de: Record<keyof typeof es, string> = {
   "check.abstract.bad": "Zusammenfassung fehlt",
   "check.keywords.ok": "Schlagwörter vorhanden",
   "check.keywords.bad": "Keine Schlagwörter (manche Zeitschriften verlangen sie)",
+  "check.pages.ok": "{pages} von {limit} Seiten ({scope})",
+  "check.pages.bad": "{pages} Seiten; das Limit sind {limit} ({scope})",
+  "check.pages.unknown": "Seitenzahl derzeit nicht verfügbar (der Compiler antwortete nicht)",
+  "check.pages.nolimit": "Dieser Venue setzt kein Seitenlimit",
+  "check.blind.ok": "Keine De-Anonymisierungssignale",
+  "check.blind.bad": "Mögliche De-Anonymisierungssignale ({n}): {list}",
+  "check.sections.ok": "Erforderliche Abschnitte vorhanden",
+  "check.sections.bad": "Fehlende Abschnitte: {list}",
+  "check.bibstyle.ok": "Erwarteter Bibliografiestil in Gebrauch",
+  "check.bibstyle.missing": "\\bibliographystyle fehlt (erwartet {expected})",
+  "check.bibstyle.bad": "Stil {found}; der Venue erwartet {expected}",
 };
 
 export const libraryDict = { es, en, de };
