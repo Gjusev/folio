@@ -393,7 +393,8 @@ const de: Record<keyof typeof es, string> = {
   "landing.foot.col.code": "Code",
   "landing.foot.source": "Quellcode",
   "landing.foot.legal": "© 2026 Folio. Unter Apache-2.0 veröffentlicht.",
-  "landing.cap.1.alt": "Der Assistent von Folio schreibt mit Belegen aus deiner eigenen Bibliografie.",
+  "landing.cap.1.alt":
+    "Der Assistent von Folio schreibt mit Belegen aus deiner eigenen Bibliografie.",
   "landing.cap.2.alt": "Die Suche in Folio findet das Paper und zitiert es mit einem Klick.",
   "landing.cap.3.alt": "Der Zitiergraph von Folio über die Projektbibliografie.",
   "landing.cap.4.alt": "Kompilierfehler, vorgeschlagener Patch und neu kompiliertes PDF.",

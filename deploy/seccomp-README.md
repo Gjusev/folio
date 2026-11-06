@@ -46,7 +46,6 @@ The boot line also prints `kernel=<release>` and `userns=<max_user_namespaces>`
 (`?` when the sysctl file is missing) to tell the "kernel has user namespaces
 off" case apart from the "seccomp blocks them" case.
 
-
 ## Outcome on the current production host (2026-11-06)
 
 Wired once (f0b6c88) and reverted the same day (d1e8f7f). Evidence trail:
