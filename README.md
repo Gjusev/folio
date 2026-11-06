@@ -17,10 +17,10 @@ change as a diff you apply.
 
 <p align="center">
   <a href="https://github.com/Gjusev/folio/blob/master/public/landing/promo/film.mp4">
-    <img alt="The Folio film: from literature to a cited draft in 57 seconds" src="public/landing/promo/film.jpg" width="880">
+    <img alt="The Folio film: from literature to a cited draft in 57 seconds" src="docs/readme-promo.webp" width="830">
   </a>
   <br />
-  <a href="https://github.com/Gjusev/folio/blob/master/public/landing/promo/film.mp4">▶ Watch the film (57 s, with sound)</a>
+  <a href="https://github.com/Gjusev/folio/blob/master/public/landing/promo/film.mp4">▶ Watch the full film (57 s, with sound)</a>
 </p>
 
 **Write scientific papers with AI you can audit, on your own server.** Folio is
