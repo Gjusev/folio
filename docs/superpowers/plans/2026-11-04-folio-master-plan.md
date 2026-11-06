@@ -251,6 +251,22 @@ Write the decision into `docs/architecture.md`, then build it with the existing
 isolation e2e suite extended: one job cannot see another job's files or
 processes, even concurrently.
 
+**Status: DONE as far as this host allows (2026-11-06, 213d6ff + f0b6c88 reverted d1e8f7f).**
+Spike evidence per the plan's own method: kernel 6.1 Debian 12 with userns
+enabled, but Docker's default seccomp blocks clone(NEWUSER). The compiler now
+carries a self-adapting bubblewrap sandbox (boot probe; per-job namespaces
+when the host allows; today's hardening otherwise; /health reports the mode).
+The staged allow-all seccomp profile was wired once with owner approval: the
+probe then died at `bwrap: Failed to make / slave` (the host forbids the
+mount-propagation change from inside), so the trade bought nothing and the
+default filter was restored the same day. Production runs `isolation=none`
+= the pre-existing hardening (uid 1000, cap_drop ALL, read-only rootfs,
+tmpfs, internal network, openin/openout_any, shell_escape off), verified
+with a real compile after the revert. gVisor needs a host install (no host
+access) and nsjail shares bwrap's mount-ns requirement. Evidence trail:
+deploy/seccomp-README.md. The sandbox activates by itself on any future
+host that permits it.
+
 ---
 
 ## Phase 6 — Prism-closing push (Dec 28 – Jan 1)
