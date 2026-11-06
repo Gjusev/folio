@@ -182,6 +182,16 @@ selector: page count from the compiled PDF, author names/affiliations in the
 source for blind review, missing required sections. Only rules we can verify
 from the venue's public author guidelines, each with its source URL.
 
+**Status: DONE (2026-11-06, 5a1995c).** `src/lib/venues.ts` (VENUES_VERSION=1;
+each rule carries sourceUrl + verifiedAt; all 7 sources opened one by one, ICML
+2025 anonymisation and LNCS page scope corrected from the official pages, IEEE
+left declared-unverified behind bot protection). `?venue=` on the submission
+check adds pages (best-effort compile, neutral degradation), blind signals
+(double-blind only, honest heuristic), required sections and bib style; without
+a venue the response is byte-identical to before. Verified in production
+(demo article: pages=2 vs ACL's 8, Limitations flagged; arXiv adds nothing
+style-related).
+
 ## Phase 4b — LanguageTool (grammar without AI)
 
 **Scope:** optional `languagetool` service in compose (official open-source
