@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Datenschutzerklärung" };
 
 // Datenschutzerklärung der gehosteten Demo-Instanz, aufgestellt nach den
 // tatsächlichen Verarbeitungen im Code (Konten, Sessions, SMTP, serverseitige
-// Metadatensuchen). Platzhalter in <mark> ergänzt der Betreiber.
+// Metadatensuchen). Betreiberin: Mokka Agentur GbR, Hosting bei netcup.
 export default function DatenschutzPage() {
   return (
     <LegalPage
@@ -22,9 +22,13 @@ export default function DatenschutzPage() {
       <p>
         Verantwortlich für die Datenverarbeitung auf dieser Website ist:
         <br />
-        <strong>Mokka Agentur</strong>
+        <strong>Mokka Agentur GbR</strong>
         <br />
-        <mark className="lp-ph">Straße und Hausnummer, PLZ Ort</mark>
+        vertreten durch die Gesellschafter Youssef Ouhaghi Ahmian und Jasid Khalaf
+        <br />
+        Untere Wiesenstraße 32, 57271 Hilchenbach, Deutschland
+        <br />
+        Telefon: +49 157 52987051
         <br />
         E-Mail:{" "}
         <a className="lp-link" href="mailto:info@mokka-agentur.de">
@@ -91,7 +95,7 @@ export default function DatenschutzPage() {
       <p>
         Der Hoster (netcup GmbH, Gütersloh, Deutschland) erhebt Verbindungsdaten (IP, Zeitpunkt,
         abgerufene Ressource) zur Sicherung des Betriebs; Rechtsgrundlage Art. 6 Abs. 1 lit. f
-        DSGVO. Wir werten sie nicht werblich aus.
+        DSGVO. Die Logdaten werden nach rund 30 Tagen gelöscht. Wir werten sie nicht werblich aus.
       </p>
 
       <h2>4. Cookies — und warum es keinen Cookie-Banner gibt</h2>
@@ -133,14 +137,22 @@ export default function DatenschutzPage() {
       <h2>5. Speicherdauer</h2>
       <p>
         Kontodaten und Projektinhalte: bis zur Löschung deines Kontos bzw. des Projekts.
-        Reset-Tokens: 30 Minuten. Server-Logfiles: gemäß den Vorgaben des Hosters.
+        Reset-Tokens: 30 Minuten. Server-Logfiles: rund 30 Tage (Vorgabe des Hosters).
       </p>
 
       <h2>6. Auftragsverarbeiter und Empfänger</h2>
       <p>
-        Hosting: netcup GmbH (Deutschland). Metadaten-APIs: OpenAlex (OurResearch), Semantic Scholar
-        (Allen Institute for AI), arXiv (Cornell University), Crossref — jeweils nur die
-        serverseitigen Suchanfragen aus Abschnitt 3.
+        Hosting: netcup GmbH (Deutschland). Mit netcup besteht ein Vertrag zur Auftragsverarbeitung
+        nach Art. 28 DSGVO (Referenz DSGVO-387825-20260701-75999 vom 1. Juli 2026). netcup setzt als
+        Sub-Auftragsverarbeiter EU-Unternehmen ein — ANEXIA Internetdienstleistungs GmbH
+        (Klagenfurt, Österreich) und ANEXIA Deutschland GmbH (Karlsruhe); alle Standorte liegen
+        innerhalb der EU, eine Übermittlung in Drittländer findet nicht statt. netcup ist nach ISO
+        9001, 27001 und 27701 zertifiziert.
+      </p>
+      <p>
+        Metadaten-APIs: OpenAlex (OurResearch), Semantic Scholar (Allen Institute for AI), arXiv
+        (Cornell University), Crossref — jeweils nur die serverseitigen Suchanfragen aus Abschnitt
+        3.
       </p>
       <p>
         KI-Anbieter: ausschließlich die von dir selbst konfigurierten. Eine Weitergabe oder ein
@@ -152,7 +164,8 @@ export default function DatenschutzPage() {
         Du hast das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17),
         Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch
         (Art. 21 DSGVO) sowie das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren
-        (Art. 77 DSGVO).
+        (Art. 77 DSGVO). Zuständig ist die Landesbeauftragte für Datenschutz und
+        Informationsfreiheit Nordrhein-Westfalen (LDI NRW, Kavalleriestraße 2–4, 40213 Düsseldorf).
       </p>
       <p>
         Für Auskünfte und Löschung genügt eine E-Mail an{" "}

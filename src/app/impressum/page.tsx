@@ -3,42 +3,45 @@ import { LegalPage } from "@/components/landing/LegalPage";
 
 export const metadata: Metadata = { title: "Impressum" };
 
-// German legal page for the hosted demo instance. Values in <mark> are
-// placeholders the operator must replace with the real legal details.
 export default function ImpressumPage() {
   return (
     <LegalPage title="Impressum" back="Zurück zu Folio" updated="Stand: 6. November 2026">
       <p>Angaben gemäß § 5 DDG für die Demo-Instanz unter folio.mokka-agentur.de:</p>
-      <p>Angaben gemäß § 5 DDG für die Demo-Instanz unter folio.mokka-agentur.de:</p>
       <p>
-        <strong>Mokka Agentur</strong>
+        <strong>Mokka Agentur GbR</strong>
         <br />
-        <mark className="lp-ph">Rechtsform (z. B. Einzelunternehmen / GmbH)</mark>
+        vertreten durch die Gesellschafter
         <br />
-        <mark className="lp-ph">Straße und Hausnummer</mark>
+        Youssef Ouhaghi Ahmian und Jasid Khalaf
         <br />
-        <mark className="lp-ph">PLZ und Ort</mark>
+        Untere Wiesenstraße 32
+        <br />
+        57271 Hilchenbach
         <br />
         Deutschland
       </p>
       <h2>Kontakt</h2>
       <p>
+        Telefon: +49 157 52987051
+        <br />
         E-Mail:{" "}
         <a className="lp-link" href="mailto:info@mokka-agentur.de">
           info@mokka-agentur.de
         </a>
         <br />
-        <mark className="lp-ph">Telefon (optional)</mark>
+        Web:{" "}
+        <a className="lp-link" href="https://mokka-agentur.de" rel="noopener noreferrer">
+          mokka-agentur.de
+        </a>
       </p>
-      <h2>Umsatzsteuer</h2>
+      <h2>Unternehmensdaten</h2>
       <p>
-        USt-IdNr. gemäß § 27a UStG:{" "}
-        <mark className="lp-ph">falls vorhanden, sonst diesen Absatz löschen</mark>
+        Die Mokka Agentur GbR ist eine Gesellschaft bürgerlichen Rechts und nicht ins
+        Handelsregister eingetragen. Eine Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG ist
+        nicht vorhanden.
       </p>
       <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
-      <p>
-        <mark className="lp-ph">Name und Anschrift wie oben</mark>
-      </p>
+      <p>Youssef Ouhaghi Ahmian, Anschrift wie oben.</p>
       <h2>EU-Streitschlichtung</h2>
       <p>
         Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren vor einer
