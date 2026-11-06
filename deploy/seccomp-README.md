@@ -45,3 +45,19 @@ permissions to create new namespace`) — user namespaces are blocked.
 The boot line also prints `kernel=<release>` and `userns=<max_user_namespaces>`
 (`?` when the sysctl file is missing) to tell the "kernel has user namespaces
 off" case apart from the "seccomp blocks them" case.
+
+
+## Outcome on the current production host (2026-11-06)
+
+Wired once (f0b6c88) and reverted the same day (d1e8f7f). Evidence trail:
+with Docker's default seccomp the boot probe says `isolation=none ... No
+permissions to create new namespace` (the profile blocks clone(NEWUSER)).
+With this profile wired, the probe gets PAST namespace creation but dies at
+`bwrap: Failed to make / slave: Permission denied` — the host (Debian 12,
+kernel 6.1, Docker under Dokploy) does not allow the mount-propagation change
+from inside the container, and bwrap's setup order makes that step mandatory.
+So on this host the trade buys nothing: an allow-all filter with no per-job
+jails. Default seccomp restored; the compiler keeps its self-adapting probe
+(isolation=none today) and this profile stays here for a future host or
+Docker setup where the slave remount is permitted — wire it, deploy, and read
+the boot line: `isolation=bwrap` means it worked.
