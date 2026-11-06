@@ -275,6 +275,17 @@ Release v0.2.0 with Phases 2–4, a "Moving from Prism" guide in `docs/`, a
 refreshed landing (the countdown reaches zero and switches to "Prism has
 closed" automatically — already implemented), announcement update.
 
+**Status: PREPARED, awaiting owner actions (2026-11-06, b015291).** Version
+0.2.0 cut in CHANGELOG.md (CI extracts the [0.2.0] section as release notes
+from the tag), docs/moving-from-prism.md written and linked from the README,
+roadmap refreshed, RELEASE.md re-targeted to v0.2.0 (signed-tag command with
+an annotated fallback, image tag, updated "not in this release" list, an
+ALLOW_REGISTRATION decision reminder before the announcement). Owner steps,
+in order, all in RELEASE.md: battery → secrets sweep → make repo public →
+social preview → CI green → tag v0.2.0 (triggers the GHCR multi-arch build
+and the GitHub release) → announcement (r/LaTeX, Show HN). The countdown
+auto-switch is live in production.
+
 ---
 
 ## Monitoring (spans phases)
