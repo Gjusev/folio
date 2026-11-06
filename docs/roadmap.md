@@ -18,6 +18,15 @@ is next, and what Folio does not do.
 - Review mode with scope, aspect and reviewer filters, verified locations
 - Localised demo project, onboarding, browser-language detection (es/en/de)
 - Installable PWA; Docker Compose and Dokploy deployments
+- Inline comments anchored to quoted text (anchors survive edits), threaded across files
+- Review mode v2: saved history, per-comment states, run-to-run comparison, fix-with-assistant handoff
+- Response letter from reviewer comments (pasted or Folio reviews) with AI-drafted answers
+- arXiv source export with TeX-faithful file closure and pre-flight checks
+- Venue profiles in the submission check (NeurIPS, ICML, ACL, IEEE, Elsevier, LNCS, arXiv) with sourced rules
+- Optional LanguageTool grammar checking mapped back to exact source lines
+- Optional SMTP: password reset by e-mail and project invitations
+- Personal PDF library with DOI detection, cite-into-project and RAG attach
+- Self-adapting per-job bubblewrap sandbox in the compiler where the host allows it
 
 ## Next
 

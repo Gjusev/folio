@@ -60,7 +60,7 @@ services:
 
   web:
     build: .
-    image: folio:0.1.0
+    image: folio:0.2.0
     environment:
       DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD}@db:5432/folio
       COMPILER_URL: http://compiler:3001

@@ -1,8 +1,11 @@
 # Releasing Folio — maintainer checklist
 
-Current state (2026-11-04): the repository lives at `github.com/Gjusev/folio`
-(**private**), branch `master`, `package.json` at `0.1.0`, no tags yet. A
+Current state (2026-11-06): the repository lives at `github.com/Gjusev/folio`
+(**private**), branch `master`, `package.json` at `0.2.0`, no tags yet. A
 production instance runs on Dokploy (see [docs/deployment.md](docs/deployment.md)).
+This checklist targets the **v0.2.0** release; the changelog section
+`## [0.2.0]` in `CHANGELOG.md` is the release text (CI extracts it
+automatically from the tag name).
 CI's `app` job uses `pgvector/pgvector:pg17` because migration `0006` creates
 the `vector` extension; the `compiler` job builds the real container and runs
 its end-to-end tests.
@@ -25,6 +28,10 @@ its end-to-end tests.
     history is not an option afterwards.
 - [ ] Review the `CHANGELOG.md` section of the release — it becomes the release
       text.
+- [ ] **Decide the registration policy for the public announcement**: the
+      reference instance currently has `ALLOW_REGISTRATION=1`. If the instance
+      is personal, set it to `0` BEFORE posting the announcement (an open
+      registration on a URL you are about to publish is an invitation).
 
 ## 1. Publish the repository
 
@@ -35,16 +42,18 @@ its end-to-end tests.
       preview.
 - [ ] Check that CI is green on the default branch (`app` and `compiler` jobs).
 - [ ] Add the comparison link at the end of `CHANGELOG.md`:
-      `[0.1.0]: https://github.com/Gjusev/folio/releases/tag/v0.1.0`.
-- [ ] Signed tag: `git tag -s v0.1.0 -m "Folio 0.1.0" && git push origin v0.1.0`
-      (needs `git config --global user.signingkey`).
-- [ ] GitHub Release "v0.1.0" with the changelog section and the images in
+      `[0.2.0]: https://github.com/Gjusev/folio/releases/tag/v0.2.0`.
+- [ ] Signed tag: `git tag -s v0.2.0 -m "Folio 0.2.0 — the publication workflow release" && git push origin v0.2.0`
+      (needs `git config --global user.signingkey`). No signing key? An annotated
+      tag is the fallback: `git tag -a v0.2.0 -m "Folio 0.2.0"` — say so in the
+      announcement.
+- [ ] GitHub Release "v0.2.0" with the changelog section and the images in
       `docs/images/`.
 
 ## 2. Container image
 
 - [ ] Multi-arch build and push of the web image:
-      `docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/gjusev/folio:0.1.0 -t ghcr.io/gjusev/folio:latest --push .`
+      `docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/gjusev/folio:0.2.0 -t ghcr.io/gjusev/folio:latest --push .`
 - [ ] Smoke test the published image from a clean directory with a minimal
       compose file: register, load the demo project, compile.
 
@@ -56,14 +65,18 @@ its end-to-end tests.
       licence, how to try it in three commands, and the "not in this release"
       list below, verbatim. Honesty about limits is a project principle.
 
-## Not in 0.1.0 (copy into the announcement)
+## Not in 0.2.0 (copy into the announcement)
 
 - Real-time collaboration is **opt-in and experimental** (`COLLAB_URL` empty by
   default); in production the relay needs `wss://`.
 - RAG needs an embedding provider; without one, indexing answers 503 with a
   clear message.
 - One web instance only: rate limits live in memory; the compiler is one shared
-  container with `MAX_CONCURRENT_JOBS`.
+  container with `MAX_CONCURRENT_JOBS` (per-job sandboxing adapts to the host;
+  the reference Dokploy host currently runs it without namespaces — see
+  `deploy/seccomp-README.md`).
+- Grammar checking and e-mail ship **off by default** (one env var each) — a
+  fresh install has neither until the admin enables them.
 - No SSO/OIDC: local accounts only.
 - The AI features are verified against fake OpenAI-compatible servers in tests;
   no paid model runs in CI.

@@ -49,6 +49,9 @@ to go with it:
 
 From then on your documents are in your Postgres, exportable as ZIP at any time.
 
+The step-by-step version, including what does and does not survive the move,
+is in [docs/moving-from-prism.md](docs/moving-from-prism.md).
+
 ## Try it in a minute
 
 Every new account can start with a **demo project**: a short, finished paper

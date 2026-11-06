@@ -6,6 +6,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.2.0] - 2026-11-06
+
+The publication workflow release: from draft to submission package with AI
+that never edits behind your back. Also the biggest interface and
+infrastructure hardening round since the first release.
+
 ### Added — the interface wave
 
 - **API errors in your language.** 89 server-side error sites (auth, projects,
@@ -178,6 +186,94 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reporting unchecked keys as resolved.
 - `pnpm reset-password <email>`: admin-side password reset for self-hosted
   instances (no email server is assumed).
+
+### Added — the publication workflow
+
+- **arXiv export**: the Export menu builds the package arXiv expects. The
+  compiler resolves the file closure exactly as TeX does (`\input`/`\include`
+  with TeX's path rules, figures, `.bib`, the generated `.bbl`), and the
+  dialog runs honest pre-flight checks — file names, `pdfoutput`, paths, EPS,
+  shell-escape leftovers, bbl freshness, size — before the ZIP download.
+- **Review mode v2**: reviews are saved per project with the filters that
+  produced them, reloaded across devices, with a history list and per-comment
+  states (resolved/dismissed kept on the server). Comparing two runs shows
+  what was resolved, what is new and what is still open (matched by aspect,
+  location and quote). Any comment can be handed to the assistant as a
+  fix instruction — the assistant proposes, nothing is applied silently.
+- **Response letter**: comments from a saved Folio review, pasted text from
+  real journal reviewers, or both, become the response-letter template — one
+  item per comment (quote, link to the changed lines, response placeholder).
+  The parser of pasted reviews understands numbered points, `R1.2`-style
+  labels, bullets, multi-paragraph points and severity words in English,
+  Spanish and German; everything is LaTeX-escaped. The AI can draft responses
+  for the empty ones (marked as drafts, in the document too), the letter
+  compiles without touching the project's main file, and choosing a snapshot
+  adds an appendix that names it next to the latexdiff.
+- **Venue profiles** in the submission check: NeurIPS, ICML, ACL, IEEE
+  conferences, Elsevier, Springer LNCS and arXiv, each rule carrying its
+  official source URL and verification date (all seven guides opened and
+  checked by hand; two candidate values were corrected against the official
+  pages, IEEE's bot-wall is declared unverified). With a venue selected the
+  check adds the page count from the real compiled PDF, blind-review signals
+  (author blocks, acknowledgements, grants — presented as possible signals,
+  never verdicts), missing required sections (ACL's Limitations) and the
+  expected bibliography style. Without a venue the checklist is exactly as it
+  was.
+- **Optional grammar checking (LanguageTool)**: `LANGUAGETOOL_URL` empty means
+  off, as shipped. When set, prose is extracted from the LaTeX (comments,
+  math and technical commands stripped) with a character-level map back to
+  the source, so every finding jumps to its exact line. Findings join the
+  chktex list; a down server costs one request, a slow one is cut at a run
+  budget; chktex results render before grammar arrives.
+- **Optional e-mail (SMTP)**: `SMTP_*` unset means off, as shipped. When
+  configured: password reset by e-mail (single-use 30-minute tokens stored
+  hashed, a reset revokes every session) and invitation e-mails for shared
+  projects. Reset links are built only from `APP_URL`; `forgot` answers
+  identically whether the account exists or not — no enumeration by response
+  or by timing. `pnpm reset-password` remains for admins.
+
+### Added — interface and landing
+
+- The landing speaks the product's main claim: "Write with AI. Or without
+  it." over a real writing contract fragment, nine native dark films of the
+  actual product, and a Prism countdown that switches itself to "Prism has
+  closed" on 2027-01-01. A `docs/moving-from-prism.md` guide backs the
+  countdown.
+- Mobile audit wave (six screens, 52 findings): the projects header, the
+  editor tab strip, the PDF worker in standalone builds (extraction was dead
+  in production), and `/library` layout at 375 px; a single coarse-pointer
+  pass raises every control to the 44 px touch minimum with 16 px inputs (no
+  iOS focus zoom); plus 23 major fixes (dark-mode editor syntax colors,
+  destructive-action confirmations, wrapping metadata, real dialogs).
+- API rate limits scale with `RATE_LIMIT_MULTIPLIER` for large self-hosted
+  instances and test suites; the default (1) changes nothing.
+
+### Changed — compiler hardening
+
+- The compiler now carries a self-adapting per-job sandbox: at boot it probes
+  whether the host lets it create user+mount namespaces and, when it does,
+  every latexmk/chktex/texcount/synctex/latexdiff job runs inside a
+  bubblewrap jail (no network, no IPC, read-only root, the job directory as
+  the only writable path). On hosts that forbid it — like the reference
+  Dokploy deployment, where Docker's default seccomp blocks the namespace
+  calls — the compiler keeps its previous hardening (unprivileged user, no
+  capabilities, read-only rootfs, internal network, `openin/out_any`,
+  `shell_escape` off) and `/health` reports which mode is active. The full
+  evidence trail, including one tried-and-reverted seccomp trade, is in
+  `deploy/seccomp-README.md`.
+
+### Fixed
+
+- PDF text extraction was dead in standalone production builds (the pdf.js
+  worker chunk never loaded); citing and attaching from the library now work
+  there, with an e2e that uploads a real PDF to keep it that way.
+- Spanish at 375 px: the projects header pushed "Cerrar sesión" off-screen
+  and the Review tab was unreachable behind the clipped tab strip.
+- CodeMirror used light-only default syntax colors: brackets sat at 1.4:1
+  contrast in dark mode; the editor now derives its highlight theme from the
+  app palette.
+
+[0.2.0]: https://github.com/Gjusev/folio/releases/tag/v0.2.0
 
 ## [0.1.0] - 2026-11-04
 
