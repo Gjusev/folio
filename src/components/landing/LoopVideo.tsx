@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-// A muted decorative loop: it only plays while on screen and stays on its
-// poster frame under prefers-reduced-motion. With a label it describes
-// itself; without one it is aria-hidden chrome.
+// A muted loop: it only plays while on screen and stays on its poster frame
+// under prefers-reduced-motion. With a label it describes itself; without one
+// it is aria-hidden chrome. `eager` (the hero) preloads the whole clip.
 export function LoopVideo({
   src,
   mime,
@@ -12,6 +12,7 @@ export function LoopVideo({
   width,
   height,
   label,
+  eager = false,
 }: {
   src: string;
   mime: string;
@@ -19,6 +20,7 @@ export function LoopVideo({
   width: number;
   height: number;
   label?: string;
+  eager?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -42,7 +44,7 @@ export function LoopVideo({
       muted
       loop
       playsInline
-      preload="metadata"
+      preload={eager ? "auto" : "metadata"}
       poster={poster}
       width={width}
       height={height}

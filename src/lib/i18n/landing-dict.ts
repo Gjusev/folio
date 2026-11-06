@@ -7,21 +7,65 @@
 const es = {
   // landing: nav + hero (the shout: Folio, unlike Prism, never closes)
   "landing.nav": "Navegación",
-  "landing.hero.l1": "Folio",
-  "landing.hero.l2": "no cierra.",
-  "landing.hero.scrap-alt": "Una página del PDF compilado del proyecto demo.",
-  "landing.hero.cat": "El editor LaTeX autoalojado con IA.",
+  "landing.skip": "Saltar al contenido",
+  "landing.nav.self": "Instalar",
+  "landing.hero.pill": "Código abierto · Autoalojado · Apache-2.0",
+  "landing.hero.h": "El editor LaTeX que puedes *auditar.*",
+  "landing.hero.prism": "Folio importa su exportación tal cual.",
+  "landing.hero.alt":
+    "Folio compila el artículo en un contenedor aislado y el PDF aparece junto a la fuente.",
+  "landing.film.btn": "Ver la película",
+  "landing.film.title": "Folio en 57 segundos",
+  "landing.film.close": "Cerrar",
+  "landing.ch.label": "Del asistente a la publicación",
+  "landing.ch.lit.k": "Literatura",
+  "landing.ch.lit.h": "Busca artículos reales *sin salir* del editor.",
+  "landing.ch.lit.p":
+    "OpenAlex, arXiv, PubMed y Semantic Scholar en un solo buscador. Pulsa Citar y la entrada llega a tu .bib, lista para \\cite.",
+  "landing.ch.lit.alt":
+    "Búsqueda de artículos en Folio: resultados de OpenAlex, Citar y la bibliografía del proyecto.",
+  "landing.turn.k": "Redacción",
+  "landing.turn.h": "De la literatura a un borrador *citado.*",
+  "landing.turn.1": "Tu bibliografía como grafo: en la demo, 93 artículos y 239 enlaces.",
+  "landing.turn.2":
+    "Pides una sección y el agente reúne evidencia antes de escribir: aquí, doce artículos.",
+  "landing.turn.3": "Solo cita claves de tu .bib. Lo que invente se elimina en el servidor.",
+  "landing.turn.alt":
+    "Los artículos del grafo de citas se convierten en las líneas de un borrador con citas.",
+  "landing.ch.asst.k": "Asistente",
+  "landing.ch.asst.h": "Se ha leído el artículo *entero.*",
+  "landing.ch.asst.p":
+    "Pregunta por tu documento y responde con tu propia fuente delante. Nada cambia sin tu confirmación.",
+  "landing.ch.asst.alt":
+    "El asistente responde a una pregunta sobre la introducción señalando el método del artículo.",
+  "landing.ch.rev.k": "Revisión",
+  "landing.ch.rev.h": "Un revisor que *te cita.*",
+  "landing.ch.rev.p":
+    "Puntuación por aspecto y comentarios que señalan una línea de main.tex. Un clic y el asistente se encarga del arreglo.",
+  "landing.ch.rev.alt":
+    "Revisión con resumen, puntuaciones y un comentario mayor que cita main.tex:28.",
+  "landing.ch.fix.k": "Errores",
+  "landing.ch.fix.h": "Los errores salen como *parches.*",
+  "landing.ch.fix.p":
+    "Una compilación fallida vuelve como un parche en rojo y verde. Lo aplicas y Folio recompila.",
+  "landing.ch.fix.alt":
+    "Error de compilación en main.tex:12, el parche propuesto y el PDF recompilado.",
+  "landing.ch.ship.k": "En equipo",
+  "landing.ch.ship.h": "Escribe en equipo. Publica *donde quieras.*",
+  "landing.ch.ship.p":
+    "Invita a coautores, guarda versiones que comparas con latexdiff y exporta el PDF, las fuentes o un paquete para arXiv.",
+  "landing.ch.ship.alt": "Menús de compartir, exportar y versiones de Folio.",
+  "landing.model.h": "Tu servidor. Tu *modelo.*",
+  "landing.model.p":
+    "Cualquier API compatible con OpenAI, Anthropic o un modelo local, con un proveedor distinto por tarea. Las claves se guardan cifradas en tu servidor.",
+  "landing.model.alt": "Ajustes de Folio: proveedores de IA y reparto por tarea.",
+  "landing.self.h": "Tres comandos y es tuyo.",
+  "landing.self.p":
+    "Postgres, el compilador y la app en un solo archivo compose. Sin seguimiento y sin correo de verificación.",
+  "landing.self.repo": "Guía de instalación",
+  "landing.close.h": "Tu próximo artículo, en *tu* servidor.",
   "landing.hero.sub":
     "Folio es el espacio abierto para escribir artículos científicos con IA: tu modelo, tu servidor, citas que no se pueden inventar y cada cambio a la vista antes de aplicarlo.",
-  "landing.ai.h": "Escribe con IA. O sin ella.",
-  "landing.ai.p":
-    "Describe la sección y Folio busca literatura real, la muestra como evidencia y redacta el LaTeX: solo cita claves de tu .bib y nada se aplica sin tu confirmación. Sin proveedor configurado, todo lo demás funciona igual.",
-  "landing.ai.you": "Tú:",
-  "landing.ai.instr": "Escribe un párrafo sobre atención eficiente.",
-  "landing.ai.agent": "Folio:",
-  "landing.ai.draft":
-    "La atención recortó el coste de las secuencias largas \cite{vaswani2017attention}",
-  "landing.window.h": "El producto",
   "landing.cta.main": "Probar el proyecto demo",
   "landing.cta.more": "Ver qué incluye",
   "landing.cta.selfhost": "Instálalo en tu servidor",
@@ -35,15 +79,6 @@ const es = {
   "landing.prism.step2": "Crea tu cuenta en Folio.",
   "landing.prism.step3": "Importa el ZIP en Proyectos: Folio detecta el archivo principal.",
   // landing: the films (real clips; captions describe the feature, never "real capture")
-  "landing.prism.film": "El ZIP de Prism llega al árbol de archivos.",
-  "landing.window.alt":
-    "El asistente propone un cambio como diff y una cita que no está en el .bib se rechaza.",
-  "landing.ai.film": "Vídeo: redactar con el asistente, de la instrucción al borrador con citas.",
-  "landing.sheet.h": "En movimiento",
-  "landing.sheet.1": "La revisión cita tu .bib",
-  "landing.sheet.2": "El error, con su arreglo",
-  "landing.sheet.3": "Versiones marcadas con latexdiff",
-  "landing.sheet.4": "Tu agente edita por MCP",
   // landing: capabilities (poster list: capability name + one-sentence description)
   "landing.feat.title": "Qué hay dentro",
   "landing.cap.1.s": "Escribe con IA",
@@ -64,33 +99,14 @@ const es = {
   // landing: the name
 
   // landing: how it works (tinted accordion) + the demo library as a board
-  "landing.stages.h": "Cómo funciona",
-  "landing.stages.p":
-    "De la primera nota al PDF compilado sin salir de Folio: cuatro movimientos que ya están en la demo.",
-  "landing.stage.1.d":
-    "La fuente a la izquierda, el PDF compilado a la derecha. Pulsa Compilar o Ctrl+Enter.",
-  "landing.stage.1.n": "Escribe",
-  "landing.stage.1.alt": "Editor de Folio con el código LaTeX y el PDF compilado lado a lado.",
-  "landing.stage.2.d": "Busca en OpenAlex y arXiv, pulsa Citar, y la entrada llega a tu .bib.",
-  "landing.stage.2.n": "Cita",
-  "landing.stage.2.alt": "Biblioteca de Folio con las referencias del .bib y su estado.",
-  "landing.stage.3.d":
-    "Trabajo previo y derivado de cualquier paper, con tu propia bibliografía como semilla.",
-  "landing.stage.3.n": "Explora",
-  "landing.stage.3.alt": "Explorador de grafo de citas de Folio con la lista, el grafo y la ficha.",
-  "landing.stage.4.d": "Postgres, el compilador y la app en un solo archivo compose.",
-  "landing.stage.4.n": "Aloja",
 
   // landing: close (one word is the button) + footer
   "landing.close.p":
     "Crea tu cuenta y Folio abre un proyecto demo que ya compila: pulsa el PDF, cita un paper, guarda una versión.",
-  "landing.cta.word": "Pruébalo",
   "landing.foot.note": "Autoalojado: tus artículos se quedan en tu propio Postgres.",
   "landing.foot.note2": "Interfaz en español, English y Deutsch.",
   "landing.foot.top": "Volver arriba",
-  "landing.foot.col.self": "Autoalojado",
   "landing.foot.col.code": "Código",
-  "landing.foot.col.credit": "Créditos",
   "landing.foot.source": "Código fuente",
   "landing.foot.legal": "© 2026 Folio. Publicado bajo Apache-2.0.",
 
@@ -136,20 +152,64 @@ const es = {
 
 const en: Record<keyof typeof es, string> = {
   "landing.nav": "Navigation",
-  "landing.hero.l1": "Folio",
-  "landing.hero.l2": "can't close.",
-  "landing.hero.scrap-alt": "A page from the compiled PDF of the demo project.",
-  "landing.hero.cat": "The self-hosted LaTeX editor with AI.",
+  "landing.skip": "Skip to content",
+  "landing.nav.self": "Self-host",
+  "landing.hero.pill": "Open source · Self-hosted · Apache-2.0",
+  "landing.hero.h": "The LaTeX editor you can *audit.*",
+  "landing.hero.prism": "Folio imports its export as it is.",
+  "landing.hero.alt":
+    "Folio compiles the paper in an isolated container and the PDF appears beside the source.",
+  "landing.film.btn": "Watch the film",
+  "landing.film.title": "Folio in 57 seconds",
+  "landing.film.close": "Close",
+  "landing.ch.label": "From the assistant to publication",
+  "landing.ch.lit.k": "Literature",
+  "landing.ch.lit.h": "Search real papers, *inside* the editor.",
+  "landing.ch.lit.p":
+    "OpenAlex, arXiv, PubMed and Semantic Scholar in one search box. Press Cite and the entry lands in your .bib, ready for \\cite.",
+  "landing.ch.lit.alt":
+    "Paper search in Folio: OpenAlex results, Cite, and the project bibliography.",
+  "landing.turn.k": "Drafting",
+  "landing.turn.h": "From literature to a *cited* draft.",
+  "landing.turn.1": "Your bibliography as a graph: in the demo, 93 papers and 239 links.",
+  "landing.turn.2":
+    "Ask for a section and the agent gathers evidence before it writes: twelve papers here.",
+  "landing.turn.3":
+    "It only cites keys from your .bib. Anything it invents is stripped on the server.",
+  "landing.turn.alt": "The papers of the citation graph turn into the lines of a cited draft.",
+  "landing.ch.asst.k": "Assistant",
+  "landing.ch.asst.h": "It has read the *whole* paper.",
+  "landing.ch.asst.p":
+    "Ask about your document and it answers with your own source in view. Nothing changes until you confirm.",
+  "landing.ch.asst.alt":
+    "The assistant answers a question about the introduction, pointing at the paper's method.",
+  "landing.ch.rev.k": "Review",
+  "landing.ch.rev.h": "A reviewer that *quotes* you.",
+  "landing.ch.rev.p":
+    "Scores per aspect and comments that point to a line of main.tex. One click hands the fix to the assistant.",
+  "landing.ch.rev.alt": "A review with a summary, scores and a major comment quoting main.tex:28.",
+  "landing.ch.fix.k": "Errors",
+  "landing.ch.fix.h": "Errors leave as *patches.*",
+  "landing.ch.fix.p":
+    "A failed compile comes back as a red and green patch. Apply it and Folio recompiles.",
+  "landing.ch.fix.alt":
+    "A compile error at main.tex:12, the proposed patch and the recompiled PDF.",
+  "landing.ch.ship.k": "Together",
+  "landing.ch.ship.h": "Write together. Ship *anywhere.*",
+  "landing.ch.ship.p":
+    "Invite co-authors, save versions you can compare with latexdiff, and export the PDF, the sources or an arXiv package.",
+  "landing.ch.ship.alt": "Folio's share, export and versions menus.",
+  "landing.model.h": "Your server. Your *model.*",
+  "landing.model.p":
+    "Any OpenAI-compatible API, Anthropic or a local model, with a different provider per task. Keys are stored encrypted on your server.",
+  "landing.model.alt": "Folio settings: AI providers and per-task routing.",
+  "landing.self.h": "Three commands and it's yours.",
+  "landing.self.p":
+    "Postgres, the compiler and the app in one compose file. No tracking and no verification email.",
+  "landing.self.repo": "Installation guide",
+  "landing.close.h": "Your next paper, on *your* server.",
   "landing.hero.sub":
     "Folio is the open workspace for writing scientific papers with AI: your model, your server, citations that cannot be invented, and every change in view before it lands.",
-  "landing.ai.h": "Write with AI. Or without it.",
-  "landing.ai.p":
-    "Describe the section and Folio retrieves real literature, shows it as evidence and drafts the LaTeX: it only cites keys from your .bib and nothing is applied without your confirmation. With no provider configured, everything else works the same.",
-  "landing.ai.you": "You:",
-  "landing.ai.instr": "Draft a paragraph on efficient attention.",
-  "landing.ai.agent": "Folio:",
-  "landing.ai.draft": "Attention cut the cost of long sequences \cite{vaswani2017attention}",
-  "landing.window.h": "The product",
   "landing.cta.main": "Try the demo project",
   "landing.cta.more": "See what is inside",
   "landing.cta.selfhost": "Run it on your server",
@@ -161,15 +221,6 @@ const en: Record<keyof typeof es, string> = {
   "landing.prism.step1": "In Prism: Settings → Data Controls → Export all.",
   "landing.prism.step2": "Create your Folio account.",
   "landing.prism.step3": "Import the ZIP in Projects: Folio finds the main file.",
-  "landing.prism.film": "The Prism ZIP lands in the file tree.",
-  "landing.window.alt":
-    "The assistant proposes a change as a diff; a citation that is not in the .bib is rejected.",
-  "landing.ai.film": "Video: writing with the assistant, from instruction to a cited draft.",
-  "landing.sheet.h": "In motion",
-  "landing.sheet.1": "The review cites your .bib",
-  "landing.sheet.2": "The error, with its fix",
-  "landing.sheet.3": "Versions marked with latexdiff",
-  "landing.sheet.4": "Your agent edits over MCP",
   "landing.feat.title": "What is inside",
   "landing.cap.1.s": "Write with AI",
   "landing.cap.1.d":
@@ -187,33 +238,12 @@ const en: Record<keyof typeof es, string> = {
   "landing.cap.5.d":
     "Any OpenAI-compatible API, Anthropic or local models. The owner decides whether a manuscript may leave the server, and Folio writes the AI-use declaration journals ask for.",
 
-  "landing.stages.h": "How it works",
-  "landing.stages.p":
-    "From the first note to the compiled PDF without leaving Folio: four moves already in the demo.",
-  "landing.stage.1.d":
-    "Source on the left, the compiled PDF on the right. Press Compile or Ctrl+Enter.",
-  "landing.stage.1.n": "Write",
-  "landing.stage.1.alt": "Folio editor with LaTeX source and the compiled PDF side by side.",
-  "landing.stage.2.d": "Search OpenAlex and arXiv, press Cite, and the entry lands in your .bib.",
-  "landing.stage.2.n": "Cite",
-  "landing.stage.2.alt": "Folio library listing the references in the .bib and their status.",
-  "landing.stage.3.d":
-    "Prior and derivative work of any paper, with your own bibliography as the seed.",
-  "landing.stage.3.n": "Explore",
-  "landing.stage.3.alt":
-    "Folio citation graph explorer with the list, the graph and the paper card.",
-  "landing.stage.4.d": "Postgres, the compiler and the app in a single compose file.",
-  "landing.stage.4.n": "Host",
-
   "landing.close.p":
     "Create your account and Folio opens a demo project that already compiles: click the PDF, cite a paper, save a version.",
-  "landing.cta.word": "Try it",
   "landing.foot.note": "Self-hosted: your papers stay in your own Postgres.",
   "landing.foot.note2": "Interface in English, Español and Deutsch.",
   "landing.foot.top": "Back to top",
-  "landing.foot.col.self": "Self-hosted",
   "landing.foot.col.code": "Code",
-  "landing.foot.col.credit": "Credits",
   "landing.foot.source": "Source code",
   "landing.foot.legal": "© 2026 Folio. Released under Apache-2.0.",
 
@@ -254,20 +284,65 @@ const en: Record<keyof typeof es, string> = {
 
 const de: Record<keyof typeof es, string> = {
   "landing.nav": "Navigation",
-  "landing.hero.l1": "Folio",
-  "landing.hero.l2": "schließt nie.",
-  "landing.hero.scrap-alt": "Eine Seite des kompilierten PDFs aus dem Demo-Projekt.",
-  "landing.hero.cat": "Der selbst gehostete LaTeX-Editor mit KI.",
+  "landing.skip": "Zum Inhalt springen",
+  "landing.nav.self": "Selbst hosten",
+  "landing.hero.pill": "Open Source · Selbst gehostet · Apache-2.0",
+  "landing.hero.h": "Der LaTeX-Editor, den du *prüfst.*",
+  "landing.hero.prism": "Folio importiert den Export unverändert.",
+  "landing.hero.alt":
+    "Folio kompiliert den Artikel in einem isolierten Container, und das PDF erscheint neben dem Quelltext.",
+  "landing.film.btn": "Film ansehen",
+  "landing.film.title": "Folio in 57 Sekunden",
+  "landing.film.close": "Schließen",
+  "landing.ch.label": "Vom Assistenten zur Veröffentlichung",
+  "landing.ch.lit.k": "Literatur",
+  "landing.ch.lit.h": "Echte Paper suchen, *direkt* im Editor.",
+  "landing.ch.lit.p":
+    "OpenAlex, arXiv, PubMed und Semantic Scholar in einem Suchfeld. Ein Klick auf Zitieren, und der Eintrag steht in deinem .bib, bereit für \\cite.",
+  "landing.ch.lit.alt":
+    "Paper-Suche in Folio: OpenAlex-Ergebnisse, Zitieren und die Projektbibliografie.",
+  "landing.turn.k": "Entwurf",
+  "landing.turn.h": "Von der Literatur zum *zitierten* Entwurf.",
+  "landing.turn.1": "Deine Bibliografie als Graph: in der Demo 93 Paper und 239 Verbindungen.",
+  "landing.turn.2":
+    "Du bittest um einen Abschnitt, und der Agent sammelt zuerst Belege: hier zwölf Paper.",
+  "landing.turn.3":
+    "Er zitiert nur Schlüssel aus deinem .bib. Was er erfindet, entfernt der Server.",
+  "landing.turn.alt": "Die Paper des Zitiergraphen werden zu den Zeilen eines zitierten Entwurfs.",
+  "landing.ch.asst.k": "Assistent",
+  "landing.ch.asst.h": "Er hat das *ganze* Paper gelesen.",
+  "landing.ch.asst.p":
+    "Frag nach deinem Dokument, und er antwortet mit deinem Quelltext vor Augen. Nichts ändert sich ohne deine Bestätigung.",
+  "landing.ch.asst.alt":
+    "Der Assistent beantwortet eine Frage zur Einleitung und verweist auf die Methode des Papers.",
+  "landing.ch.rev.k": "Review",
+  "landing.ch.rev.h": "Ein Reviewer, der dich *zitiert.*",
+  "landing.ch.rev.p":
+    "Bewertungen pro Aspekt und Kommentare, die auf eine Zeile in main.tex zeigen. Ein Klick übergibt die Korrektur an den Assistenten.",
+  "landing.ch.rev.alt":
+    "Ein Review mit Zusammenfassung, Bewertungen und einem Hauptkommentar, der main.tex:28 zitiert.",
+  "landing.ch.fix.k": "Fehler",
+  "landing.ch.fix.h": "Fehler kommen als *Patch* zurück.",
+  "landing.ch.fix.p":
+    "Ein fehlgeschlagener Lauf kommt als roter und grüner Patch zurück. Du wendest ihn an, Folio kompiliert neu.",
+  "landing.ch.fix.alt":
+    "Ein Kompilierfehler in main.tex:12, der vorgeschlagene Patch und das neu kompilierte PDF.",
+  "landing.ch.ship.k": "Gemeinsam",
+  "landing.ch.ship.h": "Gemeinsam schreiben. *Überall* publizieren.",
+  "landing.ch.ship.p":
+    "Lade Co-Autoren ein, speichere Versionen, die du mit latexdiff vergleichst, und exportiere PDF, Quellen oder ein arXiv-Paket.",
+  "landing.ch.ship.alt": "Die Menüs Teilen, Exportieren und Versionen in Folio.",
+  "landing.model.h": "Dein Server. Dein *Modell.*",
+  "landing.model.p":
+    "Jede OpenAI-kompatible API, Anthropic oder ein lokales Modell, mit einem eigenen Anbieter pro Aufgabe. Schlüssel liegen verschlüsselt auf deinem Server.",
+  "landing.model.alt": "Folio-Einstellungen: KI-Anbieter und Zuordnung pro Aufgabe.",
+  "landing.self.h": "Drei Befehle, und es gehört dir.",
+  "landing.self.p":
+    "Postgres, Compiler und App in einer Compose-Datei. Kein Tracking, keine Bestätigungsmail.",
+  "landing.self.repo": "Installationsanleitung",
+  "landing.close.h": "Dein nächstes Paper, auf *deinem* Server.",
   "landing.hero.sub":
     "Folio ist der offene Arbeitsplatz für wissenschaftliches Schreiben mit KI: dein Modell, dein Server, Zitate, die sich nicht erfinden lassen, und jede Änderung sichtbar, bevor sie übernommen wird.",
-  "landing.ai.h": "Mit KI schreiben. Oder ohne.",
-  "landing.ai.p":
-    "Beschreibe den Abschnitt, und Folio holt echte Literatur, zeigt sie als Belege und entwirft das LaTeX: zitiert werden nur Schlüssel aus deiner .bib, und nichts wird ohne deine Bestätigung übernommen. Ohne konfigurierten Anbieter funktioniert alles andere genauso.",
-  "landing.ai.you": "Du:",
-  "landing.ai.instr": "Entwirf einen Absatz über effiziente Attention.",
-  "landing.ai.agent": "Folio:",
-  "landing.ai.draft": "Attention senkte die Kosten langer Sequenzen \cite{vaswani2017attention}",
-  "landing.window.h": "Das Produkt",
   "landing.cta.main": "Demo-Projekt ausprobieren",
   "landing.cta.more": "Ansehen, was drinsteckt",
   "landing.cta.selfhost": "Auf deinem Server betreiben",
@@ -279,16 +354,6 @@ const de: Record<keyof typeof es, string> = {
   "landing.prism.step1": "In Prism: Settings → Data Controls → Export all.",
   "landing.prism.step2": "Erstelle dein Folio-Konto.",
   "landing.prism.step3": "Importiere das ZIP unter Projekte: Folio findet die Hauptdatei.",
-  "landing.prism.film": "Das Prism-ZIP landet im Dateibaum.",
-  "landing.window.alt":
-    "Der Assistent schlägt eine Änderung als Diff vor; ein Zitat, das nicht im .bib ist, wird verworfen.",
-  "landing.ai.film":
-    "Video: Schreiben mit dem Assistenten, von der Anweisung zum Entwurf mit Zitaten.",
-  "landing.sheet.h": "In Bewegung",
-  "landing.sheet.1": "Das Review zitiert dein .bib",
-  "landing.sheet.2": "Der Fehler, mit seiner Lösung",
-  "landing.sheet.3": "Versionen mit latexdiff markiert",
-  "landing.sheet.4": "Dein Agent bearbeitet über MCP",
   "landing.feat.title": "Was drinsteckt",
   "landing.cap.1.s": "Mit KI schreiben",
   "landing.cap.1.d":
@@ -306,33 +371,12 @@ const de: Record<keyof typeof es, string> = {
   "landing.cap.5.d":
     "Jede OpenAI-kompatible API, Anthropic oder lokale Modelle. Der Eigentümer entscheidet, ob ein Manuskript den Server verlassen darf, und Folio schreibt die KI-Erklärung, die Zeitschriften verlangen.",
 
-  "landing.stages.h": "So funktioniert es",
-  "landing.stages.p":
-    "Von der ersten Notiz zum kompilierten PDF, ohne Folio zu verlassen: vier Schritte, die schon in der Demo stecken.",
-  "landing.stage.1.d":
-    "Quelltext links, kompiliertes PDF rechts. Klicke auf Kompilieren oder drücke Strg+Enter.",
-  "landing.stage.1.n": "Schreiben",
-  "landing.stage.1.alt": "Folio-Editor mit LaTeX-Quelltext und kompiliertem PDF nebeneinander.",
-  "landing.stage.2.d":
-    "Suche in OpenAlex und arXiv, klicke auf Zitieren, und der Eintrag landet in deinem .bib.",
-  "landing.stage.2.n": "Zitieren",
-  "landing.stage.2.alt": "Folio-Bibliothek mit den Referenzen des .bib und ihrem Status.",
-  "landing.stage.3.d":
-    "Vorarbeiten und Folgearbeiten jeder Arbeit, mit deiner eigenen Bibliografie als Ausgangspunkt.",
-  "landing.stage.3.n": "Erkunden",
-  "landing.stage.3.alt": "Zitiergraph-Explorer von Folio mit Liste, Graph und Karte.",
-  "landing.stage.4.d": "Postgres, Compiler und App in einer einzigen Compose-Datei.",
-  "landing.stage.4.n": "Hosten",
-
   "landing.close.p":
     "Erstelle dein Konto und Folio öffnet ein Demo-Projekt, das schon kompiliert: ins PDF klicken, eine Arbeit zitieren, eine Version speichern.",
-  "landing.cta.word": "Testen",
   "landing.foot.note": "Selbst gehostet: Deine Arbeiten bleiben in deinem eigenen Postgres.",
   "landing.foot.note2": "Oberfläche auf Español, English und Deutsch.",
   "landing.foot.top": "Nach oben",
-  "landing.foot.col.self": "Selbst gehostet",
   "landing.foot.col.code": "Code",
-  "landing.foot.col.credit": "Credits",
   "landing.foot.source": "Quellcode",
   "landing.foot.legal": "© 2026 Folio. Unter Apache-2.0 veröffentlicht.",
 
