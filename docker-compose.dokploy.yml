@@ -1,7 +1,10 @@
 # Dokploy / Traefik deployment: same stack as docker-compose.yml but with no
-# host-published ports and no profiles (Traefik routes by domain instead).
+# host-published ports and no profiles except the opt-in grammar one (Traefik
+# routes by domain instead).
 # Required env (Dokploy -> Environment): POSTGRES_PASSWORD, COMPILER_TOKEN,
 # COLLAB_SECRET, LLM_CREDENTIALS_KEY. Optional: COLLAB_URL (wss://...), ALLOW_REGISTRATION.
+# Optional grammar checking: set COMPOSE_PROFILES=grammar to start LanguageTool
+# and LANGUAGETOOL_URL=http://languagetool:8010 so the web app uses it.
 name: folio
 
 services:
@@ -71,6 +74,8 @@ services:
       CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
       OPENALEX_MAILTO: ${OPENALEX_MAILTO:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      # Empty = grammar checking off. With the grammar profile: http://languagetool:8010
+      LANGUAGETOOL_URL: ${LANGUAGETOOL_URL:-}
     depends_on:
       db: { condition: service_healthy }
       compiler: { condition: service_started }
@@ -90,7 +95,22 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
-    networks: [default, compile]
+    networks: [default, compile, grammar]
+
+  # Optional LanguageTool server for grammar checking (opt-in profile). Only the
+  # web app can reach it; web does not depend on it, so the stack runs without.
+  # The first check after a start is slow (~30 s) while the JVM warms up.
+  languagetool:
+    profiles: [grammar]
+    image: erikvl87/languagetool:6.8
+    environment:
+      Java_Xms: 256m
+      Java_Xmx: 768m
+    mem_limit: 1g
+    cpus: 1.0
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    networks: [grammar]
 
 networks:
   # Explicit subnets: the shared host's Docker address pools are exhausted
@@ -105,6 +125,12 @@ networks:
     ipam:
       config:
         - subnet: 10.213.1.0/24
+  # Same for LanguageTool: the text it receives never leaves the host.
+  grammar:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.213.2.0/24
 
 volumes:
   pgdata: {}

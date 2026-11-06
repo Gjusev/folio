@@ -132,6 +132,11 @@ const baseEs = {
   "pdf.words": "{n:palabra|palabras}",
   "pdf.lint": "Lint",
   "pdf.lint.none": "chktex no encontró avisos.",
+  "pdf.lint.plusGrammar": "Lint + gramática",
+  "pdf.lint.none.grammar": "Ni chktex ni LanguageTool encontraron avisos.",
+  "pdf.lint.grammarOff": "Revisión gramatical (LanguageTool) no configurada en este servidor.",
+  "pdf.lint.grammarUnreachable":
+    "La revisión gramatical no está disponible ahora; se muestran solo los avisos de chktex.",
   "pdf.opening": "Abriendo el PDF…",
   "pdf.loading": "Cargando el visor…",
   "pdf.error": "No se pudo mostrar el PDF.",
@@ -661,6 +666,11 @@ const baseEn = {
   "pdf.words": "{n:word|words}",
   "pdf.lint": "Lint",
   "pdf.lint.none": "chktex found no warnings.",
+  "pdf.lint.plusGrammar": "Lint + grammar",
+  "pdf.lint.none.grammar": "Neither chktex nor LanguageTool found any warnings.",
+  "pdf.lint.grammarOff": "Grammar checking (LanguageTool) is not configured on this server.",
+  "pdf.lint.grammarUnreachable":
+    "Grammar checking is unavailable right now; showing chktex warnings only.",
   "pdf.opening": "Opening the PDF…",
   "pdf.loading": "Loading the viewer…",
   "pdf.error": "Could not display the PDF.",
@@ -1168,6 +1178,12 @@ const baseDe = {
   "pdf.words": "{n:Wort|Wörter}",
   "pdf.lint": "Lint",
   "pdf.lint.none": "chktex fand keine Warnungen.",
+  "pdf.lint.plusGrammar": "Lint + Grammatik",
+  "pdf.lint.none.grammar": "Weder chktex noch LanguageTool fanden Warnungen.",
+  "pdf.lint.grammarOff":
+    "Grammatikprüfung (LanguageTool) ist auf diesem Server nicht eingerichtet.",
+  "pdf.lint.grammarUnreachable":
+    "Die Grammatikprüfung ist gerade nicht verfügbar; es werden nur chktex-Warnungen angezeigt.",
   "pdf.opening": "PDF wird geöffnet…",
   "pdf.loading": "Viewer wird geladen…",
   "pdf.error": "PDF konnte nicht angezeigt werden.",

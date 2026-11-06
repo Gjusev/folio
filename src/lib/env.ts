@@ -14,6 +14,8 @@ const schema = z.object({
   LLM_ENV_SHARED: z.stringbool().or(z.boolean()).default(true),
   OPENALEX_MAILTO: z.union([z.literal(""), z.email()]).default(""),
   OPENALEX_API_KEY: z.string().default(""),
+  // Optional LanguageTool server (e.g. http://languagetool:8010). Empty = grammar checking off.
+  LANGUAGETOOL_URL: z.union([z.literal(""), z.url()]).default(""),
   // 1/true (default) keeps self-registration open for dev; production operators
   // set 0 to close it. Accepts booleans and the usual string spellings.
   ALLOW_REGISTRATION: z.stringbool().or(z.boolean()).default(true),

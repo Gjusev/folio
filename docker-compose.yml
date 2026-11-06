@@ -90,6 +90,8 @@ services:
       CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
       OPENALEX_MAILTO: ${OPENALEX_MAILTO:-}
       OPENALEX_API_KEY: ${OPENALEX_API_KEY:-}
+      # Empty = grammar checking off. With the grammar profile: http://languagetool:8010
+      LANGUAGETOOL_URL: ${LANGUAGETOOL_URL:-}
     ports:
       - "127.0.0.1:${WEB_PORT:-3000}:3000"
     depends_on:
@@ -125,6 +127,25 @@ services:
       - "127.0.0.1:11434:11434"
     volumes:
       - ollama:/root/.ollama
+    networks: [default]
+
+  # Optional LanguageTool server for grammar checking (not a web dependency).
+  #   docker compose --profile grammar up -d languagetool
+  # pnpm dev on the host: LANGUAGETOOL_URL=http://127.0.0.1:8010
+  # web container (--profile app): LANGUAGETOOL_URL=http://languagetool:8010
+  # The first check after a start is slow (~30 s) while the JVM warms up.
+  languagetool:
+    profiles: [grammar]
+    image: erikvl87/languagetool:6.8
+    environment:
+      Java_Xms: 256m
+      Java_Xmx: 768m
+    ports:
+      - "127.0.0.1:8010:8010"
+    mem_limit: 1g
+    cpus: 1.0
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
     networks: [default]
 
 networks:

@@ -58,6 +58,7 @@ something on your host.
 | `LLM_ALLOW_LOCAL`, `LLM_ALLOWED_LOCAL_PORTS` | no          | off, `11434`            | Let user profiles point at loopback/private hosts (e.g. Ollama)                              |
 | `OPENALEX_MAILTO`                            | no          | empty                   | Contact e-mail for OpenAlex's polite pool                                                    |
 | `OPENALEX_API_KEY`                           | no          | empty                   | A free OpenAlex key so the instance has its own daily budget                                 |
+| `LANGUAGETOOL_URL`                           | no          | empty                   | LanguageTool server for grammar checking (see below); empty turns it off                     |
 | `RATE_LIMIT_MULTIPLIER`                      | no          | `1`                     | Multiplies every rate-limit ceiling. For test stacks only; raising it lowers your protection |
 | `NEXT_PUBLIC_REPO_URL`                       | no          | empty                   | Link to the source shown in the landing footer (build-time)                                  |
 
@@ -66,6 +67,27 @@ Generate secrets with:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+## Grammar checking (LanguageTool)
+
+Optional and off by default. The Lint button then runs chktex alone and says
+grammar checking is not configured. To turn it on:
+
+1. Start the bundled LanguageTool service, which sits behind the `grammar`
+   Compose profile: `docker compose --profile grammar up -d languagetool`
+   locally, or `COMPOSE_PROFILES=grammar` in the Dokploy environment.
+2. Set `LANGUAGETOOL_URL=http://languagetool:8010` for the web container
+   (`http://127.0.0.1:8010` when running `pnpm dev` on the host) and redeploy.
+
+The service is the community `erikvl87/languagetool` image (the LanguageTool
+project publishes no official one), capped at 1 GB of memory with a 768 MB Java
+heap. In Dokploy it sits on an internal network with no published port and only
+the web app can reach it. The web app does not depend on it: if it is stopped
+or slow, Lint shows a short note and keeps the chktex results. Only prose
+leaves the web app (LaTeX commands, math and comments are stripped first), and
+it goes to your own LanguageTool server, never to a third party. The first check
+after a start takes about 30 s while the JVM warms up. Each check covers up to
+30 `.tex` files (main file first) and returns at most 100 issues.
 
 ## Venue profiles
 

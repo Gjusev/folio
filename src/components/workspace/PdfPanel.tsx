@@ -41,8 +41,12 @@ type Props = {
   /** chktex issues over the current sources. */
   lint?: LogIssue[] | null;
   lintBusy?: boolean;
+  /** LanguageTool's part of the last lint run (null = not run yet). */
+  grammar?: GrammarState;
   onLint?: () => void;
 };
+
+export type GrammarState = "on" | "off" | "unreachable" | null;
 
 export function PdfPanel({
   state,
@@ -54,6 +58,7 @@ export function PdfPanel({
   words,
   lint,
   lintBusy,
+  grammar = null,
   onLint,
 }: Props) {
   const { t, lang } = useI18n();
@@ -65,6 +70,7 @@ export function PdfPanel({
   const logRef = useOutsideClose();
   const failed = state.ok === false || Boolean(state.message);
   const zoom = (d: number) => setScale((s) => Math.max(0.4, Math.min(3, (s ?? 1) + d)));
+  const lintLabel = grammar === "on" ? t("pdf.lint.plusGrammar") : t("pdf.lint");
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -139,7 +145,7 @@ export function PdfPanel({
                     ? t("pdf.warnings.one")
                     : warnings.length > 1
                       ? t("pdf.warnings", { n: warnings.length })
-                      : t("pdf.lint"))}
+                      : lintLabel)}
           </p>
           <IssueList issues={errors} tone="text-danger" onReveal={onReveal} />
           {errors.length === 0 && (
@@ -149,7 +155,14 @@ export function PdfPanel({
                 <IssueList issues={lint} tone="text-warn" onReveal={onReveal} />
               )}
               {lint && lint.length === 0 && (
-                <p className="mt-2 text-xs text-muted">{t("pdf.lint.none")}</p>
+                <p className="mt-2 text-xs text-muted">
+                  {t(grammar === "on" ? "pdf.lint.none.grammar" : "pdf.lint.none")}
+                </p>
+              )}
+              {lint && (grammar === "off" || grammar === "unreachable") && (
+                <p className="mt-2 text-xs text-muted" data-testid="grammar-note">
+                  {t(grammar === "off" ? "pdf.lint.grammarOff" : "pdf.lint.grammarUnreachable")}
+                </p>
               )}
             </>
           )}
@@ -202,7 +215,7 @@ export function PdfPanel({
           )}
           {onLint && (
             <button type="button" className="hover:text-ink" onClick={onLint} disabled={lintBusy}>
-              {lintBusy ? t("common.loading") : t("pdf.lint")}
+              {lintBusy ? t("common.loading") : lintLabel}
               {lint && lint.length > 0 ? ` (${lint.length})` : ""}
             </button>
           )}

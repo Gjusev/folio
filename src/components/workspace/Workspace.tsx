@@ -18,12 +18,13 @@ import { OnboardingCard } from "@/components/onboarding/OnboardingCard";
 import { tourEvent, type TaskId } from "@/components/onboarding/tasks";
 import type { AgentPlan } from "@/lib/ai-prompts";
 import type { LogIssue } from "@/lib/latex-log";
+import type { GrammarResult } from "@/lib/grammar";
 import { AiPanel } from "./AiPanel";
 import { ReviewPanel } from "./ReviewPanel";
 import { CodeEditor, type EditorHandle } from "./CodeEditor";
 import { FileTree } from "./FileTree";
 import { PapersPanel } from "@/components/papers/PapersPanel";
-import { PdfPanel, type CompileState } from "./PdfPanel";
+import { PdfPanel, type CompileState, type GrammarState } from "./PdfPanel";
 import { useDocuments, type FileDoc, type SaveStatus } from "./useDocuments";
 import { useOutsideClose } from "./useOutsideClose";
 import { requestCollab } from "@/lib/collab";
@@ -294,19 +295,43 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
   }, [project.id, activeId]);
   const [lint, setLint] = useState<LogIssue[] | null>(null);
   const [lintBusy, setLintBusy] = useState(false);
+  const [grammar, setGrammar] = useState<GrammarState>(null);
 
-  /** chktex warnings over the stored sources; revealed like compile issues. */
+  /**
+   * chktex warnings plus (when the server has LanguageTool) grammar issues,
+   * requested in parallel into one list; revealed like compile issues. chktex
+   * shows as soon as it lands: a slow grammar server only delays its own rows.
+   */
   async function runLint() {
     setLintBusy(true);
     try {
       await docs.store.flush();
+      // Grammar is optional: any failure (rate limit, network) only adds a note.
+      const grammarCall = api<GrammarResult>("POST", `/api/projects/${project.id}/grammar`).catch(
+        (): GrammarResult => ({ off: false, error: "unreachable" }),
+      );
       const r = await api<{ issues: { file: string; line: number; message: string }[] }>(
         "GET",
         `/api/projects/${project.id}/lint`,
       );
-      setLint(
-        r.issues.map((i) => ({ file: i.file, line: i.line, message: `chktex: ${i.message}` })),
-      );
+      const chktex = r.issues.map((i) => ({
+        file: i.file,
+        line: i.line,
+        message: `chktex: ${i.message}`,
+      }));
+      setLint(chktex);
+      const g = await grammarCall;
+      setGrammar(g.off ? "off" : "error" in g ? "unreachable" : "on");
+      const grammarIssues = "issues" in g ? g.issues : [];
+      if (grammarIssues.length)
+        setLint([
+          ...chktex,
+          ...grammarIssues.map((i) => ({
+            file: i.file,
+            line: i.line,
+            message: `languagetool: ${i.message}${i.replacements.length ? ` (${i.replacements.join(", ")})` : ""}`,
+          })),
+        ]);
     } catch (err) {
       setNotice((err as Error).message);
     } finally {
@@ -768,6 +793,7 @@ export function Workspace({ project, initialFiles, aiEnabled, userName }: Props)
         words={words}
         lint={lint}
         lintBusy={lintBusy}
+        grammar={grammar}
         onLint={() => void runLint()}
       />
     </div>
