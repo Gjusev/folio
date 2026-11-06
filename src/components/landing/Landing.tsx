@@ -18,6 +18,15 @@ const P = "/landing/promo";
 
 const rise = (i: number) => ({ "--i": i }) as React.CSSProperties;
 
+// One fragment per capability, in film order.
+const CAPS = [
+  { n: 1, clip: "assistant", w: 900, h: 560 },
+  { n: 2, clip: "search", w: 860, h: 1000 },
+  { n: 3, clip: "graph", w: 1600, h: 900 },
+  { n: 4, clip: "fix", w: 860, h: 930 },
+  { n: 5, clip: "model", w: 1600, h: 900 },
+] as const;
+
 // Chapters around the turn, in the film's order. w/h are the fragment's pixels.
 const BEFORE = [{ id: "lit", clip: "search", w: 860, h: 1000 }] as const;
 const AFTER = [
@@ -141,10 +150,10 @@ export function Landing({
       </a>
 
       <header className="lp-top">
-        <Link href="/" className="lp-wordmark" aria-label="Folio">
+        <Link href="/" className="lp-wordmark lp-in" style={rise(0)} aria-label="Folio">
           <Logo className="h-7 w-auto" />
         </Link>
-        <nav aria-label={t("landing.nav")} className="lp-nav">
+        <nav aria-label={t("landing.nav")} className="lp-nav lp-in" style={rise(1)}>
           <a href="#inside" className="lp-link lp-hide-s">
             {t("landing.cta.more")}
           </a>
@@ -241,7 +250,9 @@ export function Landing({
         {/* Prism: the live number, different on every visit. */}
         <section id="prism" className="lp-sec lp-prism" aria-labelledby="prism-title">
           <div className="lp-prism-num" data-reveal aria-hidden>
-            <span className="lp-days">{Math.max(daysLeft, 0)}</span>
+            <span className="lp-days" data-countup>
+              {Math.max(daysLeft, 0)}
+            </span>
             <span className="lp-days-l">{t("landing.prism.until")}</span>
           </div>
           <div className="lp-prism-body">
@@ -309,16 +320,34 @@ export function Landing({
           </div>
         </section>
 
-        {/* What's inside, at poster scale: name beside its one sentence. */}
+        {/* What's inside: each capability beside its own playing fragment. */}
         <section id="inside" className="lp-sec lp-caps" aria-labelledby="caps-title">
           <h2 id="caps-title" className="lp-h" data-reveal>
             {t("landing.feat.title")}
           </h2>
           <ul className="lp-caps-list">
-            {[1, 2, 3, 4, 5].map((n, j) => (
-              <li key={n} className="lp-cap" data-reveal style={rise(j)}>
-                <h3 className="lp-cap-n">{t(`landing.cap.${n}.s` as MsgKey)}</h3>
-                <p className="lp-cap-d">{t(`landing.cap.${n}.d` as MsgKey)}</p>
+            {CAPS.map((c, j) => (
+              <li
+                key={c.n}
+                className="lp-cap"
+                data-cap={c.n}
+                data-reveal
+                style={rise(Math.min(j, 1))}
+              >
+                <div className="lp-cap-t">
+                  <h3 className="lp-cap-n">{t(`landing.cap.${c.n}.s` as MsgKey)}</h3>
+                  <p className="lp-cap-d">{t(`landing.cap.${c.n}.d` as MsgKey)}</p>
+                </div>
+                <figure className="lp-cap-m">
+                  <LoopVideo
+                    src={`${P}/${c.clip}.mp4`}
+                    mime="video/mp4"
+                    poster={`${P}/${c.clip}.jpg`}
+                    width={c.w}
+                    height={c.h}
+                    label={t(`landing.cap.${c.n}.alt` as MsgKey)}
+                  />
+                </figure>
               </li>
             ))}
           </ul>
@@ -354,6 +383,12 @@ export function Landing({
           </a>
           <Link href="/login" className="lp-link">
             {t("auth.login")}
+          </Link>
+          <Link href="/impressum" className="lp-link">
+            {t("landing.foot.imprint")}
+          </Link>
+          <Link href="/datenschutz" className="lp-link">
+            {t("landing.foot.privacy")}
           </Link>
           <a href="#main" className="lp-link">
             {t("landing.foot.top")}

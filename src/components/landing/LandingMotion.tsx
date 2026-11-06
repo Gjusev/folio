@@ -73,6 +73,30 @@ export function LandingMotion() {
       });
     }
 
+    // ---- [data-countup]: the Prism number counts up once, when it enters
+    for (const el of root.querySelectorAll<HTMLElement>("[data-countup]")) {
+      const target = Number(el.textContent);
+      if (!Number.isFinite(target) || reduce) continue;
+      const io = new IntersectionObserver(
+        ([e]) => {
+          if (!e.isIntersecting) return;
+          io.disconnect();
+          const t0 = performance.now();
+          const dur = 1100;
+          const tick = (t: number) => {
+            const p = Math.min(1, (t - t0) / dur);
+            el.textContent = String(Math.round(target * (1 - Math.pow(2, -10 * p))));
+            if (p < 1) requestAnimationFrame(tick);
+            else el.textContent = String(target);
+          };
+          requestAnimationFrame(tick);
+        },
+        { threshold: 0.4 },
+      );
+      io.observe(el);
+      cleanups.push(() => io.disconnect());
+    }
+
     // ---- one scroll clock for the turn and the drifts
     const turn = root.querySelector<HTMLElement>("[data-turn]");
     const turnVid = turn?.querySelector<HTMLVideoElement>("video") ?? null;

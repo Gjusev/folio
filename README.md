@@ -3,6 +3,26 @@
   <img alt="Folio — the open workspace for writing scientific papers with AI" src="docs/brand/banner-light.png">
 </picture>
 
+<p align="center">
+  <a href="https://github.com/Gjusev/folio/blob/master/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-5fb3c8"></a>
+  <a href="https://folio.mokka-agentur.de"><img alt="Live demo" src="https://img.shields.io/badge/demo-folio.mokka--agentur.de-5fb3c8"></a>
+  <img alt="Prism closes 2027-01-01" src="https://img.shields.io/badge/Prism%20EOL-2027--01--01-8d929b">
+  <img alt="Self-hosted · Docker" src="https://img.shields.io/badge/self--hosted-Docker-8d929b">
+</p>
+
+**The LaTeX editor you can audit.** Write scientific papers with AI on your
+own server: an assistant that knows your whole paper, a drafting agent that
+cites only what exists, a reviewer that quotes your own lines, and every
+change as a diff you apply.
+
+<p align="center">
+  <a href="https://github.com/Gjusev/folio/blob/master/public/landing/promo/film.mp4">
+    <img alt="The Folio film: from literature to a cited draft in 57 seconds" src="public/landing/promo/film.jpg" width="880">
+  </a>
+  <br />
+  <a href="https://github.com/Gjusev/folio/blob/master/public/landing/promo/film.mp4">▶ Watch the film (57 s, with sound)</a>
+</p>
+
 **Write scientific papers with AI you can audit, on your own server.** Folio is
 the open alternative to OpenAI's Prism: an assistant that knows your whole
 paper, a drafting agent that brings real literature as evidence, a reviewer
@@ -54,7 +74,9 @@ is in [docs/moving-from-prism.md](docs/moving-from-prism.md).
 
 ## Try it in a minute
 
-Every new account can start with a **demo project**: a short, finished paper
+There is a public demo instance at **[folio.mokka-agentur.de](https://folio.mokka-agentur.de)**
+(temporary hosting; the legal notes are [here](https://folio.mokka-agentur.de/impressum)). Every
+new account can start with a **demo project**: a short, finished paper
 (equations, a TikZ figure, a table, real citations) that compiles out of the
 box, in English, Spanish or German. Click a sentence in the PDF, cite a paper,
 save a version, ask for a review.
@@ -151,8 +173,8 @@ paid models. See the [roadmap](docs/roadmap.md).
 
 You need Docker. No TeX installation is required.
 
-**From published images** (no clone needed). The images exist once `v0.1.0` is
-published — until then use the from-source commands below. `FOLIO_VERSION` pins
+**From published images** (no clone needed). The images are published with each
+release — until the first release is out, use the from-source commands below. `FOLIO_VERSION` pins
 a release and is documented in the header of the compose file.
 
 ```bash
@@ -277,7 +299,12 @@ docs/                      documentation, brand assets and images
 ## License and credits
 
 [Apache-2.0](LICENSE). TeX Live is installed in the compiler image from Debian
-packages and is not redistributed in this repository. The continuous PDF viewer
+packages and is not redistributed in this repository.
+
+The public demo at [folio.mokka-agentur.de](https://folio.mokka-agentur.de) is
+operated by Mokka Agentur; its [Impressum](https://folio.mokka-agentur.de/impressum)
+and [privacy notice](https://folio.mokka-agentur.de/datenschutz) describe what
+that instance processes. Your own instance answers to nobody but you. The continuous PDF viewer
 pattern is adapted from [assistant-ui/open-prism](https://github.com/assistant-ui/open-prism)
 (MIT). The Switzer typeface is by the Indian Type Foundry, used under the
 [ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl).

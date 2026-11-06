@@ -265,6 +265,9 @@
   animation: lp-arrive 1s var(--lp-ease) both;
   animation-delay: calc(var(--i, 0) * 90ms + 80ms);
 }
+.lp-top .lp-in {
+  animation-duration: 0.8s;
+}
 
 /* film fragments sit on the ground: feather their edges into it */
 .lp-hero-film video,
@@ -520,7 +523,20 @@
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: clamp(16px, 4vw, 72px);
-  align-items: baseline;
+  align-items: center;
+  padding: clamp(28px, 5vh, 56px) 0;
+}
+.lp-cap:nth-child(even) {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+.lp-cap:nth-child(even) .lp-cap-t {
+  order: 2;
+}
+.lp-cap-m video {
+  width: 100%;
+  height: auto;
+  max-height: 68vh;
+  object-fit: contain;
 }
 .lp-cap-n {
   margin: 0;
@@ -731,8 +747,13 @@
   }
   .lp-prism,
   .lp-self-run,
-  .lp-cap {
+  .lp-cap,
+  /* nth-child(even) outranks a bare .lp-cap, so restate it here */
+  .lp-cap:nth-child(even) {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .lp-cap:nth-child(even) .lp-cap-t {
+    order: 0;
   }
   .lp-prism-num {
     position: static;
@@ -745,7 +766,7 @@
     font-size: 2.25rem;
   }
   .lp-h {
-    font-size: 1.875rem;
+    font-size: 1.75rem;
   }
   .lp-turn-lock .lp-h {
     font-size: 1.5rem;
@@ -817,4 +838,77 @@
   .lp-turn-lock .lp-h {
     font-size: 2rem;
   }
+}
+
+/* ---------------------------------------------------------------- legal pages */
+.lp-doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(120px, 16vh, 180px) var(--lp-m) 96px;
+}
+.lp-doc-h {
+  font-size: clamp(2rem, 1.2rem + 2.4vw, 3.5rem);
+  margin-bottom: 6px;
+}
+.lp-doc-upd {
+  margin: 0 0 40px;
+  font-family: var(--lp-mono);
+  font-size: 14px;
+  color: var(--lp-muted);
+}
+.lp-doc h2 {
+  margin: 48px 0 12px;
+  font-family: var(--lp-serif);
+  font-weight: 500;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.lp-doc h3 {
+  margin: 28px 0 8px;
+  font-family: var(--lp-sans);
+  font-weight: 500;
+  font-size: 1.0625rem;
+}
+.lp-doc p {
+  margin: 12px 0;
+  max-width: none;
+}
+.lp-doc a.lp-link {
+  word-break: break-word;
+}
+.lp-doc table {
+  margin: 20px 0;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.lp-doc th,
+.lp-doc td {
+  text-align: left;
+  padding: 10px 18px 10px 0;
+  vertical-align: top;
+}
+.lp-doc th {
+  font-weight: 500;
+  color: var(--lp-ink);
+}
+.lp-doc td {
+  color: #c9ccd1;
+}
+.lp-doc code {
+  font: 0.9em var(--lp-mono);
+  color: var(--lp-accent);
+}
+.lp-ph {
+  background: rgba(226, 168, 68, 0.16);
+  color: #e8c27a;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.lp-doc-lead {
+  font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.25rem);
+  line-height: 1.55;
+  color: var(--lp-ink);
+  max-width: 34em;
 }
