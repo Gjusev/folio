@@ -53,6 +53,22 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
 
+/** Password-reset links sent by e-mail: single use, short-lived. */
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    // SHA-256 of the token in the link; the raw token is never stored.
+    id: text().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("password_resets_user_idx").on(t.userId)],
+);
+
 export const projects = pgTable(
   "projects",
   {

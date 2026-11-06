@@ -19,6 +19,24 @@ const schema = z.object({
   // 1/true (default) keeps self-registration open for dev; production operators
   // set 0 to close it. Accepts booleans and the usual string spellings.
   ALLOW_REGISTRATION: z.stringbool().or(z.boolean()).default(true),
+  // Public origin (https://folio.example.org). Absolute links in e-mails are
+  // built ONLY from this, never from the request's Host header.
+  APP_URL: z.union([z.literal(""), z.url()]).default(""),
+  // Optional SMTP, as one URL (smtps://user:pass@smtp.example.org:465) or as
+  // discrete SMTP_HOST/PORT/USER/PASS (no URL-encoding of special characters).
+  // SMTP_URL wins when both are set. Neither = no e-mail: no password reset by
+  // mail, no invitation e-mails.
+  SMTP_URL: z.union([z.literal(""), z.url()]).default(""),
+  SMTP_HOST: z.string().default(""),
+  // "" (compose passes unset vars as empty) means the default, not port 0.
+  SMTP_PORT: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number().int().min(1).max(65_535).default(465),
+  ),
+  SMTP_USER: z.string().default(""),
+  SMTP_PASS: z.string().default(""),
+  // Sender; empty = SMTP_USER when it is an address, else "Folio <no-reply@APP_URL's host>".
+  SMTP_FROM: z.string().default(""),
   // Multiplies every rate-limit ceiling (1 = production default, unchanged).
   // For test stacks that hammer one instance from one IP, e.g. the e2e suite
   // needing more than 10 log-ins per 15 minutes. Not a security knob: raising

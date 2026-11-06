@@ -48,11 +48,15 @@ export function ShareMenu({ projectId }: Props) {
     setError(null);
     setNote(null);
     try {
-      await api("POST", `/api/projects/${projectId}/members`, { email: email.trim(), role });
+      const { emailed } = await api<{ emailed?: boolean }>(
+        "POST",
+        `/api/projects/${projectId}/members`,
+        { email: email.trim(), role },
+      );
       tourEvent("share-or-token");
       setMembers(null); // reload on next open/effect run
       setEmail("");
-      setNote(t("share.invited"));
+      setNote(emailed ? `${t("share.invited")} · ${t("share.emailed")}` : t("share.invited"));
       const r = await api<{ owner: { email: string; name: string } | null; members: Member[] }>(
         "GET",
         `/api/projects/${projectId}/members`,

@@ -24,9 +24,12 @@ const BENEFITS = [
 export function AuthForm({
   mode,
   registrationOpen = true,
+  canReset = false,
 }: {
   mode: "login" | "register";
   registrationOpen?: boolean;
+  /** SMTP configured: offer the e-mailed password reset. */
+  canReset?: boolean;
 }) {
   const router = useRouter();
   const { t, lang } = useI18n();
@@ -173,6 +176,13 @@ export function AuthForm({
             onChange={(e) => setPassword(e.target.value)}
             aria-describedby={isRegister ? "password-hint" : undefined}
           />
+          {!isRegister && canReset && (
+            <p className="mt-1 text-right text-xs">
+              <Link className="text-accent underline-offset-4 hover:underline" href="/forgot">
+                {t("auth.forgot.link")}
+              </Link>
+            </p>
+          )}
           {isRegister && (
             <p
               id="password-hint"

@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { enforceRateLimit, parseJson, requireUser, route } from "@/lib/http";
+import { requestLang } from "@/lib/i18n/request";
+import { appUrl, mailEnabled, sendMail } from "@/lib/mail";
+import { inviteEmail } from "@/lib/mail-templates";
 import { addMember, getOwnedProject, listMembers } from "@/lib/projects";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
@@ -33,6 +36,17 @@ export const POST = route(async (req, { params }: Ctx) => {
   const project = await getOwnedProject(user.id, (await params).id);
   enforceRateLimit(`share:${user.id}`, 20, 60_000);
   const { email, role } = await parseJson(req, body);
-  const member = await addMember(project.id, email, role);
-  return Response.json({ member }, { status: 201 });
+  const { created, ...member } = await addMember(project.id, email, role);
+  // New members only (not role changes); best effort, never blocks or fails the share.
+  const emailed = created && mailEnabled();
+  if (emailed) {
+    const mail = inviteEmail(requestLang(req), {
+      inviterName: user.name,
+      projectName: project.name,
+      role,
+      link: `${appUrl()}/projects/${project.id}`,
+    });
+    void sendMail({ to: member.email, ...mail }).catch(() => {});
+  }
+  return Response.json({ member, emailed }, { status: 201 });
 });

@@ -79,6 +79,12 @@ services:
       # resolves inside the docker network; real deployments expose the relay
       # with a proxy and use a wss:// URL here.
       APP_URL: ${APP_URL:-}
+      SMTP_URL: ${SMTP_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       COLLAB_URL: ${COLLAB_URL:-}
       COLLAB_SECRET: ${COLLAB_SECRET:-}
       # 0 closes self-registration (existing accounts keep logging in).

@@ -12,6 +12,13 @@ export const registerBody = credentials.extend({
   name: z.string().trim().min(1, "Indica tu nombre").max(100),
 });
 
+export const forgotBody = credentials.pick({ email: true });
+
+// Same password rule as sign-up; the token is base64url of 32 random bytes.
+export const resetBody = credentials.pick({ password: true }).extend({
+  token: z.string().min(1).max(200),
+});
+
 export const projectName = z.string().trim().min(1, "El nombre no puede estar vacío").max(120);
 
 export const fileContent = z.string().max(MAX_FILE_BYTES, "El archivo supera 1 MB");

@@ -9,6 +9,7 @@ import { graphDict } from "./graph-dict";
 import { landingDict } from "./landing-dict";
 import { letterDict } from "./letter-dict";
 import { libraryDict } from "./library-dict";
+import { mailDict } from "./mail-dict";
 import { library2Dict } from "./library2-dict";
 import { onboardingDict } from "./onboarding-dict";
 import { reviewDict } from "./review-dict";
@@ -560,6 +561,7 @@ export const es = {
   ...commentsDict.es,
   ...aiDict.es,
   ...onboardingDict.es,
+  ...mailDict.es,
 };
 export type MsgKey = keyof typeof es;
 export type Dict = { [K in MsgKey]: string };
@@ -1607,6 +1609,7 @@ export const en: Dict = {
   ...commentsDict.en,
   ...aiDict.en,
   ...onboardingDict.en,
+  ...mailDict.en,
 };
 export const de: Dict = {
   ...baseDe,
@@ -1620,6 +1623,7 @@ export const de: Dict = {
   ...commentsDict.de,
   ...aiDict.de,
   ...onboardingDict.de,
+  ...mailDict.de,
 };
 
 export const DICTS: Record<Lang, Dict> = { es, en, de };

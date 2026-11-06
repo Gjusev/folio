@@ -48,7 +48,11 @@ something on your host.
 | `COMPILER_TOKEN`                             | yes         |                         | Shared secret between web and compiler; also signs collab tokens if `COLLAB_SECRET` is unset |
 | `DATABASE_URL`                               | dev only    |                         | Set by Compose in containers; needed when running `pnpm dev` on the host                     |
 | `COMPILER_URL`                               | dev only    |                         | `http://127.0.0.1:3001` in development; set by Compose in containers                         |
-| `APP_URL`                                    | prod        | `http://localhost:3000` | Public origin, used for absolute links such as the Open Graph image                          |
+| `APP_URL`                                    | prod, mail  | `http://localhost:3000` | Public origin for absolute links (Open Graph image, e-mail links). Required for e-mail       |
+| `SMTP_URL`                                   | no          | empty                   | SMTP as one URL (`smtps://user:pass@host:465`); empty (and no `SMTP_HOST`) turns e-mail off  |
+| `SMTP_HOST`, `SMTP_PORT`                     | no          | empty, `465`            | SMTP as discrete values; `465` uses implicit TLS, other ports STARTTLS. `SMTP_URL` wins      |
+| `SMTP_USER`, `SMTP_PASS`                     | no          | empty                   | SMTP credentials for the discrete form, taken verbatim (no URL-encoding)                     |
+| `SMTP_FROM`                                  | no          | see below               | Sender address; default `SMTP_USER` if it is an address, else `no-reply@` the `APP_URL` host |
 | `ALLOW_REGISTRATION`                         | no          | `1`                     | `0` closes self-registration; existing accounts keep signing in                              |
 | `COLLAB_URL`                                 | no          | empty                   | WebSocket URL the browser uses for live collaboration; empty turns it off                    |
 | `COLLAB_SECRET`                              | no          | `COMPILER_TOKEN`        | HMAC key for collaboration room tokens (give the relay the same value)                       |
@@ -89,6 +93,48 @@ it goes to your own LanguageTool server, never to a third party. The first check
 after a start takes about 30 s while the JVM warms up. Each check covers up to
 30 `.tex` files (main file first) and returns at most 100 issues.
 
+## E-mail (optional)
+
+Off by default: with neither `SMTP_URL` nor `SMTP_HOST` set, Folio sends no
+e-mail and behaves as before. With SMTP configured it enables:
+
+- **Password reset by e-mail.** The login page shows "Forgot your password?";
+  `/forgot` mails a link to `/reset`. Tokens are random, stored only as a
+  SHA-256 hash, valid for 30 minutes and single-use; asking again invalidates
+  the previous link. A successful reset signs the user out of every session and
+  does not log them in. `/forgot` answers the same whether the account exists or
+  not, and is rate-limited per IP and per address.
+- **Invitation e-mails.** Sharing a project with an existing account also mails
+  the new member a link to it (role changes send nothing). Sharing with an
+  address that has no account is still refused.
+
+`pnpm reset-password` keeps working either way and stays the rescue path.
+
+Two ways to configure the server, pick one (`SMTP_URL` wins if both are set):
+
+```bash
+# One URL. Special characters in the user or password must be URL-encoded.
+SMTP_URL=smtps://folio%40example.org:secret@smtp.example.org:465
+# Discrete values, taken verbatim: recommended when the password has
+# characters such as @ # : / ? %.
+SMTP_HOST=smtp.example.org
+SMTP_PORT=465            # 465 = implicit TLS; 587 = STARTTLS
+SMTP_USER=folio@example.org
+SMTP_PASS=p@ss#word
+```
+
+Mind the `$`: Compose interpolates env values, so a literal `$` in `SMTP_PASS`
+is silently truncated (verified with `docker compose config`: `pa$w0rd` reaches
+the container as `pa`). In Compose env files write `$$`, or wrap the value in
+single quotes; `#` needs no quoting. `pnpm dev` on the host takes the value
+verbatim.
+
+`APP_URL` is **required** for e-mail: links are built only from it, never from
+the request's `Host` header. In production, SMTP with an empty `APP_URL` keeps
+e-mail off and logs `SMTP set but APP_URL empty: mail disabled`. Many
+providers reject a sender other than the authenticated mailbox, which is why
+`SMTP_FROM` defaults to `SMTP_USER` when that is an address.
+
 ## Venue profiles
 
 The submission checklist's venue profiles (NeurIPS, ICML, ACL, IEEE, Elsevier,
@@ -102,10 +148,10 @@ when updating a value and bump `VENUES_VERSION`; nothing else needs deploying.
 
 - **Public instance checklist.** Set `ALLOW_REGISTRATION=0` once your accounts
   exist; set `LLM_ENV_SHARED=false` if the server has an LLM key; set `APP_URL`.
-- **Password reset.** There is no e-mail flow (Folio does not assume a mail
-  server). An administrator resets a password on the server:
-  `pnpm reset-password user@example.org` (or the same script inside the web
-  container).
+- **Password reset.** Without SMTP there is no e-mail flow; with it, see
+  [E-mail](#e-mail-optional). Either way an administrator can reset a password
+  on the server: `pnpm reset-password user@example.org` (or the same script
+  inside the web container).
 - **Upgrades.** Pull, rebuild, restart. Migrations are applied by the web
   container on start-up; never apply migration SQL by hand, or drizzle's journal
   will disagree with the schema.

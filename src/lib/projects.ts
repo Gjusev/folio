@@ -266,14 +266,17 @@ export async function addMember(projectId: string, email: string, role: "editor"
     .where(eq(schema.users.email, email.toLowerCase()))
     .limit(1);
   if (!user) throw fail(404, "api.members.noAccount");
-  await db()
+  const [row] = await db()
     .insert(schema.projectMembers)
     .values({ projectId, userId: user.id, role })
     .onConflictDoUpdate({
       target: [schema.projectMembers.projectId, schema.projectMembers.userId],
       set: { role },
-    });
-  return { userId: user.id, email: email.toLowerCase(), role };
+    })
+    // Postgres idiom: xmax = 0 only on a freshly inserted row, not on the
+    // conflict update. Tells a new member from a role change atomically.
+    .returning({ created: sql<boolean>`(xmax = 0)` });
+  return { userId: user.id, email: email.toLowerCase(), role, created: row.created };
 }
 
 export async function removeMember(projectId: string, userId: string) {
