@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 // Public, static routes only — the app pages sit behind auth.
-export const revalidate = 3600; // read APP_URL at runtime, not build time
+export const dynamic = "force-dynamic"; // APP_URL exists at runtime, not at build
 
 const base = process.env.APP_URL || "http://localhost:3000";
 
