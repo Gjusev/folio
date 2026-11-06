@@ -35,7 +35,13 @@ services:
     tmpfs:
       - /tmp:size=512m,mode=1777
     cap_drop: [ALL]
-    security_opt: ["no-new-privileges:true"]
+    # The allow-all seccomp profile (see deploy/seccomp-README.md) trades the
+    # default syscall filter for per-job bubblewrap namespaces: Docker's
+    # default profile blocks clone(CLONE_NEWUSER), so bwrap cannot jail TeX
+    # jobs without it. Chosen after the production boot probe reported
+    # isolation=none on 2026-11-06 (kernel 6.1, userns enabled, seccomp deny).
+    security_opt:
+      ["no-new-privileges:true", "seccomp=./deploy/seccomp-compile-userns.json"]
     mem_limit: 1g
     cpus: 2
     pids_limit: 256
