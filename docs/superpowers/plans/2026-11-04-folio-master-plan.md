@@ -200,6 +200,17 @@ server image, internal network); `/api/projects/[id]/grammar` sends prose only
 back to source lines — pure function, tested); results appear in the issue list
 next to chktex. Off when `LANGUAGETOOL_URL` is empty.
 
+**Status: DONE (2026-11-06, 874065d).** `src/lib/latex-prose.ts` records the
+source index of every output character, so findings map back to the exact line
+whatever the extraction rules do (37 tests + 300-document fuzz). The grammar
+route fails fast on a dead server (one request), and a 60 s run budget cuts a
+slow-but-alive one. chktex results render before grammar. The compose service is
+`erikvl87/languagetool:6.8` (LanguageTool publishes no official image), behind
+`profiles: [grammar]`. Verified end to end against a REAL LanguageTool locally:
+the issue is shown and clicking it jumps to the right line. Production is
+deployed OFF (to enable: `COMPOSE_PROFILES=grammar` +
+`LANGUAGETOOL_URL=http://languagetool:8010`, about 1 GB RAM).
+
 ## Phase 4c — Optional SMTP
 
 **Scope:** `SMTP_URL` (empty = off, today's behaviour). When set: password reset
