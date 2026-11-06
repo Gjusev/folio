@@ -220,6 +220,16 @@ projects, rate limits. `pnpm reset-password` stays.
 **Acceptance for 4a–4c:** each is off/neutral by default, documented in
 `docs/deployment.md`, and covered by unit + e2e tests.
 
+**Status 4c: DONE (2026-11-06, 6f5c9c8), and ENABLED in production** (netcup
+SMTP via the discrete SMTP_HOST/PORT/USER/PASS form; the password's `#` needs
+no quoting in compose, `$` would need single quotes — documented). Reset
+tokens: single-use atomic UPDATE, 30 min, sha256 at rest, one clock (the
+DB's), and a reset revokes every session. No account enumeration by response
+or by TIMING (measured 6x before, 0.1 ms = 0.1 ms after). Reset links build
+only from APP_URL. Invite mails escape everything and never block the share;
+sendMail rejects CRLF recipients (proven injection at the nodemailer boundary).
+Full e2e against a fake SMTP plus a real-delivery probe in production.
+
 ---
 
 ## Phase 5 — Per-job compile isolation
