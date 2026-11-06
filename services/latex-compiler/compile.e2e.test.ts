@@ -109,6 +109,18 @@ describe.skipIf(!URL_)("latex-compiler (real container)", () => {
     expect(status).toBe(401);
   });
 
+  it("/health always reports the compile isolation mode (additive field)", async () => {
+    const res = await fetch(`${URL_}/health`);
+    const body = (await res.json()) as { ok: boolean; active: number; isolation?: string };
+    expect(body.ok).toBe(true);
+    // Never missing, always one of the two modes. When the container was
+    // started with the staged seccomp profile (deploy/seccomp-compile-
+    // userns.json — needed wherever Docker's default profile blocks user
+    // namespaces), the boot probe must have succeeded.
+    expect(["bwrap", "none"]).toContain(body.isolation);
+    if (process.env.COMPILER_E2E_EXPECT_BWRAP === "1") expect(body.isolation).toBe("bwrap");
+  });
+
   it("compiles projects whose main file sits in a subfolder", async () => {
     const { body } = await compile(
       [

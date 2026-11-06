@@ -1,0 +1,7 @@
+{
+  "comment": "Folio compiler fallback profile: deliberately ALLOW-everything. Docker's default seccomp profile blocks clone/unshare with user-namespace flags for unprivileged users on some hosts, which keeps the compiler's per-job bubblewrap sandbox from working (the boot probe then reports isolation=none). This profile trades default-seccomp filtering for per-job namespace isolation. NOT wired into any compose file; see deploy/seccomp-README.md before using it.",
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "defaultErrnoRet": 1,
+  "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_X86"],
+  "syscalls": []
+}

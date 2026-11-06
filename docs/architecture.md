@@ -112,9 +112,37 @@ commands (`\write18`), exhaust resources (infinite loops) or exfiltrate data.
    infinite loops, wrong token), and that every template and the demo project
    compile with resolved citations.
 
-Known limit: jobs from different users share the container, one after another.
-The planned upgrade is an ephemeral container or microVM per job (gVisor,
-Firecracker).
+### Compile isolation (per-job namespaces)
+
+The threat model above assumes users are untrusted: `latexmk` executes TeX code
+they wrote, so the controls in point 3 are permission-level (TeX refuses to
+open paths outside the job directory). Since jobs from different users share
+the container, one after another, they add a namespace boundary: when the host
+allows it, every tool spawn (`latexmk`, `chktex`, `texcount`, `synctex`,
+`latexdiff`) is wrapped in [bubblewrap](https://github.com/containers/bubblewrap)
+— `bwrap --unshare-all --die-with-parent --new-session` with the whole root
+read-only, a fresh private `/tmp` and the job directory as the only writable
+path. One job cannot even **see** another job's files, and there is no network,
+no IPC and no other writable path inside the sandbox at all.
+
+This is self-adapting: a one-shot boot probe runs the exact production wrap
+with `/usr/bin/true`; if the kernel or the container's seccomp profile does not
+allow user namespaces, the service logs one line (`isolation=none reason=…`,
+with the kernel release and the userns sysctl) and keeps today's behavior —
+compilation never depends on the sandbox being available. `/health` reports the
+active mode (`isolation: "bwrap" | "none"`, additive field).
+
+Where Docker's default seccomp profile blocks user namespaces,
+`deploy/seccomp-compile-userns.json` is staged as a fallback of last resort: a
+deliberately allow-all profile (a real weakening of the container) justified
+only because every job then runs in its own namespace sandbox. It is not wired
+into any compose file; the operator wires it onto the compiler service only if
+the production boot probe reports `isolation=none` for that reason
+(`deploy/seccomp-README.md`).
+
+Remaining limit: jobs still share one kernel. A container escape or a kernel
+vulnerability is out of scope for bubblewrap; the planned deeper upgrade
+remains an ephemeral container or microVM per job (gVisor, Firecracker).
 
 ## Design system
 

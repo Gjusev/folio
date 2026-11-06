@@ -7,7 +7,7 @@ import { timingSafeEqual } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { readdirSync, rmSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { tmpdir } from "node:os";
+import { release, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -216,6 +216,121 @@ async function writeFiles(
   }
 }
 
+// ---- Per-job sandbox (bubblewrap) ----
+// Every tool spawn can run inside its own user+mount namespace: the job
+// directory is the only writable path and the only part of /tmp that
+// exists, so one job cannot even SEE another job's files — namespace
+// isolation on top of the permission-level rules (openin/openout_any).
+// Self-adapting: probed once at boot; when the host (kernel or container
+// seccomp) does not allow user namespaces, jobs keep today's behavior.
+// Compilation must never break because the sandbox is unavailable.
+
+export type IsolationMode = "bwrap" | "none";
+
+let SANDBOX: IsolationMode = "none";
+
+/**
+ * The exact bwrap argv. Order matters: mounts apply in sequence and later
+ * mounts win — / / is read-only, /tmp becomes a fresh private tmpfs, and
+ * the job dir (bound after it) is re-exposed as the only writable real
+ * path. --unshare-all includes the network namespace (no TeX tool needs
+ * network) and IPC; if a tool ever turns out to need IPC, drop only
+ * --unshare-ipc here. --die-with-parent + --new-session keep the existing
+ * process-group kill working: killing bwrap reaps the sandboxed tree.
+ */
+export function bwrapArgs(jobDir: string, cmd: string, args: string[]): string[] {
+  return [
+    "--unshare-all",
+    "--die-with-parent",
+    "--new-session",
+    "--ro-bind",
+    "/",
+    "/",
+    "--dev",
+    "/dev",
+    "--proc",
+    "/proc",
+    "--tmpfs",
+    "/tmp",
+    "--bind",
+    jobDir,
+    jobDir,
+    "--chdir",
+    jobDir,
+    "--",
+    cmd,
+    ...args,
+  ];
+}
+
+/** Formats the one boot log line (pure; unit-tested). */
+export function probeLogLine(
+  mode: IsolationMode,
+  reason: string,
+  kernel: string,
+  userns: string,
+): string {
+  return mode === "bwrap"
+    ? `isolation=bwrap kernel=${kernel} userns=${userns}`
+    : `isolation=none reason=${reason} kernel=${kernel} userns=${userns}`;
+}
+
+/**
+ * One-shot boot probe: the EXACT production wrap (a fresh temp job dir,
+ * /usr/bin/true as the payload) under a 5 s timeout. Anything but a clean
+ * exit 0 — bwrap missing, seccomp blocking user namespaces, no kernel
+ * support — leaves the service in today's unsandboxed mode.
+ */
+async function probeSandbox(): Promise<{ mode: IsolationMode; reason: string }> {
+  const dir = await mkdtemp(join(tmpdir(), "probe-"));
+  try {
+    return await new Promise((resolve) => {
+      const child = spawn("bwrap", bwrapArgs(dir, "/usr/bin/true", []), {
+        cwd: dir,
+        detached: true,
+        stdio: ["ignore", "ignore", "pipe"],
+        env: {
+          NODE_ENV: "production",
+          PATH: process.env.PATH ?? "/usr/bin:/bin",
+          HOME: dir,
+        },
+      });
+      let stderr = "";
+      child.stderr.on("data", (c: Buffer) => {
+        stderr += c;
+      });
+      const timer = setTimeout(() => {
+        try {
+          process.kill(-child.pid!, "SIGKILL");
+        } catch {
+          /* already gone */
+        }
+        resolve({ mode: "none", reason: "bwrap probe timed out after 5s" });
+      }, 5_000);
+      child.on("error", (err) => {
+        clearTimeout(timer);
+        resolve({
+          mode: "none",
+          reason: `bwrap unavailable (${(err as NodeJS.ErrnoException).code ?? err.message})`,
+        });
+      });
+      child.on("close", (code) => {
+        clearTimeout(timer);
+        if (code === 0) return resolve({ mode: "bwrap", reason: "" });
+        const head = stderr.split("\n")[0]?.slice(0, 120);
+        resolve({ mode: "none", reason: `bwrap exit ${code}${head ? `: ${head}` : ""}` });
+      });
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/** Routes a tool spawn through the sandbox when the boot probe succeeded. */
+function wrap(cmd: string, args: string[], jobDir: string): { cmd: string; args: string[] } {
+  return SANDBOX === "bwrap" ? { cmd: "bwrap", args: bwrapArgs(jobDir, cmd, args) } : { cmd, args };
+}
+
 /** Runs latexmk on `mainFile` inside `dir` and packages the outcome. */
 async function render(dir: string, mainFile: string): Promise<CompileResult> {
   const { code, timedOut } = await run(dir, mainFile);
@@ -361,23 +476,24 @@ const LATEXDIFF_TIMEOUT_MS = 20_000;
 
 function latexdiff(dir: string, oldMain: string, newMain: string, outPath: string) {
   return new Promise<{ code: number | null; timedOut: boolean }>((resolve) => {
-    const child = spawn(
+    const tool = wrap(
       "latexdiff",
       ["--flatten", "--encoding=UTF8", join("old", oldMain), join("new", newMain)],
-      {
-        cwd: dir,
-        detached: true,
-        stdio: ["ignore", "pipe", "pipe"],
-        env: {
-          NODE_ENV: "production",
-          PATH: process.env.PATH ?? "/usr/bin:/bin",
-          HOME: dir,
-          openin_any: "p",
-          openout_any: "p",
-          shell_escape: "f",
-        },
-      },
+      dir,
     );
+    const child = spawn(tool.cmd, tool.args, {
+      cwd: dir,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        NODE_ENV: "production",
+        PATH: process.env.PATH ?? "/usr/bin:/bin",
+        HOME: dir,
+        openin_any: "p",
+        openout_any: "p",
+        shell_escape: "f",
+      },
+    });
     let out = "";
     child.stdout.on("data", (c: Buffer) => {
       out += c;
@@ -413,7 +529,8 @@ const TOOL_TIMEOUT_MS = 20_000;
  */
 function runTool(cmd: string, args: string[], cwd: string) {
   return new Promise<{ code: number | null; out: string; timedOut: boolean }>((resolve) => {
-    const child = spawn(cmd, args, {
+    const tool = wrap(cmd, args, cwd);
+    const child = spawn(tool.cmd, tool.args, {
       cwd,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -620,7 +737,7 @@ export async function synctex(req: SynctexRequest): Promise<SynctexResult> {
 
 function run(cwd: string, mainFile: string): Promise<{ code: number | null; timedOut: boolean }> {
   return new Promise((resolve) => {
-    const child = spawn(
+    const tool = wrap(
       "latexmk",
       [
         "-norc",
@@ -633,22 +750,23 @@ function run(cwd: string, mainFile: string): Promise<{ code: number | null; time
         "-no-shell-escape",
         mainFile,
       ],
-      {
-        cwd,
-        detached: true, // own process group, so the whole tree can be killed
-        stdio: "ignore",
-        env: {
-          NODE_ENV: "production",
-          PATH: process.env.PATH ?? "/usr/bin:/bin",
-          HOME: cwd,
-          // TeX may only read/write inside the job directory; no \write18.
-          openin_any: "p",
-          openout_any: "p",
-          shell_escape: "f",
-          max_print_line: "1000",
-        },
-      },
+      cwd,
     );
+    const child = spawn(tool.cmd, tool.args, {
+      cwd,
+      detached: true, // own process group, so the whole tree can be killed
+      stdio: "ignore",
+      env: {
+        NODE_ENV: "production",
+        PATH: process.env.PATH ?? "/usr/bin:/bin",
+        HOME: cwd,
+        // TeX may only read/write inside the job directory; no \write18.
+        openin_any: "p",
+        openout_any: "p",
+        shell_escape: "f",
+        max_print_line: "1000",
+      },
+    });
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
@@ -701,7 +819,8 @@ const ROUTES = new Set(["/compile", "/diff", "/lint", "/count", "/synctex", "/ar
 let active = 0;
 
 export const server = createServer(async (req, res) => {
-  if (req.method === "GET" && req.url === "/health") return send(res, 200, { ok: true, active });
+  if (req.method === "GET" && req.url === "/health")
+    return send(res, 200, { ok: true, active, isolation: SANDBOX });
   if (req.method !== "POST" || !ROUTES.has(String(req.url)))
     return send(res, 404, { error: "not found" });
   if (!authorized(req)) return send(res, 401, { error: "unauthorized" });
@@ -761,10 +880,18 @@ if (process.argv[1]?.endsWith("server.ts")) {
     console.error("COMPILER_TOKEN must be set (>= 16 chars)");
     process.exit(1);
   }
-  // A SIGKILL mid-compile leaks job dirs; sweep them on boot.
-  for (const d of readdirSync(tmpdir()).filter((d) => d.startsWith("job-"))) {
+  // A SIGKILL mid-compile leaks job (and probe) dirs; sweep them on boot.
+  for (const d of readdirSync(tmpdir()).filter((d) => /^(job|probe)-/.test(d))) {
     rmSync(join(tmpdir(), d), { recursive: true, force: true });
   }
+  // Probe the sandbox BEFORE listening, so the mode is decided (and logged)
+  // before the first job arrives.
+  const userns = await readFile("/proc/sys/user/max_user_namespaces", "utf8")
+    .then((s) => s.trim())
+    .catch(() => "?");
+  const probe = await probeSandbox();
+  SANDBOX = probe.mode;
+  console.log(probeLogLine(SANDBOX, probe.reason, release(), userns));
   server.listen(PORT, () =>
     console.log(`latex-compiler listening on :${PORT} (max ${MAX_JOBS} jobs)`),
   );

@@ -9,9 +9,12 @@ RUN apt-get update \
       texlive-fonts-recommended texlive-science texlive-bibtex-extra \
       texlive-publishers biber \
       chktex texlive-extra-utils \
+      bubblewrap \
  && rm -rf /var/lib/apt/lists/*
 # chktex: linter (/lint). texcount ships inside texlive-extra-utils (/count).
 # synctex ships inside texlive-binaries, already pulled by texlive-latex-base.
+# bubblewrap: per-job user+mount namespaces (server.ts probes it at boot and
+# falls back to unsandboxed spawns when the host does not allow them).
 
 WORKDIR /app
 COPY server.ts ./
