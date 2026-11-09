@@ -42,29 +42,30 @@ something on your host.
 
 ## Environment reference
 
-| Variable                                     | Required    | Default                 | Purpose                                                                                      |
-| -------------------------------------------- | ----------- | ----------------------- | -------------------------------------------------------------------------------------------- |
-| `POSTGRES_PASSWORD`                          | yes         |                         | Database password (must match the one the data volume was initialised with)                  |
-| `COMPILER_TOKEN`                             | yes         |                         | Shared secret between web and compiler; also signs collab tokens if `COLLAB_SECRET` is unset |
-| `DATABASE_URL`                               | dev only    |                         | Set by Compose in containers; needed when running `pnpm dev` on the host                     |
-| `COMPILER_URL`                               | dev only    |                         | `http://127.0.0.1:3001` in development; set by Compose in containers                         |
-| `APP_URL`                                    | prod, mail  | `http://localhost:3000` | Public origin for absolute links (Open Graph image, e-mail links). Required for e-mail       |
-| `SMTP_URL`                                   | no          | empty                   | SMTP as one URL (`smtps://user:pass@host:465`); empty (and no `SMTP_HOST`) turns e-mail off  |
-| `SMTP_HOST`, `SMTP_PORT`                     | no          | empty, `465`            | SMTP as discrete values; `465` uses implicit TLS, other ports STARTTLS. `SMTP_URL` wins      |
-| `SMTP_USER`, `SMTP_PASS`                     | no          | empty                   | SMTP credentials for the discrete form, taken verbatim (no URL-encoding)                     |
-| `SMTP_FROM`                                  | no          | see below               | Sender address; default `SMTP_USER` if it is an address, else `no-reply@` the `APP_URL` host |
-| `ALLOW_REGISTRATION`                         | no          | `1`                     | `0` closes self-registration; existing accounts keep signing in                              |
-| `COLLAB_URL`                                 | no          | empty                   | WebSocket URL the browser uses for live collaboration; empty turns it off                    |
-| `COLLAB_SECRET`                              | no          | `COMPILER_TOKEN`        | HMAC key for collaboration room tokens (give the relay the same value)                       |
-| `LLM_CREDENTIALS_KEY`                        | for AI keys |                         | Encrypts per-user provider keys at rest; rotating it means users re-enter their keys         |
-| `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`   | no          | empty                   | A server-wide OpenAI-compatible endpoint                                                     |
-| `LLM_ENV_SHARED`                             | no          | `true`                  | `false`: nobody uses the server-wide key; each user brings their own                         |
-| `LLM_ALLOW_LOCAL`, `LLM_ALLOWED_LOCAL_PORTS` | no          | off, `11434`            | Let user profiles point at loopback/private hosts (e.g. Ollama)                              |
-| `OPENALEX_MAILTO`                            | no          | empty                   | Contact e-mail for OpenAlex's polite pool                                                    |
-| `OPENALEX_API_KEY`                           | no          | empty                   | A free OpenAlex key so the instance has its own daily budget                                 |
-| `LANGUAGETOOL_URL`                           | no          | empty                   | LanguageTool server for grammar checking (see below); empty turns it off                     |
-| `RATE_LIMIT_MULTIPLIER`                      | no          | `1`                     | Multiplies every rate-limit ceiling. For test stacks only; raising it lowers your protection |
-| `NEXT_PUBLIC_REPO_URL`                       | no          | empty                   | Link to the source shown in the landing footer (build-time)                                  |
+| Variable                                     | Required    | Default                 | Purpose                                                                                                     |
+| -------------------------------------------- | ----------- | ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD`                          | yes         |                         | Database password (must match the one the data volume was initialised with)                                 |
+| `COMPILER_TOKEN`                             | yes         |                         | Shared secret between web and compiler; also signs collab tokens if `COLLAB_SECRET` is unset                |
+| `DATABASE_URL`                               | dev only    |                         | Set by Compose in containers; needed when running `pnpm dev` on the host                                    |
+| `COMPILER_URL`                               | dev only    |                         | `http://127.0.0.1:3001` in development; set by Compose in containers                                        |
+| `APP_URL`                                    | prod, mail  | `http://localhost:3000` | Public origin for absolute links (Open Graph image, e-mail links). Required for e-mail                      |
+| `SMTP_URL`                                   | no          | empty                   | SMTP as one URL (`smtps://user:pass@host:465`); empty (and no `SMTP_HOST`) turns e-mail off                 |
+| `SMTP_HOST`, `SMTP_PORT`                     | no          | empty, `465`            | SMTP as discrete values; `465` uses implicit TLS, other ports STARTTLS. `SMTP_URL` wins                     |
+| `SMTP_USER`, `SMTP_PASS`                     | no          | empty                   | SMTP credentials for the discrete form, taken verbatim (no URL-encoding)                                    |
+| `SMTP_FROM`                                  | no          | see below               | Sender address; default `SMTP_USER` if it is an address, else `no-reply@` the `APP_URL` host                |
+| `ALLOW_REGISTRATION`                         | no          | `1`                     | `0` closes self-registration; existing accounts keep signing in                                             |
+| `COLLAB_URL`                                 | no          | empty                   | WebSocket URL the browser uses for live collaboration; empty turns it off                                   |
+| `COLLAB_SECRET`                              | no          | `COMPILER_TOKEN`        | HMAC key for collaboration room tokens (give the relay the same value)                                      |
+| `LLM_CREDENTIALS_KEY`                        | for AI keys |                         | Encrypts per-user provider keys at rest; rotating it means users re-enter their keys                        |
+| `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`   | no          | empty                   | A server-wide OpenAI-compatible endpoint                                                                    |
+| `LLM_ENV_SHARED`                             | no          | `true`                  | `false`: nobody uses the server-wide key; each user brings their own                                        |
+| `LLM_ALLOW_LOCAL`, `LLM_ALLOWED_LOCAL_PORTS` | no          | off, `11434`            | Let user profiles point at loopback/private hosts (e.g. Ollama)                                             |
+| `OPENALEX_MAILTO`                            | no          | empty                   | Contact e-mail for OpenAlex's polite pool                                                                   |
+| `OPENALEX_API_KEY`                           | no          | empty                   | A free OpenAlex key so the instance has its own daily budget                                                |
+| `LANGUAGETOOL_URL`                           | no          | empty                   | LanguageTool server for grammar checking (see below); empty turns it off                                    |
+| `RATE_LIMIT_MULTIPLIER`                      | no          | `1`                     | Multiplies every rate-limit ceiling. For test stacks only; raising it lowers your protection                |
+| `NEXT_PUBLIC_REPO_URL`                       | no          | empty                   | Link to the source shown in the landing footer (build-time)                                                 |
+| `FOLIO_VERSION`                              | no          | `latest`                | Image tag for the prebuilt-image stack (`docker-compose.release.yml`), e.g. `v0.2.0`; unset tracks `latest` |
 
 Generate secrets with:
 
