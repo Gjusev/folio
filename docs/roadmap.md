@@ -32,9 +32,9 @@ is next, and what Folio does not do.
 
 1. **AI verified against real models.** A test battery against paid providers;
    today every AI path is tested against fake OpenAI-compatible servers.
-2. **Review mode follow-ups.** Persist reviews on the server (today: in the
-   browser), compare two reviews, send a comment to the assistant as an
-   instruction, venue-specific checklists.
+2. **Venue-specific review checklists.** Review mode v2 already persists
+   reviews, compares runs and hands comments to the assistant; what is left is
+   checklists tailored per venue.
 3. **Per-job compile isolation.** An ephemeral container or microVM per job
    (gVisor, Firecracker) instead of one shared, hardened container.
 4. **DataCite cascade** for preprint → published upgrades (DOI → relations →

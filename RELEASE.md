@@ -83,5 +83,14 @@ its end-to-end tests.
 
 ## 4. After the release
 
-- [ ] Open issues for the [roadmap](docs/roadmap.md) items.
-- [ ] Record the release and announcement URLs here.
+- [x] Open issues for the [roadmap](docs/roadmap.md) items
+      (2026-11-09: issues #1 to #8).
+- [x] Record the release and announcement URLs here:
+  - Release: https://github.com/Gjusev/folio/releases/tag/v0.2.0
+    (published 2026-11-09; the tag is annotated, not signed: no GPG key was
+    configured on the release machine)
+  - Announcements: Reddit (r/LaTeX, r/selfhosted) posted 2026-11-09 by the
+    owner; post URLs to be filled in here.
+  - Smoke test of the published images passed 2026-11-09: clean directory,
+    compose file fetched from raw.githubusercontent, register, demo project,
+    real compile (2 pages).
